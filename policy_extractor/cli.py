@@ -1,12 +1,16 @@
-"""Typer CLI app for poliza-extractor — Phase 4.
+"""Typer CLI app for poliza-extractor — Phase 4 + Phase 5.
 
 Subcommands:
   extract  — process a single PDF and print JSON to stdout
   batch    — process all PDFs in a directory with progress bar and summary
+  export   — export stored policies to JSON (stdout or file)
+  import   — load JSON policies into DB
+  serve    — start uvicorn with the FastAPI app
 """
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 from typing import Optional
@@ -267,3 +271,102 @@ def batch(
         console.print(fail_table)
 
         raise typer.Exit(1)
+
+
+# ---------------------------------------------------------------------------
+# export subcommand
+# ---------------------------------------------------------------------------
+
+
+@app.command(name="export")
+def export_policies(
+    insurer: Optional[str] = typer.Option(None, "--insurer", help="Filter by insurer name"),
+    agent: Optional[str] = typer.Option(None, "--agent", help="Filter by agent name"),
+    from_date: Optional[str] = typer.Option(None, "--from-date", help="Filter start date (YYYY-MM-DD)"),
+    to_date: Optional[str] = typer.Option(None, "--to-date", help="Filter end date (YYYY-MM-DD)"),
+    policy_type: Optional[str] = typer.Option(None, "--type", help="Filter by insurance type"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
+) -> None:
+    """Export stored policies to JSON. Outputs a JSON array to stdout or --output file."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from policy_extractor.storage.models import Poliza as PolizaModel
+    from policy_extractor.storage.writer import orm_to_schema
+
+    _setup_db()
+    session = SessionLocal()
+    try:
+        stmt = (
+            select(PolizaModel)
+            .options(selectinload(PolizaModel.asegurados), selectinload(PolizaModel.coberturas))
+        )
+        if insurer is not None:
+            stmt = stmt.where(PolizaModel.aseguradora == insurer)
+        if agent is not None:
+            stmt = stmt.where(PolizaModel.nombre_agente == agent)
+        if policy_type is not None:
+            stmt = stmt.where(PolizaModel.tipo_seguro == policy_type)
+        if from_date is not None:
+            from datetime import datetime
+            parsed_from = datetime.strptime(from_date, "%Y-%m-%d").date()
+            stmt = stmt.where(PolizaModel.inicio_vigencia >= parsed_from)
+        if to_date is not None:
+            from datetime import datetime
+            parsed_to = datetime.strptime(to_date, "%Y-%m-%d").date()
+            stmt = stmt.where(PolizaModel.fin_vigencia <= parsed_to)
+
+        rows = session.execute(stmt).scalars().all()
+        results = [orm_to_schema(p).model_dump(mode="json") for p in rows]
+        json_str = json.dumps(results, indent=2, ensure_ascii=False)
+
+        if output is not None:
+            output.write_text(json_str, encoding="utf-8")
+            console.print(f"Exported {len(results)} policy/policies to {output}")
+        else:
+            print(json_str)
+    finally:
+        session.close()
+
+
+# ---------------------------------------------------------------------------
+# import subcommand
+# ---------------------------------------------------------------------------
+
+
+@app.command(name="import")
+def import_json(
+    file: Path = typer.Argument(..., help="JSON file to import", exists=True),
+) -> None:
+    """Import policies from a JSON file into the database."""
+    from policy_extractor.schemas.poliza import PolicyExtraction
+    from policy_extractor.storage.writer import upsert_policy
+
+    raw = file.read_text(encoding="utf-8")
+    data = json.loads(raw)
+    records = [data] if isinstance(data, dict) else data
+
+    _setup_db()
+    session = SessionLocal()
+    try:
+        for record in records:
+            extraction = PolicyExtraction.model_validate(record)
+            upsert_policy(session, extraction)
+        console.print(f"Imported {len(records)} policy/policies")
+    finally:
+        session.close()
+
+
+# ---------------------------------------------------------------------------
+# serve subcommand
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def serve(
+    port: int = typer.Option(8000, "--port", help="Port number"),
+    host: str = typer.Option("127.0.0.1", "--host", help="Host address"),
+    reload: bool = typer.Option(False, "--reload", help="Auto-reload on code changes"),
+) -> None:
+    """Start the FastAPI server with uvicorn."""
+    import uvicorn
+    uvicorn.run("policy_extractor.api:app", host=host, port=port, reload=reload)
