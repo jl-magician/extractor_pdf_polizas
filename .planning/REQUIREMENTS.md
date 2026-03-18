@@ -43,8 +43,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CLI-01**: User can invoke single-file extraction from command line
 - [ ] **CLI-02**: User can invoke batch extraction from command line
 - [ ] **CLI-03**: Batch processing displays progress (current file, total, percentage)
-- [ ] **CLI-04**: System skips PDFs that have already been extracted (idempotent reprocessing)
-- [ ] **CLI-05**: System tracks and reports token usage and estimated API cost per execution
+- [x] **CLI-04**: System skips PDFs that have already been extracted (idempotent reprocessing)
+- [x] **CLI-05**: System tracks and reports token usage and estimated API cost per execution
 
 ## v2 Requirements
 
@@ -105,8 +105,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-01 | Phase 4 | Pending |
 | CLI-02 | Phase 4 | Pending |
 | CLI-03 | Phase 4 | Pending |
-| CLI-04 | Phase 4 | Pending |
-| CLI-05 | Phase 4 | Pending |
+| CLI-04 | Phase 4 | Complete |
+| CLI-05 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 24 total

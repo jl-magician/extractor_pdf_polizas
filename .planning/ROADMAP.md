@@ -99,5 +99,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
 | 3. Extraction | 2/2 | Complete   | 2026-03-18 |
-| 4. CLI & Batch | 0/2 | Not started | - |
+| 4. CLI & Batch | 1/2 | In Progress|  |
 | 5. Storage & API | 0/TBD | Not started | - |

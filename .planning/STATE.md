@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-18T21:56:36.681Z"
-last_activity: "2026-03-18 — Completed Phase 2 Plan 2: OCR runner, SHA-256 cache, ingest_pdf() orchestrator"
+stopped_at: "Completed 04-01-PLAN.md"
+last_updated: "2026-03-18T22:15:52Z"
+last_activity: "2026-03-18 — Completed Phase 4 Plan 1: extraction pipeline usage tokens, model override, cli_helpers module"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 80
+  total_plans: 8
+  completed_plans: 7
+  percent: 90
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 2 — Ingestion (Complete)
+**Current focus:** Phase 4 — CLI & Batch (In Progress)
 
 ## Current Position
 
-Phase: 2 of 5 (Ingestion) — COMPLETE
-Plan: 2 of 2 in current phase
+Phase: 4 of 5 (CLI & Batch) — In Progress
+Plan: 1 of 2 in current phase — COMPLETE
 Status: Executing
-Last activity: 2026-03-18 — Completed Phase 2 Plan 2: OCR runner, SHA-256 cache, ingest_pdf() orchestrator
+Last activity: 2026-03-18 — Completed Phase 4 Plan 1: extraction pipeline usage tokens, model override, cli_helpers module
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [████████░░] 80%
 *Updated after each plan completion*
 | Phase 03-extraction P01 | 4 | 3 tasks | 6 files |
 | Phase 03-extraction P02 | 5min | 2 tasks | 3 files |
+| Phase 04-cli P01 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 03-extraction]: Provenance fields excluded from Claude tool schema (source_file_hash, model_id, prompt_version, extracted_at set by code, not Claude)
 - [Phase 03-extraction]: extract_policy returns PolicyExtraction directly (not tuple) — tests contract; raw response stored in campos_adicionales['_raw_response']
 - [Phase 03-extraction]: extract_with_retry uses attempt loop (max_retries + 1 total) not recursion — cleaner retry budget tracking
+- [Phase 04-cli P01]: extract_policy return type changed to tuple[PolicyExtraction | None, Usage | None] — CLI needs usage for cost reporting in one call
+- [Phase 04-cli P01]: PRICING hardcoded in cli_helpers as haiku/sonnet dict — no network call needed, values stable on short timescale
+- [Phase 04-cli P01]: is_already_extracted queries only Poliza.id with limit(1) — minimal DB overhead for idempotency check
 
 ### Pending Todos
 
