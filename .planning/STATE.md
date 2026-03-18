@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-foundation/01-01-PLAN.md
-last_updated: "2026-03-18T15:49:10.866Z"
+stopped_at: Completed 01-foundation/01-02-PLAN.md
+last_updated: "2026-03-18T15:54:06.658Z"
 last_activity: 2026-03-18 — Roadmap created, 24/24 v1 requirements mapped across 5 phases
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 50
 ---
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-foundation P01 | 4 | 2 tasks | 16 files |
+| Phase 01-foundation P02 | 3 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 01-foundation]: Used pip instead of uv (uv not on machine); added setuptools.packages.find to pyproject.toml to scope auto-discovery to policy_extractor* only
 - [Phase 01-foundation]: normalize_date returns None for unknown formats rather than ValidationError — extraction layer handles nulls gracefully in batch processing
 - [Phase 01-foundation]: Skipped Alembic for Phase 1 — Base.metadata.create_all() sufficient for greenfield DB; Alembic deferred to Phase 5
+- [Phase 01-foundation]: Models mirror Pydantic schema field names exactly — same names, same optionality — easing ORM-from-Pydantic mapping in Phase 5
+- [Phase 01-foundation]: source_file_hash uses String(64) with index but no UNIQUE constraint — same PDF can be re-extracted with different prompt_version creating new row
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T15:49:10.863Z
-Stopped at: Completed 01-foundation/01-01-PLAN.md
+Last session: 2026-03-18T15:54:06.655Z
+Stopped at: Completed 01-foundation/01-02-PLAN.md
 Resume file: None

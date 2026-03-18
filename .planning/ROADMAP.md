@@ -12,7 +12,7 @@ Five phases that take the project from nothing to a fully operational CLI tool f
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Data model, Pydantic schemas, SQLite schema, project scaffolding
+- [x] **Phase 1: Foundation** - Data model, Pydantic schemas, SQLite schema, project scaffolding (completed 2026-03-18)
 - [ ] **Phase 2: Ingestion** - PDF type detection, OCR pipeline, result caching
 - [ ] **Phase 3: Extraction** - Claude API integration, structured output, confidence scoring
 - [ ] **Phase 4: CLI & Batch** - Single-file and batch CLI, progress, idempotency, cost tracking
@@ -87,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/2 | In Progress|  |
+| 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Ingestion | 0/TBD | Not started | - |
 | 3. Extraction | 0/TBD | Not started | - |
 | 4. CLI & Batch | 0/TBD | Not started | - |
