@@ -75,8 +75,8 @@ Plans:
   5. After each execution the tool reports the number of tokens consumed and the estimated API cost in USD
 **Plans**: 2 plans
 Plans:
-- [ ] 04-01-PLAN.md — Pipeline modifications (usage tokens, model override) + cli_helpers + test scaffold (CLI-04, CLI-05)
-- [ ] 04-02-PLAN.md — Typer CLI with extract/batch subcommands, Rich progress, entry point (ING-03, ING-04, CLI-01, CLI-02, CLI-03, CLI-05)
+- [x] 04-01-PLAN.md — Pipeline modifications (usage tokens, model override) + cli_helpers + test scaffold (CLI-04, CLI-05)
+- [x] 04-02-PLAN.md — Typer CLI with extract/batch subcommands, Rich progress, entry point (ING-03, ING-04, CLI-01, CLI-02, CLI-03, CLI-05)
 
 ### Phase 5: Storage & API
 **Goal**: All extracted data is persisted in SQLite and queryable via both JSON export and a REST API
@@ -87,7 +87,10 @@ Plans:
   2. User can export a policy (or set of policies) as a JSON file from the command line
   3. The FastAPI server starts locally and responds to GET requests returning policy data in JSON format
   4. API supports filtering results by insurer, date range, agent name, and policy type
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Writer module (upsert_policy, orm_to_schema) + CLI auto-persist wiring (STOR-01)
+- [ ] 05-02-PLAN.md — Export/import/serve CLI subcommands + FastAPI CRUD with filtering (STOR-02, STOR-03, STOR-04)
 
 ## Progress
 
@@ -100,4 +103,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
 | 3. Extraction | 2/2 | Complete   | 2026-03-18 |
 | 4. CLI & Batch | 2/2 | Complete   | 2026-03-18 |
-| 5. Storage & API | 0/TBD | Not started | - |
+| 5. Storage & API | 0/2 | Planning complete | - |
