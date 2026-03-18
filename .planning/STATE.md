@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 04-01-PLAN.md"
-last_updated: "2026-03-18T22:15:52Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-18T22:42:19.812Z"
 last_activity: "2026-03-18 — Completed Phase 4 Plan 1: extraction pipeline usage tokens, model override, cli_helpers module"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 90
 ---
 
@@ -55,6 +55,7 @@ Progress: [█████████░] 90%
 | Phase 03-extraction P01 | 4 | 3 tasks | 6 files |
 | Phase 03-extraction P02 | 5min | 2 tasks | 3 files |
 | Phase 04-cli P01 | 2min | 2 tasks | 5 files |
+| Phase 04-cli-batch P02 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 04-cli P01]: extract_policy return type changed to tuple[PolicyExtraction | None, Usage | None] — CLI needs usage for cost reporting in one call
 - [Phase 04-cli P01]: PRICING hardcoded in cli_helpers as haiku/sonnet dict — no network call needed, values stable on short timescale
 - [Phase 04-cli P01]: is_already_extracted queries only Poliza.id with limit(1) — minimal DB overhead for idempotency check
+- [Phase 04-cli-batch]: Rich console writes to stderr; JSON output goes to stdout for clean pipe behavior
+- [Phase 04-cli-batch]: Batch exit code 1 on any failure — shell scripts and CI can detect incomplete runs
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18T21:56:36.678Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-cli-batch/04-CONTEXT.md
+Last session: 2026-03-18T22:42:19.809Z
+Stopped at: Completed 04-02-PLAN.md
+Resume file: None

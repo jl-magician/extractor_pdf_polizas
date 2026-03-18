@@ -11,8 +11,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **ING-01**: System detects whether a PDF contains selectable text or is a scanned image
 - [x] **ING-02**: System extracts text from scanned PDFs using OCR with Spanish and English support
-- [ ] **ING-03**: User can process a single PDF file via CLI
-- [ ] **ING-04**: User can process a directory of PDFs in batch via CLI
+- [x] **ING-03**: User can process a single PDF file via CLI
+- [x] **ING-04**: User can process a directory of PDFs in batch via CLI
 - [x] **ING-05**: System caches OCR results to avoid reprocessing the same PDF
 
 ### Extraction
@@ -40,9 +40,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### CLI & Operations
 
-- [ ] **CLI-01**: User can invoke single-file extraction from command line
-- [ ] **CLI-02**: User can invoke batch extraction from command line
-- [ ] **CLI-03**: Batch processing displays progress (current file, total, percentage)
+- [x] **CLI-01**: User can invoke single-file extraction from command line
+- [x] **CLI-02**: User can invoke batch extraction from command line
+- [x] **CLI-03**: Batch processing displays progress (current file, total, percentage)
 - [x] **CLI-04**: System skips PDFs that have already been extracted (idempotent reprocessing)
 - [x] **CLI-05**: System tracks and reports token usage and estimated API cost per execution
 
@@ -85,8 +85,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | ING-01 | Phase 2 | Complete |
 | ING-02 | Phase 2 | Complete |
-| ING-03 | Phase 4 | Pending |
-| ING-04 | Phase 4 | Pending |
+| ING-03 | Phase 4 | Complete |
+| ING-04 | Phase 4 | Complete |
 | ING-05 | Phase 2 | Complete |
 | EXT-01 | Phase 3 | Complete |
 | EXT-02 | Phase 3 | Complete |
@@ -102,9 +102,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-02 | Phase 5 | Pending |
 | STOR-03 | Phase 5 | Pending |
 | STOR-04 | Phase 5 | Pending |
-| CLI-01 | Phase 4 | Pending |
-| CLI-02 | Phase 4 | Pending |
-| CLI-03 | Phase 4 | Pending |
+| CLI-01 | Phase 4 | Complete |
+| CLI-02 | Phase 4 | Complete |
+| CLI-03 | Phase 4 | Complete |
 | CLI-04 | Phase 4 | Complete |
 | CLI-05 | Phase 4 | Complete |
 
