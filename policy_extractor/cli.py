@@ -98,6 +98,13 @@ def extract(
         # JSON to stdout
         print(policy.model_dump_json(indent=2))
 
+        # Auto-persist to DB (STOR-01)
+        try:
+            from policy_extractor.storage.writer import upsert_policy
+            upsert_policy(session, policy)
+        except Exception as exc:  # noqa: BLE001
+            console.print(f"[yellow]WARN[/yellow] Persistence failed: {exc}")
+
         # Optionally write to file
         if output_dir is not None:
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -196,6 +203,15 @@ def batch(
                     if usage is not None:
                         total_input += usage.input_tokens
                         total_output += usage.output_tokens
+
+                    # Auto-persist to DB (STOR-01)
+                    try:
+                        from policy_extractor.storage.writer import upsert_policy
+                        upsert_policy(session, policy)
+                    except Exception as exc:  # noqa: BLE001
+                        console.print(
+                            f"[yellow]WARN[/yellow] Persistence failed for {pdf.name}: {exc}"
+                        )
 
                     # Optionally write JSON
                     if output_dir is not None:
