@@ -1,18 +1,22 @@
-"""Tests for CLI helper utilities and CLI commands (Phase 4).
+"""Tests for CLI helper utilities and CLI commands (Phase 4 + Phase 5 Plan 02).
 
 Tests 1-5: Unit tests for estimate_cost and is_already_extracted (passing from Plan 01).
 Tests 6-12: Full CLI command tests using typer.testing.CliRunner with mocked pipeline.
+Tests 13-20: Export, import, and serve subcommand tests (Plan 02).
 """
+import json
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 from policy_extractor.cli import app
 from policy_extractor.cli_helpers import estimate_cost, is_already_extracted
 from policy_extractor.schemas.poliza import PolicyExtraction
-from policy_extractor.storage.models import Poliza
+from policy_extractor.storage.models import Asegurado, Base, Cobertura, Poliza
 
 runner = CliRunner()
 
@@ -336,3 +340,220 @@ def test_idempotency_skip(tmp_path):
     assert result.exit_code == 0
     assert "SKIP" in result.output
     assert not mock_ext.called
+
+
+# ---------------------------------------------------------------------------
+# Tests — export/import/serve subcommands (Plan 02)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mem_engine():
+    """In-memory SQLite engine for CLI export/import tests."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture
+def seeded_session(mem_engine):
+    """Session with one Poliza row (AXA, vida) pre-inserted."""
+    with Session(mem_engine) as session:
+        poliza = Poliza(
+            numero_poliza="POL-AXA-001",
+            aseguradora="AXA",
+            tipo_seguro="vida",
+            nombre_agente="Juan Lopez",
+            campos_adicionales={"confianza": {}},
+        )
+        aseg = Asegurado(tipo="persona", nombre_descripcion="Carlos Ruiz")
+        cob = Cobertura(nombre_cobertura="Muerte", moneda="MXN")
+        poliza.asegurados.append(aseg)
+        poliza.coberturas.append(cob)
+        session.add(poliza)
+        session.commit()
+        yield session
+
+
+def _make_mock_session_cls(mem_engine):
+    """Return a mock SessionLocal class that yields real sessions against mem_engine."""
+    from sqlalchemy.orm import sessionmaker
+    RealSession = sessionmaker(bind=mem_engine)
+
+    class FakeSessionCls:
+        _instance = None
+
+        def __call__(self):
+            self._instance = RealSession()
+            return self._instance
+
+        def configure(self, **kwargs):
+            pass
+
+    return FakeSessionCls()
+
+
+def test_export_empty_db(mem_engine):
+    """export with empty DB outputs empty JSON array."""
+    mock_session_factory = _make_mock_session_cls(mem_engine)
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", mock_session_factory),
+    ):
+        result = runner.invoke(app, ["export"])
+
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == "[]"
+
+
+def test_export_with_data(mem_engine, seeded_session):
+    """export with seeded DB returns JSON array with policy including nested objects."""
+    mock_session_factory = _make_mock_session_cls(mem_engine)
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", mock_session_factory),
+    ):
+        result = runner.invoke(app, ["export"])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["numero_poliza"] == "POL-AXA-001"
+    assert data[0]["aseguradora"] == "AXA"
+    assert "asegurados" in data[0]
+    assert "coberturas" in data[0]
+
+
+def test_export_filter_insurer(mem_engine, seeded_session):
+    """export --insurer filters to matching aseguradora only."""
+    mock_session_factory = _make_mock_session_cls(mem_engine)
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", mock_session_factory),
+    ):
+        # Match filter
+        result_match = runner.invoke(app, ["export", "--insurer", "AXA"])
+        # No-match filter
+        result_no_match = runner.invoke(app, ["export", "--insurer", "MAPFRE"])
+
+    assert result_match.exit_code == 0
+    data_match = json.loads(result_match.output)
+    assert len(data_match) == 1
+
+    assert result_no_match.exit_code == 0
+    data_no_match = json.loads(result_no_match.output)
+    assert len(data_no_match) == 0
+
+
+def test_export_to_file(tmp_path, mem_engine, seeded_session):
+    """export --output writes JSON to file instead of stdout."""
+    out_file = tmp_path / "polizas.json"
+    mock_session_factory = _make_mock_session_cls(mem_engine)
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", mock_session_factory),
+    ):
+        result = runner.invoke(app, ["export", "--output", str(out_file)])
+
+    assert result.exit_code == 0, result.output
+    assert out_file.exists()
+    data = json.loads(out_file.read_text(encoding="utf-8"))
+    assert isinstance(data, list)
+    assert len(data) == 1
+
+
+def test_import_json_array(tmp_path, mem_engine):
+    """import loads a JSON array into DB, creating Poliza rows."""
+    records = [
+        {"numero_poliza": "IMP-001", "aseguradora": "MAPFRE"},
+        {"numero_poliza": "IMP-002", "aseguradora": "GNP"},
+    ]
+    json_file = tmp_path / "policies.json"
+    json_file.write_text(json.dumps(records), encoding="utf-8")
+
+    mock_session_factory = _make_mock_session_cls(mem_engine)
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", mock_session_factory),
+    ):
+        result = runner.invoke(app, ["import", str(json_file)])
+
+    assert result.exit_code == 0, result.output
+    assert "2" in result.output  # "Imported 2 policy/policies"
+
+    # Verify DB state
+    with Session(mem_engine) as s:
+        count = s.query(Poliza).count()
+    assert count == 2
+
+
+def test_import_single_object(tmp_path, mem_engine):
+    """import handles single-object JSON (wraps in list)."""
+    record = {"numero_poliza": "SINGLE-001", "aseguradora": "Qualitas"}
+    json_file = tmp_path / "single.json"
+    json_file.write_text(json.dumps(record), encoding="utf-8")
+
+    mock_session_factory = _make_mock_session_cls(mem_engine)
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", mock_session_factory),
+    ):
+        result = runner.invoke(app, ["import", str(json_file)])
+
+    assert result.exit_code == 0, result.output
+    assert "1" in result.output
+
+    with Session(mem_engine) as s:
+        count = s.query(Poliza).count()
+    assert count == 1
+
+
+def test_import_export_roundtrip(tmp_path, mem_engine, seeded_session):
+    """Round-trip: export then import produces equivalent DB state."""
+    mock_session_factory = _make_mock_session_cls(mem_engine)
+    out_file = tmp_path / "export.json"
+
+    # Export existing seeded data
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", mock_session_factory),
+    ):
+        export_result = runner.invoke(app, ["export", "--output", str(out_file)])
+
+    assert export_result.exit_code == 0, export_result.output
+    assert out_file.exists()
+
+    # Fresh engine for import
+    fresh_engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(fresh_engine)
+    fresh_factory = _make_mock_session_cls(fresh_engine)
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", fresh_factory),
+    ):
+        import_result = runner.invoke(app, ["import", str(out_file)])
+
+    assert import_result.exit_code == 0, import_result.output
+
+    # Verify the imported data
+    with Session(fresh_engine) as s:
+        polizas = s.query(Poliza).all()
+    assert len(polizas) == 1
+    assert polizas[0].numero_poliza == "POL-AXA-001"
+    assert polizas[0].aseguradora == "AXA"
+
+
+def test_serve_subcommand_registered():
+    """serve subcommand is registered in the Typer app (without actually starting uvicorn)."""
+    # List registered commands
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "serve" in result.output
