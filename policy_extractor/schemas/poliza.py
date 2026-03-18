@@ -50,6 +50,9 @@ class PolicyExtraction(BaseModel):
     # Overflow (DATA-02)
     campos_adicionales: dict = Field(default_factory=dict)
 
+    # Confidence per field (EXT-04)
+    confianza: dict = Field(default_factory=dict)
+
     @field_validator("fecha_emision", "inicio_vigencia", "fin_vigencia", mode="before")
     @classmethod
     def normalize_date(cls, v):

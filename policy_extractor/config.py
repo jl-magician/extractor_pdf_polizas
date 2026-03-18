@@ -18,5 +18,10 @@ class Settings:
     PAGE_SCAN_THRESHOLD: float = float(os.getenv("PAGE_SCAN_THRESHOLD", "0.80"))
     DECORATIVE_IMAGE_MIN: float = float(os.getenv("DECORATIVE_IMAGE_MIN", "0.10"))
 
+    # Extraction settings
+    EXTRACTION_MODEL: str = os.getenv("EXTRACTION_MODEL", "claude-haiku-4-5-20251001")
+    EXTRACTION_MAX_RETRIES: int = int(os.getenv("EXTRACTION_MAX_RETRIES", "1"))
+    EXTRACTION_PROMPT_VERSION: str = os.getenv("EXTRACTION_PROMPT_VERSION", "v1.0.0")
+
 
 settings = Settings()
