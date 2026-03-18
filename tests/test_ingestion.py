@@ -1,15 +1,21 @@
-"""Tests for Task 2: per-page PDF classifier.
-
-Written FIRST (TDD RED) before classifier.py exists.
-"""
+"""Tests for ingestion layer: classifier (Plan 01) and ingest_pdf orchestrator (Plan 02)."""
 import io
+import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import fitz  # PyMuPDF
 import pytest
 
 FIXTURES = Path(__file__).parent / "fixtures"
+DIGITAL_PDF = FIXTURES / "digital_sample.pdf"
+SCANNED_PDF = FIXTURES / "scanned_sample.pdf"
+
+requires_tesseract = pytest.mark.skipif(
+    shutil.which("tesseract") is None,
+    reason="Tesseract OCR not installed",
+)
 
 
 @pytest.fixture
@@ -228,3 +234,149 @@ class TestClassifierModule:
 
         assert callable(classify_page)
         assert callable(classify_all_pages)
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# ingest_pdf() orchestrator tests (Plan 02-02)
+# ────────────────────────────────────────────────────────────────────────────
+
+
+class TestIngestPdf:
+    def test_ingest_returns_pydantic_model(self):
+        """ingest_pdf returns an IngestionResult instance."""
+        from policy_extractor.ingestion import ingest_pdf, IngestionResult
+
+        result = ingest_pdf(DIGITAL_PDF)
+        assert isinstance(result, IngestionResult)
+
+    def test_ingest_digital_pdf(self):
+        """Digital PDF: ocr_applied=False, all pages classified 'digital'."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        result = ingest_pdf(DIGITAL_PDF)
+        assert result.ocr_applied is False
+        for page in result.pages:
+            assert page.classification == "digital"
+
+    def test_ingest_preserves_page_boundaries(self):
+        """result.pages has correct page_num values (1-based) and text strings."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        result = ingest_pdf(DIGITAL_PDF)
+        assert len(result.pages) >= 1
+        assert result.pages[0].page_num == 1
+        for page in result.pages:
+            assert isinstance(page.text, str)
+
+    def test_ingest_ocr_output_page_tuples(self):
+        """result.pages contains PageResult objects with page_num, text, classification."""
+        from policy_extractor.ingestion import ingest_pdf
+        from policy_extractor.schemas.ingestion import PageResult
+
+        result = ingest_pdf(DIGITAL_PDF)
+        for page in result.pages:
+            assert isinstance(page, PageResult)
+            assert hasattr(page, "page_num")
+            assert hasattr(page, "text")
+            assert hasattr(page, "classification")
+
+    def test_corrupted_pdf_skipped(self, tmp_path):
+        """Corrupted file raises RuntimeError with descriptive message."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        bad_pdf = tmp_path / "corrupt.pdf"
+        bad_pdf.write_text("this is not a pdf")
+
+        with pytest.raises(RuntimeError, match="(?i)cannot open|not a valid PDF|corrupt"):
+            ingest_pdf(bad_pdf)
+
+    @requires_tesseract
+    def test_ingest_scanned_pdf(self):
+        """Scanned PDF: ocr_applied=True (requires Tesseract)."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        result = ingest_pdf(SCANNED_PDF)
+        assert result.ocr_applied is True
+
+
+class TestIngestPdfCache:
+    def test_cache_hit_skips_ocr(self, session):
+        """Second ingest_pdf call with same hash returns from_cache=True."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        # First call — populates cache
+        result1 = ingest_pdf(DIGITAL_PDF, session=session)
+        assert result1.from_cache is False
+
+        # Second call — should hit cache
+        result2 = ingest_pdf(DIGITAL_PDF, session=session)
+        assert result2.from_cache is True
+
+    def test_cache_hit_skips_ocr_not_called(self, session):
+        """Second ingest_pdf call does not invoke OCR functions."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        # Populate cache
+        ingest_pdf(DIGITAL_PDF, session=session)
+
+        # Mock ocr_with_fallback to verify it's not called on cache hit
+        with patch(
+            "policy_extractor.ingestion.ocr_with_fallback"
+        ) as mock_ocr:
+            result = ingest_pdf(DIGITAL_PDF, session=session)
+            assert result.from_cache is True
+            mock_ocr.assert_not_called()
+
+    def test_force_reprocess_bypasses_cache(self, session):
+        """With force_reprocess=True, OCR runs even if cached."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        # Populate cache
+        ingest_pdf(DIGITAL_PDF, session=session)
+
+        # force_reprocess=True must return from_cache=False
+        result = ingest_pdf(DIGITAL_PDF, session=session, force_reprocess=True)
+        assert result.from_cache is False
+
+    def test_cache_hit_path_independent(self, session, tmp_path):
+        """Same file content at two paths returns cache hit on second call."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        # Ingest original
+        ingest_pdf(DIGITAL_PDF, session=session)
+
+        # Copy to different path
+        copy_path = tmp_path / "copy_digital.pdf"
+        shutil.copy2(DIGITAL_PDF, copy_path)
+
+        # Ingest copy — should be a cache hit (same content)
+        result = ingest_pdf(copy_path, session=session)
+        assert result.from_cache is True
+
+    def test_ocr_english_fallback(self, tmp_path):
+        """mock get_page_confidence < 60 causes run_ocr called twice with spa+eng."""
+        from policy_extractor.ingestion.ocr_runner import ocr_with_fallback
+
+        fake_ocr_output = tmp_path / "fake_ocr.pdf"
+        shutil.copy2(DIGITAL_PDF, fake_ocr_output)
+
+        with (
+            patch(
+                "policy_extractor.ingestion.ocr_runner.run_ocr"
+            ) as mock_run_ocr,
+            patch(
+                "policy_extractor.ingestion.ocr_runner.get_page_confidence"
+            ) as mock_conf,
+        ):
+            mock_conf.return_value = 30.0  # below threshold (60)
+            mock_run_ocr.side_effect = [
+                (fake_ocr_output, "spa"),
+                (fake_ocr_output, "spa+eng"),
+            ]
+            ocr_with_fallback(DIGITAL_PDF)
+
+            assert mock_run_ocr.call_count == 2
+            second_lang = mock_run_ocr.call_args_list[1][1].get(
+                "language"
+            ) or mock_run_ocr.call_args_list[1][0][1]
+            assert second_lang == ["spa", "eng"]
