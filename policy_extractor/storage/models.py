@@ -98,3 +98,16 @@ class Cobertura(Base):
     campos_adicionales: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     poliza: Mapped["Poliza"] = relationship("Poliza", back_populates="coberturas")
+
+
+class IngestionCache(Base):
+    __tablename__ = "ingestion_cache"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    file_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    file_path: Mapped[str] = mapped_column(String)
+    total_pages: Mapped[int] = mapped_column()
+    page_results: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    file_size_bytes: Mapped[int] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    ocr_language: Mapped[str] = mapped_column(String, default="spa")

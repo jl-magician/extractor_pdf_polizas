@@ -3,7 +3,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from policy_extractor.storage.models import Base
+from policy_extractor.storage.models import Base, IngestionCache  # noqa: F401
 
 
 @pytest.fixture
