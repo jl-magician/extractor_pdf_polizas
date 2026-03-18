@@ -58,7 +58,10 @@ Plans:
   2. The insurer name and insurance type are automatically classified from PDF content without any hard-coded template
   3. Each extracted field in the output includes a confidence indicator
   4. Extraction works correctly on PDFs written entirely in Spanish and on PDFs written in English
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — Schema update, extraction config, prompt module, schema builder, test scaffold (EXT-01, EXT-02, EXT-04, EXT-05)
+- [ ] 03-02-PLAN.md — Extraction client, hallucination verification, extract_policy() orchestrator (EXT-01 through EXT-05)
 
 ### Phase 4: CLI & Batch
 **Goal**: Users can process one or many PDFs from the command line with full visibility into progress and cost
@@ -92,6 +95,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
-| 3. Extraction | 0/TBD | Not started | - |
+| 3. Extraction | 0/2 | Planning complete | - |
 | 4. CLI & Batch | 0/TBD | Not started | - |
 | 5. Storage & API | 0/TBD | Not started | - |
