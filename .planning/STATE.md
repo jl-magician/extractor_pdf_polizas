@@ -3,11 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
+stopped_at: Completed 01-foundation/01-01-PLAN.md
+last_updated: "2026-03-18T15:49:10.866Z"
+last_activity: 2026-03-18 — Roadmap created, 24/24 v1 requirements mapped across 5 phases
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 50
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: planning
 stopped_at: Phase 1 context gathered
 last_updated: "2026-03-18T06:39:22.365Z"
 last_activity: 2026-03-18 — Roadmap created, 24/24 v1 requirements mapped across 5 phases
 progress:
-  total_phases: 5
+  [█████░░░░░] 50%
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -50,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-foundation P01 | 4 | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -61,6 +78,9 @@ Recent decisions affecting current work:
 - [Pre-phase]: Claude API chosen for extraction — user has existing API key; handles 50-70 formats without templates
 - [Pre-phase]: Local-first, no web until extraction validated
 - [Pre-phase]: Data model (Pydantic + SQLite hybrid schema) must be locked in Phase 1 before any LLM calls — non-retrofittable
+- [Phase 01-foundation]: Used pip instead of uv (uv not on machine); added setuptools.packages.find to pyproject.toml to scope auto-discovery to policy_extractor* only
+- [Phase 01-foundation]: normalize_date returns None for unknown formats rather than ValidationError — extraction layer handles nulls gracefully in batch processing
+- [Phase 01-foundation]: Skipped Alembic for Phase 1 — Base.metadata.create_all() sufficient for greenfield DB; Alembic deferred to Phase 5
 
 ### Pending Todos
 
@@ -74,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T06:39:22.362Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-foundation/01-CONTEXT.md
+Last session: 2026-03-18T15:49:10.863Z
+Stopped at: Completed 01-foundation/01-01-PLAN.md
+Resume file: None

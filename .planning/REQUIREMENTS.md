@@ -25,11 +25,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Model
 
-- [ ] **DATA-01**: Database schema supports multiple insured parties (people or assets) per policy via relational table
-- [ ] **DATA-02**: Schema supports dynamic/variable fields per insurer type via JSON overflow column
-- [ ] **DATA-03**: All dates are stored in canonical ISO format regardless of source format
-- [ ] **DATA-04**: All monetary amounts are stored with explicit currency code
-- [ ] **DATA-05**: System stores the raw Claude API response for each extraction (provenance logging)
+- [x] **DATA-01**: Database schema supports multiple insured parties (people or assets) per policy via relational table
+- [x] **DATA-02**: Schema supports dynamic/variable fields per insurer type via JSON overflow column
+- [x] **DATA-03**: All dates are stored in canonical ISO format regardless of source format
+- [x] **DATA-04**: All monetary amounts are stored with explicit currency code
+- [x] **DATA-05**: System stores the raw Claude API response for each extraction (provenance logging)
 
 ### Storage & Output
 
@@ -93,11 +93,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXT-03 | Phase 3 | Pending |
 | EXT-04 | Phase 3 | Pending |
 | EXT-05 | Phase 3 | Pending |
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
+| DATA-03 | Phase 1 | Complete |
+| DATA-04 | Phase 1 | Complete |
+| DATA-05 | Phase 1 | Complete |
 | STOR-01 | Phase 5 | Pending |
 | STOR-02 | Phase 5 | Pending |
 | STOR-03 | Phase 5 | Pending |
