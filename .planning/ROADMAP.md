@@ -30,7 +30,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. All date fields in the schema are typed as ISO 8601 (YYYY-MM-DD) with explicit format conversion documented
   4. Every policy record stores source_file_hash, model_id, prompt_version, and extracted_at (provenance columns)
   5. The dynamic/variable fields per insurer are stored in a JSON overflow column without breaking the core typed columns
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffolding + Pydantic v2 extraction schemas
+- [ ] 01-02-PLAN.md — SQLAlchemy ORM models + comprehensive test suite
 
 ### Phase 2: Ingestion
 **Goal**: The system reliably routes any PDF — digital or scanned — to the correct processing path before touching the LLM
@@ -84,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/2 | Planning complete | - |
 | 2. Ingestion | 0/TBD | Not started | - |
 | 3. Extraction | 0/TBD | Not started | - |
 | 4. CLI & Batch | 0/TBD | Not started | - |
