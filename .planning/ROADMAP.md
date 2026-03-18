@@ -60,8 +60,8 @@ Plans:
   4. Extraction works correctly on PDFs written entirely in Spanish and on PDFs written in English
 **Plans**: 2 plans
 Plans:
-- [ ] 03-01-PLAN.md — Schema update, extraction config, prompt module, schema builder, test scaffold (EXT-01, EXT-02, EXT-04, EXT-05)
-- [ ] 03-02-PLAN.md — Extraction client, hallucination verification, extract_policy() orchestrator (EXT-01 through EXT-05)
+- [x] 03-01-PLAN.md — Schema update, extraction config, prompt module, schema builder, test scaffold (EXT-01, EXT-02, EXT-04, EXT-05)
+- [x] 03-02-PLAN.md — Extraction client, hallucination verification, extract_policy() orchestrator (EXT-01 through EXT-05)
 
 ### Phase 4: CLI & Batch
 **Goal**: Users can process one or many PDFs from the command line with full visibility into progress and cost
@@ -73,7 +73,10 @@ Plans:
   3. If one PDF in a batch fails, processing continues with the remaining files and the failure is reported in the final summary
   4. Re-running the same command on already-processed PDFs skips those files without re-extracting or creating duplicate records
   5. After each execution the tool reports the number of tokens consumed and the estimated API cost in USD
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 04-01-PLAN.md — Pipeline modifications (usage tokens, model override) + cli_helpers + test scaffold (CLI-04, CLI-05)
+- [ ] 04-02-PLAN.md — Typer CLI with extract/batch subcommands, Rich progress, entry point (ING-03, ING-04, CLI-01, CLI-02, CLI-03, CLI-05)
 
 ### Phase 5: Storage & API
 **Goal**: All extracted data is persisted in SQLite and queryable via both JSON export and a REST API
@@ -96,5 +99,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
 | 3. Extraction | 2/2 | Complete   | 2026-03-18 |
-| 4. CLI & Batch | 0/TBD | Not started | - |
+| 4. CLI & Batch | 0/2 | Not started | - |
 | 5. Storage & API | 0/TBD | Not started | - |
