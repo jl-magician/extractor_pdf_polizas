@@ -13,16 +13,25 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from policy_extractor.storage.models import Asegurado, Base, Cobertura, Poliza
 
 # ---------------------------------------------------------------------------
 # In-memory DB setup for tests — must happen BEFORE importing app
+#
+# StaticPool + same_thread=False: ensures all connections share the same
+# in-memory SQLite database. Without StaticPool, each new connection would
+# get an empty in-memory DB (sqlite:///:memory: creates one per connection).
 # ---------------------------------------------------------------------------
 
-engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+engine = create_engine(
+    "sqlite:///:memory:",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 Base.metadata.create_all(engine)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
