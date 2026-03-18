@@ -68,8 +68,11 @@ class TestOcrRunner:
         """When mock confidence returns < 60, ocr retries with ['spa', 'eng']."""
         from policy_extractor.ingestion.ocr_runner import ocr_with_fallback
 
-        # We mock run_ocr and get_page_confidence to control behavior
-        fake_output = DIGITAL_PDF  # use a real file as mock output
+        # Use a distinct path for the mock OCR output (must differ from input_path
+        # so the "already done" early-return branch is NOT triggered)
+        fake_ocr_output = tmp_path / "fake_ocr_output.pdf"
+        import shutil
+        shutil.copy2(DIGITAL_PDF, fake_ocr_output)
 
         with (
             patch(
@@ -79,14 +82,12 @@ class TestOcrRunner:
                 "policy_extractor.ingestion.ocr_runner.get_page_confidence"
             ) as mock_conf,
         ):
-            # First call returns a fake PDF with low confidence
-            mock_run_ocr.return_value = (fake_output, "spa")
             mock_conf.return_value = 30.0  # below threshold (60)
 
-            # Second call (fallback) also returns fake output
+            # First call returns a fake PDF (different from input), second returns fallback
             mock_run_ocr.side_effect = [
-                (fake_output, "spa"),
-                (fake_output, "spa+eng"),
+                (fake_ocr_output, "spa"),
+                (fake_ocr_output, "spa+eng"),
             ]
 
             ocr_with_fallback(DIGITAL_PDF)
