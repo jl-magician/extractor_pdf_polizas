@@ -250,3 +250,170 @@ def test_policy_extraction_with_asegurados_and_coberturas():
     assert len(p.coberturas) == 1
     assert p.asegurados[0].tipo == "persona"
     assert p.asegurados[1].tipo == "bien"
+
+
+# ---------------------------------------------------------------------------
+# Plan 02 required test names — DATA-01 through DATA-05 exact names
+# ---------------------------------------------------------------------------
+
+def test_asegurado_persona():
+    """DATA-01: AseguradoExtraction accepts tipo='persona' with person fields."""
+    from policy_extractor.schemas import AseguradoExtraction
+    from datetime import date as date_type
+
+    a = AseguradoExtraction(
+        tipo="persona",
+        nombre_descripcion="Juan Perez Garcia",
+        fecha_nacimiento=date_type(1985, 6, 15),
+        rfc="PEGJ850615ABC",
+        curp="PEGJ850615HDFRZN01",
+        direccion="Av. Insurgentes 100, CDMX",
+        parentesco="titular",
+    )
+    assert a.tipo == "persona"
+    assert a.nombre_descripcion == "Juan Perez Garcia"
+    assert a.rfc == "PEGJ850615ABC"
+
+
+def test_asegurado_bien():
+    """DATA-01: AseguradoExtraction accepts tipo='bien' with asset extras in campos_adicionales."""
+    from policy_extractor.schemas import AseguradoExtraction
+
+    a = AseguradoExtraction(
+        tipo="bien",
+        nombre_descripcion="Toyota Corolla 2022",
+        campos_adicionales={"tipo_bien": "vehiculo", "vin": "1HGCM82633A004352"},
+    )
+    assert a.tipo == "bien"
+    assert a.campos_adicionales["tipo_bien"] == "vehiculo"
+    assert a.campos_adicionales["vin"] == "1HGCM82633A004352"
+
+
+def test_asegurado_invalid_tipo():
+    """DATA-01: tipo='equipo' must raise ValidationError (not in Literal['persona','bien'])."""
+    from pydantic import ValidationError
+    from policy_extractor.schemas import AseguradoExtraction
+
+    with pytest.raises(ValidationError):
+        AseguradoExtraction(tipo="equipo", nombre_descripcion="Maquinaria X")
+
+
+def test_policy_with_multiple_asegurados():
+    """DATA-01: PolicyExtraction accepts a list with mixed persona and bien asegurados."""
+    from policy_extractor.schemas import AseguradoExtraction, PolicyExtraction
+
+    p = PolicyExtraction(
+        numero_poliza="POL-MX-001",
+        aseguradora="GNP",
+        asegurados=[
+            AseguradoExtraction(tipo="persona", nombre_descripcion="Ana Rodriguez"),
+            AseguradoExtraction(tipo="persona", nombre_descripcion="Carlos Rodriguez"),
+            AseguradoExtraction(
+                tipo="bien",
+                nombre_descripcion="Nissan Sentra 2023",
+                campos_adicionales={"placas": "XYZ9999"},
+            ),
+        ],
+    )
+    assert len(p.asegurados) == 3
+    persona_count = sum(1 for a in p.asegurados if a.tipo == "persona")
+    bien_count = sum(1 for a in p.asegurados if a.tipo == "bien")
+    assert persona_count == 2
+    assert bien_count == 1
+
+
+def test_date_normalization_ddmmyyyy():
+    """DATA-03: DD/MM/YYYY string normalizes to correct date object."""
+    from policy_extractor.schemas import PolicyExtraction
+
+    p = PolicyExtraction(numero_poliza="POL-001", aseguradora="AXA", fecha_emision="15/01/2025")
+    assert p.fecha_emision == date(2025, 1, 15)
+
+
+def test_date_normalization_iso():
+    """DATA-03: ISO 8601 string (YYYY-MM-DD) normalizes to correct date object."""
+    from policy_extractor.schemas import PolicyExtraction
+
+    p = PolicyExtraction(numero_poliza="POL-001", aseguradora="AXA", fecha_emision="2025-01-15")
+    assert p.fecha_emision == date(2025, 1, 15)
+
+
+def test_date_normalization_none():
+    """DATA-03: None date field stays None (no validation error)."""
+    from policy_extractor.schemas import PolicyExtraction
+
+    p = PolicyExtraction(numero_poliza="POL-001", aseguradora="AXA", fecha_emision=None)
+    assert p.fecha_emision is None
+
+
+def test_date_normalization_dash_format():
+    """DATA-03: DD-MM-YYYY dash format normalizes to correct date object."""
+    from policy_extractor.schemas import PolicyExtraction
+
+    p = PolicyExtraction(numero_poliza="POL-001", aseguradora="AXA", fecha_emision="15-01-2025")
+    assert p.fecha_emision == date(2025, 1, 15)
+
+
+def test_decimal_precision():
+    """DATA-04: Decimal('1500000.00') round-trips without float corruption."""
+    from policy_extractor.schemas import PolicyExtraction
+
+    p = PolicyExtraction(
+        numero_poliza="POL-001",
+        aseguradora="AXA",
+        prima_total=Decimal("1500000.00"),
+    )
+    assert p.prima_total == Decimal("1500000.00")
+    assert str(p.prima_total) == "1500000.00"
+    # Must NOT equal float representation that could cause rounding
+    assert p.prima_total != 1499999.9999999998
+
+
+def test_currency_default_mxn():
+    """DATA-04: moneda defaults to 'MXN' on both PolicyExtraction and CoberturaExtraction."""
+    from policy_extractor.schemas import CoberturaExtraction, PolicyExtraction
+
+    p = PolicyExtraction(numero_poliza="POL-001", aseguradora="AXA")
+    c = CoberturaExtraction(nombre_cobertura="Daños")
+    assert p.moneda == "MXN"
+    assert c.moneda == "MXN"
+
+
+def test_currency_accepts_usd():
+    """DATA-04: moneda='USD' is accepted without error."""
+    from policy_extractor.schemas import PolicyExtraction
+
+    p = PolicyExtraction(numero_poliza="POL-001", aseguradora="AXA", moneda="USD")
+    assert p.moneda == "USD"
+
+
+def test_cobertura_overflow():
+    """DATA-02: CoberturaExtraction accepts campos_adicionales with insurer-specific fields."""
+    from policy_extractor.schemas import CoberturaExtraction
+
+    c = CoberturaExtraction(
+        nombre_cobertura="Gastos Médicos Mayores",
+        campos_adicionales={"coaseguro": "10%", "copago": "20%"},
+    )
+    assert c.campos_adicionales["coaseguro"] == "10%"
+    assert c.campos_adicionales["copago"] == "20%"
+
+
+def test_provenance_fields():
+    """DATA-05: PolicyExtraction accepts and retains all four provenance fields."""
+    from datetime import datetime
+    from policy_extractor.schemas import PolicyExtraction
+
+    extracted = datetime(2026, 3, 18, 15, 0, 0)
+    p = PolicyExtraction(
+        numero_poliza="POL-001",
+        aseguradora="AXA",
+        source_file_hash="abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
+        model_id="claude-sonnet-4-6-20250514",
+        prompt_version="v1.0.0",
+        extracted_at=extracted,
+    )
+    assert p.source_file_hash == "abc123def456abc123def456abc123def456abc123def456abc123def456abc1"
+    assert p.model_id == "claude-sonnet-4-6-20250514"
+    assert p.prompt_version == "v1.0.0"
+    assert p.extracted_at == extracted
