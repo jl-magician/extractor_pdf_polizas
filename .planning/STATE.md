@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 05-storage-api 05-01-PLAN.md
-last_updated: "2026-03-18T23:19:35.016Z"
-last_activity: "2026-03-18 — Completed Phase 4 Plan 1: extraction pipeline usage tokens, model override, cli_helpers module"
+status: complete
+stopped_at: Completed 05-storage-api 05-02-PLAN.md
+last_updated: "2026-03-18T23:26:45.466Z"
+last_activity: "2026-03-18 — Completed Phase 5 Plan 2: export/import/serve CLI, FastAPI CRUD endpoints"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 4 — CLI & Batch (In Progress)
+**Current focus:** Phase 5 — Storage & API (COMPLETE)
 
 ## Current Position
 
-Phase: 4 of 5 (CLI & Batch) — In Progress
-Plan: 1 of 2 in current phase — COMPLETE
-Status: Executing
-Last activity: 2026-03-18 — Completed Phase 4 Plan 1: extraction pipeline usage tokens, model override, cli_helpers module
+Phase: 5 of 5 (Storage & API) — COMPLETE
+Plan: 2 of 2 in current phase — COMPLETE
+Status: Complete
+Last activity: 2026-03-18 — Completed Phase 5 Plan 2: export/import/serve CLI, FastAPI CRUD endpoints
 
-Progress: [█████████░] 90%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████████░] 90%
 | Phase 04-cli P01 | 2min | 2 tasks | 5 files |
 | Phase 04-cli-batch P02 | 3min | 2 tasks | 3 files |
 | Phase 05-storage-api P01 | 8min | 2 tasks | 5 files |
+| Phase 05-storage-api P02 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 04-cli-batch]: Rich console writes to stderr; JSON output goes to stdout for clean pipe behavior
 - [Phase 04-cli-batch]: Batch exit code 1 on any failure — shell scripts and CI can detect incomplete runs
 - [Phase 05-storage-api]: confianza stored in campos_adicionales['confianza'] in ORM; orm_to_schema extracts back to top-level field — avoids new DB column while preserving round-trip fidelity
+- [Phase 05-storage-api]: StaticPool required for in-memory SQLite test engine: each connection creates a new empty DB without it
+- [Phase 05-storage-api]: PUT /polizas/{id} updates by ID not by (numero_poliza, aseguradora): REST semantics require update-by-ID, inline update bypasses upsert_policy dedup logic
+- [Phase 05-storage-api]: model_dump(mode='json') in all API responses prevents JSONResponse TypeError on Decimal fields
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18T23:19:35.013Z
-Stopped at: Completed 05-storage-api 05-01-PLAN.md
+Last session: 2026-03-18T23:26:45.463Z
+Stopped at: Completed 05-storage-api 05-02-PLAN.md
 Resume file: None
