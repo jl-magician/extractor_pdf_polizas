@@ -12,7 +12,7 @@ Five phases that take the project from nothing to a fully operational CLI tool f
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Foundation** - Data model, Pydantic schemas, SQLite schema, project scaffolding (completed 2026-03-18)
+- [x] **Phase 1: Foundation** - Data model, Pydantic schemas, SQLite schema, project scaffolding (completed 2026-03-18)
 - [ ] **Phase 2: Ingestion** - PDF type detection, OCR pipeline, result caching
 - [ ] **Phase 3: Extraction** - Claude API integration, structured output, confidence scoring
 - [ ] **Phase 4: CLI & Batch** - Single-file and batch CLI, progress, idempotency, cost tracking
@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. The dynamic/variable fields per insurer are stored in a JSON overflow column without breaking the core typed columns
 **Plans**: 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding + Pydantic v2 extraction schemas
-- [ ] 01-02-PLAN.md — SQLAlchemy ORM models + comprehensive test suite
+- [x] 01-01-PLAN.md — Project scaffolding + Pydantic v2 extraction schemas
+- [x] 01-02-PLAN.md — SQLAlchemy ORM models + comprehensive test suite
 
 ### Phase 2: Ingestion
 **Goal**: The system reliably routes any PDF — digital or scanned — to the correct processing path before touching the LLM
@@ -44,7 +44,10 @@ Plans:
   2. A scanned PDF (image-only pages) is classified as "scanned" and OCR is applied before any further processing
   3. OCR output includes Spanish-language text accurately extracted from a sample scanned policy
   4. A PDF that has already been processed returns the cached result without re-running OCR or paying API costs
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Ingestion contracts, dependencies, PDF classifier (ING-01)
+- [ ] 02-02-PLAN.md — OCR runner, cache, ingest_pdf() orchestrator (ING-02, ING-05)
 
 ### Phase 3: Extraction
 **Goal**: The system extracts all available policy fields from any PDF using Claude API with validated structured output
@@ -83,12 +86,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
-| 2. Ingestion | 0/TBD | Not started | - |
+| 2. Ingestion | 0/2 | Not started | - |
 | 3. Extraction | 0/TBD | Not started | - |
 | 4. CLI & Batch | 0/TBD | Not started | - |
 | 5. Storage & API | 0/TBD | Not started | - |
