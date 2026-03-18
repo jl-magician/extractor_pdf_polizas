@@ -33,7 +33,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Storage & Output
 
-- [ ] **STOR-01**: All extracted data is persisted in a local SQLite database
+- [x] **STOR-01**: All extracted data is persisted in a local SQLite database
 - [ ] **STOR-02**: User can export extracted policy data as JSON
 - [ ] **STOR-03**: System exposes a REST API (FastAPI) for querying stored policies
 - [ ] **STOR-04**: API supports filtering by insurer, date range, agent, and policy type
@@ -98,7 +98,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
-| STOR-01 | Phase 5 | Pending |
+| STOR-01 | Phase 5 | Complete |
 | STOR-02 | Phase 5 | Pending |
 | STOR-03 | Phase 5 | Pending |
 | STOR-04 | Phase 5 | Pending |

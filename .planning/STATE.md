@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-18T23:01:55.414Z"
+stopped_at: Completed 05-storage-api 05-01-PLAN.md
+last_updated: "2026-03-18T23:19:35.016Z"
 last_activity: "2026-03-18 — Completed Phase 4 Plan 1: extraction pipeline usage tokens, model override, cli_helpers module"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
   percent: 90
 ---
 
@@ -56,6 +56,7 @@ Progress: [█████████░] 90%
 | Phase 03-extraction P02 | 5min | 2 tasks | 3 files |
 | Phase 04-cli P01 | 2min | 2 tasks | 5 files |
 | Phase 04-cli-batch P02 | 3min | 2 tasks | 3 files |
+| Phase 05-storage-api P01 | 8min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ Recent decisions affecting current work:
 - [Phase 04-cli P01]: is_already_extracted queries only Poliza.id with limit(1) — minimal DB overhead for idempotency check
 - [Phase 04-cli-batch]: Rich console writes to stderr; JSON output goes to stdout for clean pipe behavior
 - [Phase 04-cli-batch]: Batch exit code 1 on any failure — shell scripts and CI can detect incomplete runs
+- [Phase 05-storage-api]: confianza stored in campos_adicionales['confianza'] in ORM; orm_to_schema extracts back to top-level field — avoids new DB column while preserving round-trip fidelity
 
 ### Pending Todos
 
@@ -99,6 +101,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18T23:01:55.410Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-storage-api/05-CONTEXT.md
+Last session: 2026-03-18T23:19:35.013Z
+Stopped at: Completed 05-storage-api 05-01-PLAN.md
+Resume file: None

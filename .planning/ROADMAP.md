@@ -103,4 +103,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
 | 3. Extraction | 2/2 | Complete   | 2026-03-18 |
 | 4. CLI & Batch | 2/2 | Complete   | 2026-03-18 |
-| 5. Storage & API | 0/2 | Planning complete | - |
+| 5. Storage & API | 1/2 | In Progress|  |
