@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-extraction-01-PLAN.md
-last_updated: "2026-03-18T20:33:11.143Z"
+stopped_at: Completed 03-extraction-02-PLAN.md
+last_updated: "2026-03-18T20:36:49.339Z"
 last_activity: "2026-03-18 — Completed Phase 2 Plan 2: OCR runner, SHA-256 cache, ingest_pdf() orchestrator"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 80
 ---
 
@@ -53,6 +53,7 @@ Progress: [████████░░] 80%
 
 *Updated after each plan completion*
 | Phase 03-extraction P01 | 4 | 3 tasks | 6 files |
+| Phase 03-extraction P02 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 02-ingestion P02]: Cache hit updates file_path to current location informational-only; does not re-persist to DB
 - [Phase 03-extraction]: confianza field is plain dict (no strict validation) — Claude may occasionally return values outside high/medium/low; strict validation deferred to Phase 5 if storage requires it
 - [Phase 03-extraction]: Provenance fields excluded from Claude tool schema (source_file_hash, model_id, prompt_version, extracted_at set by code, not Claude)
+- [Phase 03-extraction]: extract_policy returns PolicyExtraction directly (not tuple) — tests contract; raw response stored in campos_adicionales['_raw_response']
+- [Phase 03-extraction]: extract_with_retry uses attempt loop (max_retries + 1 total) not recursion — cleaner retry budget tracking
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18T20:33:11.138Z
-Stopped at: Completed 03-extraction-01-PLAN.md
+Last session: 2026-03-18T20:36:49.336Z
+Stopped at: Completed 03-extraction-02-PLAN.md
 Resume file: None

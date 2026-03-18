@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Data model, Pydantic schemas, SQLite schema, project scaffolding (completed 2026-03-18)
 - [x] **Phase 2: Ingestion** - PDF type detection, OCR pipeline, result caching (completed 2026-03-18)
-- [ ] **Phase 3: Extraction** - Claude API integration, structured output, confidence scoring
+- [x] **Phase 3: Extraction** - Claude API integration, structured output, confidence scoring (completed 2026-03-18)
 - [ ] **Phase 4: CLI & Batch** - Single-file and batch CLI, progress, idempotency, cost tracking
 - [ ] **Phase 5: Storage & API** - SQLite persistence, JSON export, FastAPI query layer
 
@@ -95,6 +95,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
 | 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
-| 3. Extraction | 1/2 | In Progress|  |
+| 3. Extraction | 2/2 | Complete   | 2026-03-18 |
 | 4. CLI & Batch | 0/TBD | Not started | - |
 | 5. Storage & API | 0/TBD | Not started | - |
