@@ -17,11 +17,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Extraction
 
-- [ ] **EXT-01**: System extracts all available fields from a policy PDF using Claude API (contratante, asegurado(s), costo, coberturas, sumas aseguradas, compañía, vigencia, agente, forma de pago, deducibles, and any additional fields)
-- [ ] **EXT-02**: Extraction output is structured JSON validated against Pydantic schemas
+- [x] **EXT-01**: System extracts all available fields from a policy PDF using Claude API (contratante, asegurado(s), costo, coberturas, sumas aseguradas, compañía, vigencia, agente, forma de pago, deducibles, and any additional fields)
+- [x] **EXT-02**: Extraction output is structured JSON validated against Pydantic schemas
 - [ ] **EXT-03**: System automatically classifies the insurer and insurance type from the PDF content
-- [ ] **EXT-04**: Each extracted field includes a confidence score indicating extraction certainty
-- [ ] **EXT-05**: System handles PDFs in both Spanish and English
+- [x] **EXT-04**: Each extracted field includes a confidence score indicating extraction certainty
+- [x] **EXT-05**: System handles PDFs in both Spanish and English
 
 ### Data Model
 
@@ -88,11 +88,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ING-03 | Phase 4 | Pending |
 | ING-04 | Phase 4 | Pending |
 | ING-05 | Phase 2 | Complete |
-| EXT-01 | Phase 3 | Pending |
-| EXT-02 | Phase 3 | Pending |
+| EXT-01 | Phase 3 | Complete |
+| EXT-02 | Phase 3 | Complete |
 | EXT-03 | Phase 3 | Pending |
-| EXT-04 | Phase 3 | Pending |
-| EXT-05 | Phase 3 | Pending |
+| EXT-04 | Phase 3 | Complete |
+| EXT-05 | Phase 3 | Complete |
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Complete |
