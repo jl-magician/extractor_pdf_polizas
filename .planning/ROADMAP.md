@@ -13,7 +13,7 @@ Five phases that take the project from nothing to a fully operational CLI tool f
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Data model, Pydantic schemas, SQLite schema, project scaffolding (completed 2026-03-18)
-- [ ] **Phase 2: Ingestion** - PDF type detection, OCR pipeline, result caching
+- [x] **Phase 2: Ingestion** - PDF type detection, OCR pipeline, result caching (completed 2026-03-18)
 - [ ] **Phase 3: Extraction** - Claude API integration, structured output, confidence scoring
 - [ ] **Phase 4: CLI & Batch** - Single-file and batch CLI, progress, idempotency, cost tracking
 - [ ] **Phase 5: Storage & API** - SQLite persistence, JSON export, FastAPI query layer
@@ -46,8 +46,8 @@ Plans:
   4. A PDF that has already been processed returns the cached result without re-running OCR or paying API costs
 **Plans**: 2 plans
 Plans:
-- [ ] 02-01-PLAN.md — Ingestion contracts, dependencies, PDF classifier (ING-01)
-- [ ] 02-02-PLAN.md — OCR runner, cache, ingest_pdf() orchestrator (ING-02, ING-05)
+- [x] 02-01-PLAN.md — Ingestion contracts, dependencies, PDF classifier (ING-01)
+- [x] 02-02-PLAN.md — OCR runner, cache, ingest_pdf() orchestrator (ING-02, ING-05)
 
 ### Phase 3: Extraction
 **Goal**: The system extracts all available policy fields from any PDF using Claude API with validated structured output
@@ -91,7 +91,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete   | 2026-03-18 |
-| 2. Ingestion | 1/2 | In Progress|  |
+| 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
 | 3. Extraction | 0/TBD | Not started | - |
 | 4. CLI & Batch | 0/TBD | Not started | - |
 | 5. Storage & API | 0/TBD | Not started | - |

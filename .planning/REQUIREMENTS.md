@@ -10,10 +10,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Ingestion
 
 - [x] **ING-01**: System detects whether a PDF contains selectable text or is a scanned image
-- [ ] **ING-02**: System extracts text from scanned PDFs using OCR with Spanish and English support
+- [x] **ING-02**: System extracts text from scanned PDFs using OCR with Spanish and English support
 - [ ] **ING-03**: User can process a single PDF file via CLI
 - [ ] **ING-04**: User can process a directory of PDFs in batch via CLI
-- [ ] **ING-05**: System caches OCR results to avoid reprocessing the same PDF
+- [x] **ING-05**: System caches OCR results to avoid reprocessing the same PDF
 
 ### Extraction
 
@@ -84,10 +84,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ING-01 | Phase 2 | Complete |
-| ING-02 | Phase 2 | Pending |
+| ING-02 | Phase 2 | Complete |
 | ING-03 | Phase 4 | Pending |
 | ING-04 | Phase 4 | Pending |
-| ING-05 | Phase 2 | Pending |
+| ING-05 | Phase 2 | Complete |
 | EXT-01 | Phase 3 | Pending |
 | EXT-02 | Phase 3 | Pending |
 | EXT-03 | Phase 3 | Pending |
