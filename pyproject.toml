@@ -13,7 +13,12 @@ dependencies = [
     "pdf2image>=1.17.0",
     "loguru>=0.7",
     "anthropic>=0.86.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
 ]
+
+[project.scripts]
+poliza-extractor = "policy_extractor.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
