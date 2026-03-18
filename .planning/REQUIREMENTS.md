@@ -83,36 +83,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ING-01 | — | Pending |
-| ING-02 | — | Pending |
-| ING-03 | — | Pending |
-| ING-04 | — | Pending |
-| ING-05 | — | Pending |
-| EXT-01 | — | Pending |
-| EXT-02 | — | Pending |
-| EXT-03 | — | Pending |
-| EXT-04 | — | Pending |
-| EXT-05 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DATA-05 | — | Pending |
-| STOR-01 | — | Pending |
-| STOR-02 | — | Pending |
-| STOR-03 | — | Pending |
-| STOR-04 | — | Pending |
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| CLI-04 | — | Pending |
-| CLI-05 | — | Pending |
+| ING-01 | Phase 2 | Pending |
+| ING-02 | Phase 2 | Pending |
+| ING-03 | Phase 4 | Pending |
+| ING-04 | Phase 4 | Pending |
+| ING-05 | Phase 2 | Pending |
+| EXT-01 | Phase 3 | Pending |
+| EXT-02 | Phase 3 | Pending |
+| EXT-03 | Phase 3 | Pending |
+| EXT-04 | Phase 3 | Pending |
+| EXT-05 | Phase 3 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| STOR-01 | Phase 5 | Pending |
+| STOR-02 | Phase 5 | Pending |
+| STOR-03 | Phase 5 | Pending |
+| STOR-04 | Phase 5 | Pending |
+| CLI-01 | Phase 4 | Pending |
+| CLI-02 | Phase 4 | Pending |
+| CLI-03 | Phase 4 | Pending |
+| CLI-04 | Phase 4 | Pending |
+| CLI-05 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 after roadmap creation*
