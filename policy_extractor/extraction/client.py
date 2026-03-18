@@ -82,7 +82,7 @@ def extract_with_retry(
     ingestion_file_hash: str,
     model: str,
     max_retries: int = 1,
-) -> tuple[PolicyExtraction, dict] | None:
+) -> tuple[PolicyExtraction, dict, anthropic.types.Usage] | None:
     """Call the Anthropic API with one retry on ValidationError.
 
     On the first ValidationError, appends the error details to the prompt
@@ -97,7 +97,7 @@ def extract_with_retry(
         max_retries: Number of retries on validation failure (default 1).
 
     Returns:
-        Tuple of (PolicyExtraction, raw_response_dict) on success, or None on failure.
+        Tuple of (PolicyExtraction, raw_response_dict, usage) on success, or None on failure.
     """
     current_text = assembled_text
     attempts = max_retries + 1  # total attempts = retries + 1
@@ -106,7 +106,7 @@ def extract_with_retry(
         try:
             message = call_extraction_api(client, current_text, model)
             policy, raw_response = parse_and_validate(message, ingestion_file_hash)
-            return (policy, raw_response)
+            return (policy, raw_response, message.usage)
         except ValidationError as exc:
             logger.warning(
                 f"Extraction attempt {attempt + 1}/{attempts} failed validation: {exc}"
