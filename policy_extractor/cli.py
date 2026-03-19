@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import enum
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 
@@ -137,6 +139,68 @@ def extract(
 # ---------------------------------------------------------------------------
 
 
+def _process_single_pdf(
+    pdf: Path,
+    *,
+    model: str | None,
+    force: bool,
+    output_dir: Path | None,
+) -> dict:
+    """Process one PDF in its own thread. Creates its own DB session.
+
+    Returns dict with keys: status, name, input_tokens, output_tokens, retries, error.
+    """
+    session = SessionLocal()
+    try:
+        file_hash = compute_file_hash(pdf)
+        if not force and is_already_extracted(session, file_hash):
+            return {
+                "status": "skipped",
+                "name": pdf.name,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "retries": 0,
+                "error": None,
+            }
+
+        ingestion_result = ingest_pdf(pdf, session=session, force_reprocess=force)
+        policy, usage, rl_retries = extract_policy(ingestion_result, model=model)
+
+        if policy is None:
+            raise RuntimeError(f"extract_policy returned None for {pdf.name}")
+
+        # Persist
+        from policy_extractor.storage.writer import upsert_policy
+        upsert_policy(session, policy)
+
+        # Optional JSON output
+        if output_dir is not None:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / f"{pdf.stem}.json").write_text(
+                policy.model_dump_json(indent=2), encoding="utf-8"
+            )
+
+        return {
+            "status": "success",
+            "name": pdf.name,
+            "input_tokens": usage.input_tokens if usage else 0,
+            "output_tokens": usage.output_tokens if usage else 0,
+            "retries": rl_retries,
+            "error": None,
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "status": "failed",
+            "name": pdf.name,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "retries": 0,
+            "error": str(exc),
+        }
+    finally:
+        session.close()
+
+
 @app.command()
 def batch(
     folder: Path = typer.Argument(..., help="Directory containing PDF files"),
@@ -147,6 +211,9 @@ def batch(
     ),
     verbose: bool = typer.Option(False, "--verbose", help="Show detailed output"),
     quiet: bool = typer.Option(False, "--quiet", help="Suppress all output except JSON"),
+    concurrency: int = typer.Option(
+        3, "--concurrency", help="Number of concurrent workers (1 = sequential)", min=1, max=10
+    ),
 ) -> None:
     """Extract structured data from all PDFs in a directory.
 
@@ -171,79 +238,85 @@ def batch(
     skipped = 0
     total_input = 0
     total_output = 0
+    total_retries = 0
     failures: list[tuple[str, str]] = []
 
     start_time = time.time()
-    session = SessionLocal()
 
-    try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            MofNCompleteColumn(),
-            TextColumn("{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-            console=console,
-            disable=quiet,
-        ) as progress:
-            task_id = progress.add_task("Starting...", total=len(pdfs))
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TextColumn("{task.percentage:>3.0f}%"),
+        TimeElapsedColumn(),
+        console=console,
+        disable=quiet,
+    ) as progress:
+        task_id = progress.add_task("Batch processing...", total=len(pdfs))
 
+        if concurrency == 1:
+            # Sequential path -- identical behavior to pre-Phase 9
             for pdf in pdfs:
                 progress.update(task_id, description=f"[cyan]{pdf.name}[/cyan]")
+                result = _process_single_pdf(pdf, model=model, force=force, output_dir=output_dir)
 
-                try:
-                    # Idempotency check
-                    file_hash = compute_file_hash(pdf)
-                    if not force and is_already_extracted(session, file_hash):
-                        skipped += 1
-                        progress.advance(task_id)
-                        continue
-
-                    # Ingestion
-                    ingestion_result = ingest_pdf(pdf, session=session, force_reprocess=force)
-
-                    # Extraction
-                    policy, usage, _retries = extract_policy(ingestion_result, model=model)
-
-                    if policy is None:
-                        raise RuntimeError(f"extract_policy returned None for {pdf.name}")
-
+                if result["status"] == "success":
                     succeeded += 1
-
-                    if usage is not None:
-                        total_input += usage.input_tokens
-                        total_output += usage.output_tokens
-
-                    # Auto-persist to DB (STOR-01)
-                    try:
-                        from policy_extractor.storage.writer import upsert_policy
-                        upsert_policy(session, policy)
-                    except Exception as exc:  # noqa: BLE001
-                        console.print(
-                            f"[yellow]WARN[/yellow] Persistence failed for {pdf.name}: {exc}"
-                        )
-
-                    # Optionally write JSON
-                    if output_dir is not None:
-                        output_dir.mkdir(parents=True, exist_ok=True)
-                        out_file = output_dir / f"{pdf.stem}.json"
-                        out_file.write_text(policy.model_dump_json(indent=2), encoding="utf-8")
-
-                    if verbose:
-                        console.print(f"[green]OK[/green] {pdf.name}")
-
-                except Exception as exc:  # noqa: BLE001
+                    total_input += result["input_tokens"]
+                    total_output += result["output_tokens"]
+                elif result["status"] == "skipped":
+                    skipped += 1
+                elif result["status"] == "failed":
                     failed += 1
-                    failures.append((pdf.name, str(exc)))
+                    failures.append((result["name"], result["error"]))
+                total_retries += result["retries"]
+
+                if result["status"] == "failed":
                     console.print(
-                        f"[yellow]WARN[/yellow] {pdf.name}: {exc}", highlight=False
+                        f"[yellow]WARN[/yellow] {result['name']}: {result['error']}",
+                        highlight=False,
                     )
+                elif verbose and result["status"] == "success":
+                    console.print(f"[green]OK[/green] {result['name']}")
 
                 progress.advance(task_id)
+        else:
+            # Concurrent path
+            lock = threading.Lock()
 
-    finally:
-        session.close()
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                future_to_pdf = {
+                    executor.submit(
+                        _process_single_pdf, pdf,
+                        model=model, force=force, output_dir=output_dir,
+                    ): pdf
+                    for pdf in pdfs
+                }
+
+                for future in as_completed(future_to_pdf):
+                    result = future.result()
+                    progress.advance(task_id)
+
+                    with lock:
+                        if result["status"] == "success":
+                            succeeded += 1
+                            total_input += result["input_tokens"]
+                            total_output += result["output_tokens"]
+                        elif result["status"] == "skipped":
+                            skipped += 1
+                        elif result["status"] == "failed":
+                            failed += 1
+                            failures.append((result["name"], result["error"]))
+                        total_retries += result["retries"]
+
+                    if result["status"] == "failed":
+                        console.print(
+                            f"[yellow]WARN[/yellow] {result['name']}: {result['error']}",
+                            highlight=False,
+                        )
+                    elif verbose and result["status"] == "success":
+                        console.print(f"[green]OK[/green] {result['name']}")
 
     elapsed = time.time() - start_time
     total_cost = estimate_cost(effective_model, total_input, total_output)
@@ -259,6 +332,7 @@ def batch(
     summary_table.add_row("Succeeded", str(succeeded))
     summary_table.add_row("Failed", str(failed))
     summary_table.add_row("Skipped", str(skipped))
+    summary_table.add_row("Retries", str(total_retries))
     summary_table.add_row("Total Time", f"{elapsed:.1f}s")
     summary_table.add_row("Input Tokens", f"{total_input:,}")
     summary_table.add_row("Output Tokens", f"{total_output:,}")
