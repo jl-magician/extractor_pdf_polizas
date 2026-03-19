@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session  # noqa: F401 (used in integration tests below)
 from alembic.config import Config
 from alembic import command
 from alembic.runtime.migration import MigrationContext
@@ -113,6 +113,92 @@ def test_wal_mode_enabled_after_migration(tmp_path):
     command.upgrade(cfg, "head")
 
     engine = create_engine(f"sqlite:///{db_file}")
+    with engine.connect() as conn:
+        result = conn.execute(text("PRAGMA journal_mode")).scalar()
+        assert result == "wal"
+
+
+# --- Integration tests for init_db guard logic (Plan 02) ---
+
+from policy_extractor.storage.database import get_engine, init_db, _get_alembic_cfg  # noqa: E402
+
+
+def test_init_db_fresh_creates_and_stamps(tmp_path):
+    """Fresh DB: init_db() creates all tables and stamps at head revision."""
+    db_file = str(tmp_path / "fresh.db")
+    init_db(db_file)
+
+    engine = create_engine(f"sqlite:///{db_file}")
+    insp = inspect(engine)
+    table_names = insp.get_table_names()
+
+    assert "polizas" in table_names
+    assert "alembic_version" in table_names
+
+    with engine.connect() as conn:
+        ctx = MigrationContext.configure(conn)
+        assert ctx.get_current_revision() is not None
+
+
+def test_init_db_existing_db_auto_migrates(tmp_path):
+    """Existing DB stamped at 001: init_db() auto-migrates to head and preserves data."""
+    db_file = tmp_path / "existing.db"
+    db_path = str(db_file)
+
+    # Build schema and insert a row
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(Poliza(numero_poliza="GUARD-001", aseguradora="Guard SA"))
+        session.commit()
+    engine.dispose()
+
+    # Stamp at 001 to simulate a pre-002 existing DB
+    cfg = _get_alembic_cfg(db_path)
+    command.stamp(cfg, "001")
+
+    # init_db should detect alembic_version and run _auto_migrate to apply 002
+    init_db(db_path)
+
+    engine2 = create_engine(f"sqlite:///{db_path}")
+    # Row must still be present
+    with Session(engine2) as session:
+        poliza = session.query(Poliza).filter_by(numero_poliza="GUARD-001").first()
+        assert poliza is not None
+        assert poliza.aseguradora == "Guard SA"
+
+    # Evaluation columns must exist after 002
+    insp = inspect(engine2)
+    col_names = [c["name"] for c in insp.get_columns("polizas")]
+    assert "evaluation_score" in col_names
+    assert "evaluation_json" in col_names
+    assert "evaluated_at" in col_names
+    assert "evaluated_model_id" in col_names
+
+
+def test_auto_migrate_creates_backup(tmp_path):
+    """When pending migrations exist, init_db() creates a .bak backup file."""
+    db_file = tmp_path / "migrate.db"
+    db_path = str(db_file)
+
+    # Build schema and stamp at 001 (so 002 is pending)
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    engine.dispose()
+
+    cfg = _get_alembic_cfg(db_path)
+    command.stamp(cfg, "001")
+
+    # Trigger auto-migrate via init_db
+    init_db(db_path)
+
+    # Backup must exist
+    assert Path(db_path + ".bak").exists()
+
+
+def test_get_engine_enables_wal(tmp_path):
+    """get_engine() sets SQLite WAL journal mode on the returned engine."""
+    engine = get_engine(str(tmp_path / "wal_test.db"))
     with engine.connect() as conn:
         result = conn.execute(text("PRAGMA journal_mode")).scalar()
         assert result == "wal"
