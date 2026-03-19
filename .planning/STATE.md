@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 09-async-batch/09-01-PLAN.md
-last_updated: "2026-03-19T19:25:25.872Z"
+stopped_at: Completed 09-async-batch/09-02-PLAN.md
+last_updated: "2026-03-19T19:30:04.854Z"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -41,6 +41,7 @@ Plan: 2 of 2
 | Phase 08-pdf-upload-api P01 | 4m | 2 tasks | 4 files |
 | Phase 08-pdf-upload-api P02 | 3min | 1 tasks | 2 files |
 | Phase 09-async-batch P01 | 10m | 2 tasks | 5 files |
+| Phase 09-async-batch P02 | 3m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,9 @@ Recent decisions affecting current work:
 - [Phase 08-pdf-upload-api]: Tests call _run_extraction directly and synchronously -- no thread spawning needed, isolates pipeline logic from HTTP layer
 - [Phase 09-01]: Rate limit retry placed INSIDE extract_with_retry wrapping call_extraction_api to prevent broad except Exception swallowing transient errors before retry
 - [Phase 09-01]: extract_with_retry returns 4-tuple (policy, raw_response, usage, rl_retries); extract_policy returns 3-tuple threading count to CLI callers
+- [Phase 09-async-batch]: ThreadPoolExecutor with concurrency==1 bypass: sequential path skips thread pool entirely
+- [Phase 09-async-batch]: Per-worker SessionLocal(): each _process_single_pdf() creates and closes its own session
+- [Phase 09-async-batch]: threading.Lock guards counter aggregation in as_completed loop for thread-safe totals
 
 ### Pending Todos
 
@@ -96,7 +100,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T19:25:25.869Z
-Stopped at: Completed 09-async-batch/09-01-PLAN.md
+Last session: 2026-03-19T19:30:04.850Z
+Stopped at: Completed 09-async-batch/09-02-PLAN.md
 Resume file: None
 Next action: `/gsd:execute-phase` for next phase (08+)

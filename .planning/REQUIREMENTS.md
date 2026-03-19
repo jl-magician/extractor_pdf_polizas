@@ -32,11 +32,11 @@ Requirements for v1.1 API & Quality release. Each maps to roadmap phases.
 
 ### Async Batch Processing
 
-- [ ] **ASYNC-01**: Batch processing runs extractions concurrently with configurable concurrency limit
-- [ ] **ASYNC-02**: SQLite WAL mode enabled for concurrent write safety
-- [ ] **ASYNC-03**: Each concurrent worker uses its own database session
+- [x] **ASYNC-01**: Batch processing runs extractions concurrently with configurable concurrency limit
+- [x] **ASYNC-02**: SQLite WAL mode enabled for concurrent write safety
+- [x] **ASYNC-03**: Each concurrent worker uses its own database session
 - [x] **ASYNC-04**: Rate limit errors from Anthropic API trigger automatic retry with exponential backoff
-- [ ] **ASYNC-05**: CLI `batch` command accepts `--concurrency N` flag
+- [x] **ASYNC-05**: CLI `batch` command accepts `--concurrency N` flag
 
 ### Quality Evaluation
 
@@ -101,11 +101,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-04 | Phase 8 | Complete |
 | API-05 | Phase 8 | Complete |
 | API-06 | Phase 8 | Complete |
-| ASYNC-01 | Phase 9 | Pending |
-| ASYNC-02 | Phase 9 | Pending |
-| ASYNC-03 | Phase 9 | Pending |
+| ASYNC-01 | Phase 9 | Complete |
+| ASYNC-02 | Phase 9 | Complete |
+| ASYNC-03 | Phase 9 | Complete |
 | ASYNC-04 | Phase 9 | Complete |
-| ASYNC-05 | Phase 9 | Pending |
+| ASYNC-05 | Phase 9 | Complete |
 | QAL-01 | Phase 10 | Pending |
 | QAL-02 | Phase 10 | Pending |
 | QAL-03 | Phase 10 | Pending |
