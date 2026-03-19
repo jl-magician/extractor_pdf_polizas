@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: v1.1
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 07-export Plan 01 complete
-last_updated: "2026-03-19T17:05:00.000Z"
+status: in-progress
+stopped_at: Phase 07-export Plan 02 complete
+last_updated: "2026-03-19T17:20:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 07 — export
+**Current focus:** Phase 07 — export (COMPLETE)
 
 ## Current Position
 
-Phase: 07 (export) — EXECUTING
-Plan: 2 of 2
+Phase: 07 (export) — COMPLETE
+Plan: 2 of 2 — COMPLETE
 
 ## Performance Metrics
 
@@ -37,6 +37,7 @@ Plan: 2 of 2
 | Phase 06-migrations P01 | — | 2 tasks | 8 files |
 | Phase 06-migrations P02 | 2m | 2 tasks | 2 files |
 | Phase 07-export P01 | 12m | 1 task (TDD) | 3 files |
+| Phase 07-export P02 | 18m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,10 @@ Recent decisions affecting current work:
 - [Phase 07-01]: number_format applied per-cell after ws.append() — column-level format before append has no effect in openpyxl 3.x
 - [Phase 07-01]: Decimal-to-float coercion via _cell_value() helper — openpyxl writes Decimal as string otherwise
 - [Phase 07-01]: auto_filter.ref only set when ws.max_row > 1 — ws.dimensions returns "A1:A1" on empty sheets
+- [Phase 07-02]: ExportFormat enum at module level (not inside function) — importable and testable externally
+- [Phase 07-02]: Spanish flags merged with English compat flags using "or" — Spanish takes precedence
+- [Phase 07-02]: export_xlsx/export_csv lazy-imported inside fmt branches — avoids openpyxl import on JSON-only usage
+- [Phase 07-02]: --output required check before DB query — fast fail without unnecessary I/O
 
 ### Pending Todos
 
@@ -82,7 +87,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T17:05:00.000Z
-Stopped at: Completed 07-export-01-PLAN.md
-Resume file: .planning/phases/07-export/07-02-PLAN.md
-Next action: `/gsd:execute-phase` for 07-02 (CLI wiring)
+Last session: 2026-03-19T17:20:00.000Z
+Stopped at: Completed 07-export-02-PLAN.md (Phase 07 complete)
+Resume file: next phase plan file
+Next action: `/gsd:execute-phase` for next phase (08+)

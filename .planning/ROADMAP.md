@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **v1.1 Phases (current milestone):**
 - [x] **Phase 6: Migrations** - Alembic initialized with SQLite batch mode, baseline migration, evaluation columns migration (completed 2026-03-19)
-- [ ] **Phase 7: Export** - Excel and CSV export from stored polizas with multi-sheet workbook and correct numeric types
+- [x] **Phase 7: Export** - Excel and CSV export from stored polizas with multi-sheet workbook and correct numeric types (completed 2026-03-19)
 - [ ] **Phase 8: PDF Upload API** - HTTP endpoint to POST a PDF and receive async extraction results with job polling
 - [ ] **Phase 9: Async Batch** - Concurrent batch processing with configurable concurrency, WAL mode, and rate limit backoff
 - [ ] **Phase 10: Quality Evaluator** - Opt-in Sonnet evaluation of Haiku extractions with stored scores and CLI/API flags
@@ -56,7 +56,7 @@ Plans:
   3. Excel and CSV exports accept the same `--aseguradora`, `--desde`, and `--hasta` filter flags as the existing JSON export
   4. Opening the Excel file in a spreadsheet tool shows prima_total and other monetary values as numbers (not text), enabling SUM formulas to work correctly
   5. Date columns in the Excel file are formatted as dates, not strings
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
 - [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
@@ -133,7 +133,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 4. CLI & Batch | 2/2 | Complete | 2026-03-18 |
 | 5. Storage & API | 2/2 | Complete | 2026-03-18 |
 | 6. Migrations | 2/2 | Complete   | 2026-03-19 |
-| 7. Export | 1/2 | In Progress|  |
+| 7. Export | 2/2 | Complete   | 2026-03-19 |
 | 8. PDF Upload API | 0/? | Not started | - |
 | 9. Async Batch | 0/? | Not started | - |
 | 10. Quality Evaluator | 0/? | Not started | - |
