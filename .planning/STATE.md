@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-19T16:04:19.149Z"
-last_activity: 2026-03-18 — Roadmap created for v1.1 milestone (phases 6-11)
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-19T16:08:26.000Z"
+last_activity: 2026-03-19 — Phase 06 Plan 02 complete — runtime migration guard + WAL mode
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 
 ## Current Position
 
-Phase: 6 (Migrations) — Not started
-Plan: —
-Status: Roadmap complete, ready to plan Phase 6
-Last activity: 2026-03-18 — Roadmap created for v1.1 milestone (phases 6-11)
+Phase: 6 (Migrations) — Complete
+Plan: 2/2 complete
+Status: Phase 06 all plans executed — ready for Phase 7
+Last activity: 2026-03-19 — Phase 06-02 complete — runtime migration guard, WAL mode, 9 migration tests
 
 ```
-v1.1 Progress: [                              ] 0/6 phases
+v1.1 Progress: [#####                         ] 1/6 phases
 ```
 
 ## Performance Metrics
@@ -41,7 +41,8 @@ v1.1 Progress: [                              ] 0/6 phases
 | Test count | 153 passing | 153 passing (start) |
 | Requirements shipped | 24/24 | 0/28 |
 | Phases complete | 5/5 | 0/6 |
-| Phase 06-migrations P01 | 9 | 2 tasks | 8 files |
+| Phase 06-migrations P01 | — | 2 tasks | 8 files |
+| Phase 06-migrations P02 | 2m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,9 @@ Recent decisions affecting current work:
 - [Phase 06-01]: env.py URL isolation: only apply settings.DB_PATH fallback when alembic.ini has placeholder URL
 - [Phase 06-01]: Baseline migration 001 uses separate engine for create_all due to SQLAlchemy 2.0 autobegin transaction isolation
 - [Phase 06-01]: Migration 002 guards add_column with inspector check to prevent duplicate column error on fresh DBs
+- [Phase 06-02]: _get_alembic_cfg resolves alembic.ini via Path(__file__).parent.parent.parent to work from any CWD
+- [Phase 06-02]: Lazy alembic imports inside functions avoid overhead when migration not needed
+- [Phase 06-02]: Backup created only when current_rev != head_rev to avoid unnecessary I/O on up-to-date DBs
 
 ### Pending Todos
 
@@ -76,11 +80,11 @@ Recent decisions affecting current work:
 
 - [v1.0 carry-over]: Tesseract + Spanish language pack must be installed on Windows for OCR tests
 - Async batch design needs empirical testing of Claude API rate limits at account tier
-- WAL mode migration on existing polizas.db: requires one-time PRAGMA call Alembic does not manage
+- WAL mode migration on existing polizas.db: RESOLVED — get_engine() now sets WAL on every connection
 
 ## Session Continuity
 
-Last session: 2026-03-19T16:04:19.146Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-19T16:08:26.000Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
-Next action: `/gsd:plan-phase 6`
+Next action: `/gsd:plan-phase 7`

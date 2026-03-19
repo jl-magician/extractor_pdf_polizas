@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Storage & API** - SQLite persistence, JSON export, FastAPI query layer (completed 2026-03-18)
 
 **v1.1 Phases (current milestone):**
-- [ ] **Phase 6: Migrations** - Alembic initialized with SQLite batch mode, baseline migration, evaluation columns migration
+- [x] **Phase 6: Migrations** - Alembic initialized with SQLite batch mode, baseline migration, evaluation columns migration (completed 2026-03-19)
 - [ ] **Phase 7: Export** - Excel and CSV export from stored polizas with multi-sheet workbook and correct numeric types
 - [ ] **Phase 8: PDF Upload API** - HTTP endpoint to POST a PDF and receive async extraction results with job polling
 - [ ] **Phase 9: Async Batch** - Concurrent batch processing with configurable concurrency, WAL mode, and rate limit backoff
@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Running `alembic upgrade head` on the existing production database stamps it without altering any table or losing any data
   3. After migration 002 runs, the polizas table has evaluation_score and evaluation_json columns
   4. `alembic current` shows the correct head revision on any database (new or existing)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 06-01-PLAN.md — Alembic infrastructure, migration files (001+002), ORM model updates, migration chain tests
 - [ ] 06-02-PLAN.md — database.py guard logic (init_db + auto-migrate + WAL), integration tests
@@ -117,7 +117,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 3. Extraction | 2/2 | Complete | 2026-03-18 |
 | 4. CLI & Batch | 2/2 | Complete | 2026-03-18 |
 | 5. Storage & API | 2/2 | Complete | 2026-03-18 |
-| 6. Migrations | 1/2 | In Progress|  |
+| 6. Migrations | 2/2 | Complete   | 2026-03-19 |
 | 7. Export | 0/? | Not started | - |
 | 8. PDF Upload API | 0/? | Not started | - |
 | 9. Async Batch | 0/? | Not started | - |
