@@ -557,3 +557,189 @@ def test_serve_subcommand_registered():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "serve" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Tests -- rate limit retry (Phase 9)
+# ---------------------------------------------------------------------------
+
+import anthropic as _anthropic
+from policy_extractor.extraction.client import extract_with_retry
+
+PATCH_CALL_API = "policy_extractor.extraction.client.call_extraction_api"
+PATCH_TIME = "policy_extractor.extraction.client.time"
+PATCH_RANDOM = "policy_extractor.extraction.client.random"
+
+
+def _make_mock_message():
+    """Return a mock anthropic.types.Message with valid tool_use content."""
+    msg = MagicMock()
+    content_block = MagicMock()
+    content_block.type = "tool_use"
+    content_block.input = {
+        "numero_poliza": "TEST-001",
+        "aseguradora": "Test",
+    }
+    msg.content = [content_block]
+    msg.model = "claude-haiku-4-5-20251001"
+    msg.usage = MagicMock()
+    msg.usage.input_tokens = 100
+    msg.usage.output_tokens = 50
+    return msg
+
+
+def _make_rate_limit_error():
+    return _anthropic.RateLimitError(
+        message="rate limited",
+        response=MagicMock(status_code=429, headers={}),
+        body=None,
+    )
+
+
+def _make_internal_server_error():
+    return _anthropic.InternalServerError(
+        message="server error",
+        response=MagicMock(status_code=500, headers={}),
+        body=None,
+    )
+
+
+def _make_connection_error():
+    return _anthropic.APIConnectionError(request=MagicMock())
+
+
+def _make_bad_request_error():
+    return _anthropic.BadRequestError(
+        message="bad request",
+        response=MagicMock(status_code=400, headers={}),
+        body=None,
+    )
+
+
+def test_rate_limit_retry_succeeds():
+    """RateLimitError on first call; second call succeeds. Returns valid result with retry count 1."""
+    mock_client = MagicMock(spec=_anthropic.Anthropic)
+    mock_message = _make_mock_message()
+
+    with (
+        patch(PATCH_CALL_API, side_effect=[_make_rate_limit_error(), mock_message]),
+        patch(PATCH_TIME) as mock_time,
+        patch(PATCH_RANDOM) as mock_random,
+    ):
+        mock_time.sleep = MagicMock()
+        mock_random.uniform = MagicMock(return_value=0.5)
+
+        result = extract_with_retry(
+            mock_client, "text", "hash123", "claude-haiku-4-5-20251001"
+        )
+
+    assert result is not None, "Expected a result tuple, got None"
+    assert len(result) == 4, f"Expected 4-tuple, got {len(result)}-tuple"
+    policy, raw_response, usage, rl_retries = result
+    assert policy is not None
+    assert rl_retries == 1, f"Expected 1 rate limit retry, got {rl_retries}"
+    mock_time.sleep.assert_called_once()
+
+
+def test_rate_limit_retry_exhausted():
+    """RateLimitError on all 4 attempts exhausts retries; returns None (caught by except Exception)."""
+    mock_client = MagicMock(spec=_anthropic.Anthropic)
+
+    with (
+        patch(
+            PATCH_CALL_API,
+            side_effect=[
+                _make_rate_limit_error(),
+                _make_rate_limit_error(),
+                _make_rate_limit_error(),
+                _make_rate_limit_error(),
+            ],
+        ),
+        patch(PATCH_TIME) as mock_time,
+        patch(PATCH_RANDOM) as mock_random,
+    ):
+        mock_time.sleep = MagicMock()
+        mock_random.uniform = MagicMock(return_value=0.5)
+
+        result = extract_with_retry(
+            mock_client, "text", "hash123", "claude-haiku-4-5-20251001"
+        )
+
+    assert result is None, "Expected None after exhausting all retries"
+    # sleep called 3 times (one per backoff wait, before 4th attempt which raises)
+    assert mock_time.sleep.call_count == 3
+
+
+def test_no_retry_on_4xx():
+    """BadRequestError (4xx non-429) must NOT trigger retry — only 1 API call made."""
+    mock_client = MagicMock(spec=_anthropic.Anthropic)
+
+    with (
+        patch(PATCH_CALL_API, side_effect=[_make_bad_request_error()]) as mock_api,
+        patch(PATCH_TIME) as mock_time,
+        patch(PATCH_RANDOM) as mock_random,
+    ):
+        mock_time.sleep = MagicMock()
+        mock_random.uniform = MagicMock(return_value=0.5)
+
+        result = extract_with_retry(
+            mock_client, "text", "hash123", "claude-haiku-4-5-20251001"
+        )
+
+    assert result is None, "Expected None for non-retryable 4xx error"
+    assert mock_api.call_count == 1, f"Expected 1 call, got {mock_api.call_count}"
+    mock_time.sleep.assert_not_called()
+
+
+def test_rate_limit_retry_with_server_error():
+    """InternalServerError (5xx) on first call; second call succeeds. Retry count = 1."""
+    mock_client = MagicMock(spec=_anthropic.Anthropic)
+    mock_message = _make_mock_message()
+
+    with (
+        patch(
+            PATCH_CALL_API,
+            side_effect=[_make_internal_server_error(), mock_message],
+        ),
+        patch(PATCH_TIME) as mock_time,
+        patch(PATCH_RANDOM) as mock_random,
+    ):
+        mock_time.sleep = MagicMock()
+        mock_random.uniform = MagicMock(return_value=0.5)
+
+        result = extract_with_retry(
+            mock_client, "text", "hash123", "claude-haiku-4-5-20251001"
+        )
+
+    assert result is not None, "Expected valid result after 5xx retry"
+    policy, raw_response, usage, rl_retries = result
+    assert policy is not None
+    assert rl_retries == 1, f"Expected 1 retry, got {rl_retries}"
+    mock_time.sleep.assert_called_once()
+
+
+def test_rate_limit_retry_with_connection_error():
+    """APIConnectionError on first call; second call succeeds. Retry count = 1."""
+    mock_client = MagicMock(spec=_anthropic.Anthropic)
+    mock_message = _make_mock_message()
+
+    with (
+        patch(
+            PATCH_CALL_API,
+            side_effect=[_make_connection_error(), mock_message],
+        ),
+        patch(PATCH_TIME) as mock_time,
+        patch(PATCH_RANDOM) as mock_random,
+    ):
+        mock_time.sleep = MagicMock()
+        mock_random.uniform = MagicMock(return_value=0.5)
+
+        result = extract_with_retry(
+            mock_client, "text", "hash123", "claude-haiku-4-5-20251001"
+        )
+
+    assert result is not None, "Expected valid result after connection error retry"
+    policy, raw_response, usage, rl_retries = result
+    assert policy is not None
+    assert rl_retries == 1, f"Expected 1 retry, got {rl_retries}"
+    mock_time.sleep.assert_called_once()
