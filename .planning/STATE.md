@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 12-02-PLAN.md
-last_updated: "2026-03-19T23:30:27.685Z"
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-03-19T23:30:38.561Z"
 progress:
   total_phases: 7
   completed_phases: 7
@@ -104,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 11-regression-suite]: _discover_fixtures() returns [] when golden dir missing — empty parametrize skips gracefully in pytest 8.4.2
 - [Phase 11-regression-suite]: _source_pdf stored as file.name (not full path) so fixture is portable across machines
 - [Phase 12]: nyquist_compliant frontmatter flip is metadata-only; requirements_completed uses underscore key convention in new SUMMARY files
+- [Phase 12-01]: _values_equal uses math.isclose(rel_tol=1e-9) for Decimal/float numeric comparison — tight tolerance forgives only float representation artifacts, not truly different values; strings and other types use strict equality
 
 ### Pending Todos
 
@@ -119,7 +120,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T23:32:00.000Z
-Stopped at: Completed 12-02-PLAN.md
+Last session: 2026-03-19T23:30:38.558Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
 Next action: Phase 12 complete — v1.1 milestone-polish done
