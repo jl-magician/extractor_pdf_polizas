@@ -9,7 +9,7 @@ Covers:
 """
 import io
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -221,3 +221,219 @@ def test_job_expiry_purges_expired():
     # Polling should purge and return 404
     response = client.get(f"/jobs/{job_id}")
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Pipeline integration tests (Phase 8 Plan 02)
+# Tests call _run_extraction directly (synchronously) with mocked pipeline
+# ---------------------------------------------------------------------------
+
+
+@patch("policy_extractor.storage.database.SessionLocal")
+@patch("policy_extractor.storage.writer.orm_to_schema")
+@patch("policy_extractor.storage.writer.upsert_policy")
+@patch("policy_extractor.extraction.extract_policy")
+@patch("policy_extractor.ingestion.ingest_pdf")
+@patch("policy_extractor.cli_helpers.is_already_extracted", return_value=False)
+@patch("policy_extractor.ingestion.cache.compute_file_hash", return_value="abc123")
+def test_pipeline_success_sets_complete(
+    mock_hash, mock_already, mock_ingest, mock_extract, mock_upsert, mock_orm, mock_session, tmp_path
+):
+    """Successful pipeline sets job status=complete with result dict."""
+    from policy_extractor.api import upload
+
+    pdf_file = tmp_path / "test.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    job = upload._create_job("test.pdf")
+
+    fake_extraction = MagicMock()
+    fake_extraction.model_dump.return_value = {"numero_poliza": "POL-001"}
+    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_session.return_value = MagicMock()
+
+    upload._run_extraction(job["job_id"], pdf_file, None, False)
+
+    result_job = upload._get_job(job["job_id"])
+    assert result_job["status"] == "complete"
+    assert result_job["result"] is not None
+    mock_ingest.assert_called_once()
+    mock_extract.assert_called_once()
+    mock_upsert.assert_called_once()
+
+
+@patch("policy_extractor.storage.database.SessionLocal")
+@patch("policy_extractor.storage.writer.orm_to_schema")
+@patch("policy_extractor.storage.writer.upsert_policy")
+@patch("policy_extractor.extraction.extract_policy")
+@patch("policy_extractor.ingestion.ingest_pdf")
+@patch("policy_extractor.cli_helpers.is_already_extracted", return_value=False)
+@patch("policy_extractor.ingestion.cache.compute_file_hash", return_value="abc123")
+def test_pipeline_failure_sets_failed(
+    mock_hash, mock_already, mock_ingest, mock_extract, mock_upsert, mock_orm, mock_session, tmp_path
+):
+    """When extract_policy raises, job status becomes failed with error message."""
+    from policy_extractor.api import upload
+
+    pdf_file = tmp_path / "fail.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    job = upload._create_job("fail.pdf")
+
+    mock_extract.side_effect = RuntimeError("Claude API error")
+    mock_session.return_value.__enter__ = lambda s: s
+    mock_session.return_value.__exit__ = lambda s, *a: None
+
+    upload._run_extraction(job["job_id"], pdf_file, None, False)
+
+    result_job = upload._get_job(job["job_id"])
+    assert result_job["status"] == "failed"
+    assert "Claude API error" in result_job["error"]
+
+
+@patch("policy_extractor.storage.database.SessionLocal")
+@patch("policy_extractor.storage.writer.orm_to_schema")
+@patch("policy_extractor.storage.writer.upsert_policy")
+@patch("policy_extractor.extraction.extract_policy")
+@patch("policy_extractor.ingestion.ingest_pdf")
+@patch("policy_extractor.cli_helpers.is_already_extracted", return_value=False)
+@patch("policy_extractor.ingestion.cache.compute_file_hash", return_value="abc123")
+def test_pdf_cleanup_on_success(
+    mock_hash, mock_already, mock_ingest, mock_extract, mock_upsert, mock_orm, mock_session, tmp_path
+):
+    """After successful extraction, the uploaded PDF is deleted from disk."""
+    from policy_extractor.api import upload
+
+    pdf_file = tmp_path / "cleanup.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    job = upload._create_job("cleanup.pdf")
+
+    fake_extraction = MagicMock()
+    fake_extraction.model_dump.return_value = {"numero_poliza": "POL-002"}
+    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_session.return_value = MagicMock()
+
+    upload._run_extraction(job["job_id"], pdf_file, None, False)
+
+    assert not pdf_file.exists(), "PDF should be deleted after successful extraction"
+
+
+@patch("policy_extractor.storage.database.SessionLocal")
+@patch("policy_extractor.storage.writer.orm_to_schema")
+@patch("policy_extractor.storage.writer.upsert_policy")
+@patch("policy_extractor.extraction.extract_policy")
+@patch("policy_extractor.ingestion.ingest_pdf")
+@patch("policy_extractor.cli_helpers.is_already_extracted", return_value=False)
+@patch("policy_extractor.ingestion.cache.compute_file_hash", return_value="abc123")
+def test_pdf_kept_on_failure(
+    mock_hash, mock_already, mock_ingest, mock_extract, mock_upsert, mock_orm, mock_session, tmp_path
+):
+    """After failed extraction, the uploaded PDF is kept on disk for debugging."""
+    from policy_extractor.api import upload
+
+    pdf_file = tmp_path / "kept.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    job = upload._create_job("kept.pdf")
+
+    mock_extract.side_effect = RuntimeError("Extraction failed")
+    mock_session.return_value = MagicMock()
+
+    upload._run_extraction(job["job_id"], pdf_file, None, False)
+
+    assert pdf_file.exists(), "PDF should be kept after failed extraction"
+
+
+@patch("policy_extractor.storage.database.SessionLocal")
+@patch("policy_extractor.storage.writer.orm_to_schema")
+@patch("policy_extractor.cli_helpers.is_already_extracted", return_value=True)
+@patch("policy_extractor.ingestion.ingest_pdf")
+@patch("policy_extractor.extraction.extract_policy")
+@patch("policy_extractor.ingestion.cache.compute_file_hash", return_value="abc123")
+def test_idempotent_upload_skips_extraction(
+    mock_hash, mock_extract, mock_ingest, mock_already, mock_orm, mock_session, tmp_path
+):
+    """When hash already extracted and force=False, extraction is skipped."""
+    from policy_extractor.api import upload
+
+    pdf_file = tmp_path / "idempotent.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    job = upload._create_job("idempotent.pdf")
+
+    # Mock the DB session + query chain for the selectinload path
+    fake_poliza = MagicMock()
+    mock_session_instance = MagicMock()
+    mock_session.return_value = mock_session_instance
+    mock_session_instance.execute.return_value.scalar_one.return_value = fake_poliza
+
+    fake_schema = MagicMock()
+    fake_schema.model_dump.return_value = {"numero_poliza": "POL-EXISTING"}
+    mock_orm.return_value = fake_schema
+
+    upload._run_extraction(job["job_id"], pdf_file, None, False)
+
+    mock_ingest.assert_not_called()
+    mock_extract.assert_not_called()
+    result_job = upload._get_job(job["job_id"])
+    assert result_job["status"] == "complete"
+    assert result_job["result"] is not None
+
+
+@patch("policy_extractor.storage.database.SessionLocal")
+@patch("policy_extractor.storage.writer.orm_to_schema")
+@patch("policy_extractor.storage.writer.upsert_policy")
+@patch("policy_extractor.extraction.extract_policy")
+@patch("policy_extractor.ingestion.ingest_pdf")
+@patch("policy_extractor.cli_helpers.is_already_extracted", return_value=True)
+@patch("policy_extractor.ingestion.cache.compute_file_hash", return_value="abc123")
+def test_force_upload_reprocesses(
+    mock_hash, mock_already, mock_ingest, mock_extract, mock_upsert, mock_orm, mock_session, tmp_path
+):
+    """When force=True, extraction runs even if hash already exists in DB."""
+    from policy_extractor.api import upload
+
+    pdf_file = tmp_path / "force.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    job = upload._create_job("force.pdf")
+
+    fake_extraction = MagicMock()
+    fake_extraction.model_dump.return_value = {"numero_poliza": "POL-FORCED"}
+    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_session.return_value = MagicMock()
+
+    upload._run_extraction(job["job_id"], pdf_file, None, True)
+
+    mock_ingest.assert_called_once()
+    # Verify force_reprocess=True was passed to ingest_pdf
+    call_kwargs = mock_ingest.call_args
+    assert call_kwargs.kwargs.get("force_reprocess") is True or (
+        len(call_kwargs.args) >= 3 and call_kwargs.args[2] is True
+    )
+
+
+@patch("policy_extractor.storage.database.SessionLocal")
+@patch("policy_extractor.storage.writer.orm_to_schema")
+@patch("policy_extractor.storage.writer.upsert_policy")
+@patch("policy_extractor.extraction.extract_policy")
+@patch("policy_extractor.ingestion.ingest_pdf")
+@patch("policy_extractor.cli_helpers.is_already_extracted", return_value=False)
+@patch("policy_extractor.ingestion.cache.compute_file_hash", return_value="abc123")
+def test_extraction_thread_creates_own_session(
+    mock_hash, mock_already, mock_ingest, mock_extract, mock_upsert, mock_orm, mock_session, tmp_path
+):
+    """Verify SessionLocal() is called inside _run_extraction and session is closed."""
+    from policy_extractor.api import upload
+
+    pdf_file = tmp_path / "session_test.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    job = upload._create_job("session_test.pdf")
+
+    fake_extraction = MagicMock()
+    fake_extraction.model_dump.return_value = {"numero_poliza": "POL-SESSION"}
+    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_session_instance = MagicMock()
+    mock_session.return_value = mock_session_instance
+
+    upload._run_extraction(job["job_id"], pdf_file, None, False)
+
+    # SessionLocal() must be called once inside _run_extraction
+    mock_session.assert_called_once()
+    # Session must be closed in the finally block
+    mock_session_instance.close.assert_called_once()
