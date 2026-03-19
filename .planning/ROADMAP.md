@@ -71,7 +71,7 @@ Plans:
   3. The uploaded PDF triggers the complete pipeline (ingest -> extract -> persist) and the result is queryable via existing CRUD endpoints
   4. If the server is restarted, uploading the same PDF again succeeds and produces a result (job_store loss on restart is documented, not a crash)
   5. After extraction completes, no temporary PDF files remain on disk
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 08-01-PLAN.md — Upload module (upload.py) with job store, routes, validation, python-multipart dep, unit tests
 - [ ] 08-02-PLAN.md — Pipeline integration tests for background extraction, cleanup, idempotency
@@ -134,7 +134,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 5. Storage & API | 2/2 | Complete | 2026-03-18 |
 | 6. Migrations | 2/2 | Complete   | 2026-03-19 |
 | 7. Export | 2/2 | Complete   | 2026-03-19 |
-| 8. PDF Upload API | 0/2 | Not started | - |
+| 8. PDF Upload API | 1/2 | In Progress|  |
 | 9. Async Batch | 0/? | Not started | - |
 | 10. Quality Evaluator | 0/? | Not started | - |
 | 11. Regression Suite | 0/? | Not started | - |

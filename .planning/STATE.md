@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 8 context gathered
-last_updated: "2026-03-19T17:57:52.706Z"
+status: in-progress
+stopped_at: Completed 08-pdf-upload-api-01-PLAN.md
+last_updated: "2026-03-19T18:19:30.180Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State
@@ -19,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 07 — export (COMPLETE)
+**Current focus:** Phase 08 — pdf-upload-api
 
 ## Current Position
 
-Phase: 07 (export) — COMPLETE
-Plan: 2 of 2 — COMPLETE
+Phase: 08 (pdf-upload-api) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -38,6 +39,7 @@ Plan: 2 of 2 — COMPLETE
 | Phase 06-migrations P02 | 2m | 2 tasks | 2 files |
 | Phase 07-export P01 | 12m | 1 task (TDD) | 3 files |
 | Phase 07-export P02 | 18m | 2 tasks | 2 files |
+| Phase 08-pdf-upload-api P01 | 4m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -72,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 07-02]: Spanish flags merged with English compat flags using "or" — Spanish takes precedence
 - [Phase 07-02]: export_xlsx/export_csv lazy-imported inside fmt branches — avoids openpyxl import on JSON-only usage
 - [Phase 07-02]: --output required check before DB query — fast fail without unnecessary I/O
+- [Phase 08-pdf-upload-api]: Scoped override_db fixture in test_upload.py saves/restores app.dependency_overrides[get_db] to prevent contaminating test_api.py tests sharing the same app singleton
+- [Phase 08-pdf-upload-api]: Lazy expiry purge on read (_get_job/_list_jobs) avoids background cleanup thread complexity for single-user local tool
 
 ### Pending Todos
 
@@ -87,7 +91,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T17:57:52.702Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-pdf-upload-api/08-CONTEXT.md
+Last session: 2026-03-19T18:19:30.172Z
+Stopped at: Completed 08-pdf-upload-api-01-PLAN.md
+Resume file: None
 Next action: `/gsd:execute-phase` for next phase (08+)
