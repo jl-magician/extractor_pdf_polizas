@@ -492,6 +492,36 @@ class TestCliEvaluateFlag:
 
         assert not mock_evaluate.called, "evaluate_policy should NOT be called without --evaluate flag"
 
+    def test_batch_evaluate_flag(self, tmp_path):
+        """With --evaluate flag, batch summary includes Avg Score row in output."""
+        from typer.testing import CliRunner
+        from policy_extractor.cli import app
+
+        runner = CliRunner()
+        pdf_file = tmp_path / "test.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4 fake content")
+
+        # Mock _process_single_pdf to return a result with eval_score
+        mock_result = {
+            "status": "success",
+            "name": "test.pdf",
+            "input_tokens": 1000,
+            "output_tokens": 300,
+            "retries": 0,
+            "error": None,
+            "eval_score": 0.88,
+            "eval_input_tokens": 500,
+            "eval_output_tokens": 200,
+        }
+
+        with patch("policy_extractor.cli.init_db"), \
+             patch("policy_extractor.cli.SessionLocal"), \
+             patch("policy_extractor.cli._process_single_pdf", return_value=mock_result):
+
+            result = runner.invoke(app, ["batch", str(tmp_path), "--evaluate"])
+
+        assert "Avg Score" in result.output, f"Expected 'Avg Score' in output. Output was:\n{result.output}"
+
 
 # ---------------------------------------------------------------------------
 # Tests: Constants

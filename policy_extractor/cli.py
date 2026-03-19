@@ -167,10 +167,12 @@ def _process_single_pdf(
     model: str | None,
     force: bool,
     output_dir: Path | None,
+    evaluate: bool = False,
 ) -> dict:
     """Process one PDF in its own thread. Creates its own DB session.
 
-    Returns dict with keys: status, name, input_tokens, output_tokens, retries, error.
+    Returns dict with keys: status, name, input_tokens, output_tokens, retries, error,
+    eval_score, eval_input_tokens, eval_output_tokens.
     """
     session = SessionLocal()
     try:
@@ -183,6 +185,9 @@ def _process_single_pdf(
                 "output_tokens": 0,
                 "retries": 0,
                 "error": None,
+                "eval_score": None,
+                "eval_input_tokens": 0,
+                "eval_output_tokens": 0,
             }
 
         ingestion_result = ingest_pdf(pdf, session=session, force_reprocess=force)
@@ -202,6 +207,24 @@ def _process_single_pdf(
                 policy.model_dump_json(indent=2), encoding="utf-8"
             )
 
+        # Optional Sonnet quality evaluation
+        eval_score = None
+        eval_input_tokens = 0
+        eval_output_tokens = 0
+        if evaluate:
+            from policy_extractor.evaluation import evaluate_policy
+            from policy_extractor.storage.writer import update_evaluation_columns
+            eval_result = evaluate_policy(ingestion_result, policy)
+            if eval_result is not None:
+                update_evaluation_columns(
+                    session, policy.numero_poliza, policy.aseguradora,
+                    eval_result.score, eval_result.evaluation_json,
+                    eval_result.evaluated_at, eval_result.model_id,
+                )
+                eval_score = eval_result.score
+                eval_input_tokens = eval_result.usage.input_tokens
+                eval_output_tokens = eval_result.usage.output_tokens
+
         return {
             "status": "success",
             "name": pdf.name,
@@ -209,6 +232,9 @@ def _process_single_pdf(
             "output_tokens": usage.output_tokens if usage else 0,
             "retries": rl_retries,
             "error": None,
+            "eval_score": eval_score,
+            "eval_input_tokens": eval_input_tokens,
+            "eval_output_tokens": eval_output_tokens,
         }
     except Exception as exc:  # noqa: BLE001
         return {
@@ -218,6 +244,9 @@ def _process_single_pdf(
             "output_tokens": 0,
             "retries": 0,
             "error": str(exc),
+            "eval_score": None,
+            "eval_input_tokens": 0,
+            "eval_output_tokens": 0,
         }
     finally:
         session.close()
@@ -236,6 +265,7 @@ def batch(
     concurrency: int = typer.Option(
         3, "--concurrency", help="Number of concurrent workers (1 = sequential)", min=1, max=10
     ),
+    evaluate: bool = typer.Option(False, "--evaluate", help="Run Sonnet quality evaluation after each extraction"),
 ) -> None:
     """Extract structured data from all PDFs in a directory.
 
@@ -263,6 +293,13 @@ def batch(
     total_retries = 0
     failures: list[tuple[str, str]] = []
 
+    # Evaluation counters
+    total_eval_score = 0.0
+    eval_count = 0
+    low_score_count = 0
+    total_eval_input = 0
+    total_eval_output = 0
+
     start_time = time.time()
 
     with Progress(
@@ -281,7 +318,7 @@ def batch(
             # Sequential path -- identical behavior to pre-Phase 9
             for pdf in pdfs:
                 progress.update(task_id, description=f"[cyan]{pdf.name}[/cyan]")
-                result = _process_single_pdf(pdf, model=model, force=force, output_dir=output_dir)
+                result = _process_single_pdf(pdf, model=model, force=force, output_dir=output_dir, evaluate=evaluate)
 
                 if result["status"] == "success":
                     succeeded += 1
@@ -293,6 +330,15 @@ def batch(
                     failed += 1
                     failures.append((result["name"], result["error"]))
                 total_retries += result["retries"]
+
+                if result.get("eval_score") is not None:
+                    from policy_extractor.evaluation import LOW_SCORE_THRESHOLD
+                    total_eval_score += result["eval_score"]
+                    eval_count += 1
+                    if result["eval_score"] < LOW_SCORE_THRESHOLD:
+                        low_score_count += 1
+                total_eval_input += result.get("eval_input_tokens", 0)
+                total_eval_output += result.get("eval_output_tokens", 0)
 
                 if result["status"] == "failed":
                     console.print(
@@ -311,7 +357,7 @@ def batch(
                 future_to_pdf = {
                     executor.submit(
                         _process_single_pdf, pdf,
-                        model=model, force=force, output_dir=output_dir,
+                        model=model, force=force, output_dir=output_dir, evaluate=evaluate,
                     ): pdf
                     for pdf in pdfs
                 }
@@ -331,6 +377,15 @@ def batch(
                             failed += 1
                             failures.append((result["name"], result["error"]))
                         total_retries += result["retries"]
+
+                        if result.get("eval_score") is not None:
+                            from policy_extractor.evaluation import LOW_SCORE_THRESHOLD
+                            total_eval_score += result["eval_score"]
+                            eval_count += 1
+                            if result["eval_score"] < LOW_SCORE_THRESHOLD:
+                                low_score_count += 1
+                        total_eval_input += result.get("eval_input_tokens", 0)
+                        total_eval_output += result.get("eval_output_tokens", 0)
 
                     if result["status"] == "failed":
                         console.print(
@@ -359,6 +414,14 @@ def batch(
     summary_table.add_row("Input Tokens", f"{total_input:,}")
     summary_table.add_row("Output Tokens", f"{total_output:,}")
     summary_table.add_row("Est. Cost (USD)", f"${total_cost:.4f}")
+
+    if evaluate:
+        from policy_extractor.evaluation import EVAL_MODEL_ID
+        avg_score = total_eval_score / max(eval_count, 1)
+        eval_cost = estimate_cost(EVAL_MODEL_ID, total_eval_input, total_eval_output)
+        summary_table.add_row("Avg Score", f"{avg_score:.2f}")
+        summary_table.add_row("Low Score Files", str(low_score_count))
+        summary_table.add_row("Eval Cost (USD)", f"${eval_cost:.4f}")
 
     console.print(summary_table)
 

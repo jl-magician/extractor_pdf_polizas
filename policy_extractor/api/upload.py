@@ -104,7 +104,7 @@ def _list_jobs() -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool) -> None:
+def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool, evaluate: bool = False) -> None:
     """Background extraction worker. Full pipeline wired in Plan 02."""
     _update_job(job_id, status="processing")
     try:
@@ -128,16 +128,38 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool)
                     .where(Poliza.source_file_hash == file_hash)
                 ).scalar_one()
                 result = orm_to_schema(poliza).model_dump(mode="json")
+                result["evaluation_score"] = None
+                result["evaluation_json"] = None
                 _update_job(job_id, status="complete", result=result)
                 pdf_path.unlink(missing_ok=True)
                 return
 
             ingestion_result = ingest_pdf(pdf_path, session=session, force_reprocess=force)
-            policy, _ = extract_policy(ingestion_result, model=model)
+            policy, _usage, _retries = extract_policy(ingestion_result, model=model)
             if policy is None:
                 raise RuntimeError("Extraction returned None")
             upsert_policy(session, policy)
             result = policy.model_dump(mode="json")
+
+            if evaluate:
+                from policy_extractor.evaluation import evaluate_policy
+                from policy_extractor.storage.writer import update_evaluation_columns
+                eval_result = evaluate_policy(ingestion_result, policy)
+                if eval_result is not None:
+                    update_evaluation_columns(
+                        session, policy.numero_poliza, policy.aseguradora,
+                        eval_result.score, eval_result.evaluation_json,
+                        eval_result.evaluated_at, eval_result.model_id,
+                    )
+                    result["evaluation_score"] = eval_result.score
+                    result["evaluation_json"] = eval_result.evaluation_json
+                else:
+                    result["evaluation_score"] = None
+                    result["evaluation_json"] = None
+            else:
+                result["evaluation_score"] = None
+                result["evaluation_json"] = None
+
             _update_job(job_id, status="complete", result=result)
             pdf_path.unlink(missing_ok=True)
         except Exception as exc:
@@ -159,6 +181,7 @@ async def upload_pdf(
     file: UploadFile = File(...),
     model: str | None = Query(None, description="Override extraction model"),
     force: bool = Query(False, description="Reprocess even if already extracted"),
+    evaluate: bool = Query(False, description="Run Sonnet quality evaluation after extraction"),
 ) -> JSONResponse:
     """Accept a PDF upload, validate it, create a job, and dispatch background extraction."""
     contents = await file.read()
@@ -182,7 +205,7 @@ async def upload_pdf(
 
     t = threading.Thread(
         target=_run_extraction,
-        args=(job["job_id"], save_path, model, force),
+        args=(job["job_id"], save_path, model, force, evaluate),
         daemon=True,
         name=f"extract-{job['job_id'][:8]}",
     )

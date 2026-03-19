@@ -248,7 +248,7 @@ def test_pipeline_success_sets_complete(
 
     fake_extraction = MagicMock()
     fake_extraction.model_dump.return_value = {"numero_poliza": "POL-001"}
-    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_extract.return_value = (fake_extraction, MagicMock(), 0)
     mock_session.return_value = MagicMock()
 
     upload._run_extraction(job["job_id"], pdf_file, None, False)
@@ -308,7 +308,7 @@ def test_pdf_cleanup_on_success(
 
     fake_extraction = MagicMock()
     fake_extraction.model_dump.return_value = {"numero_poliza": "POL-002"}
-    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_extract.return_value = (fake_extraction, MagicMock(), 0)
     mock_session.return_value = MagicMock()
 
     upload._run_extraction(job["job_id"], pdf_file, None, False)
@@ -395,7 +395,7 @@ def test_force_upload_reprocesses(
 
     fake_extraction = MagicMock()
     fake_extraction.model_dump.return_value = {"numero_poliza": "POL-FORCED"}
-    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_extract.return_value = (fake_extraction, MagicMock(), 0)
     mock_session.return_value = MagicMock()
 
     upload._run_extraction(job["job_id"], pdf_file, None, True)
@@ -427,7 +427,7 @@ def test_extraction_thread_creates_own_session(
 
     fake_extraction = MagicMock()
     fake_extraction.model_dump.return_value = {"numero_poliza": "POL-SESSION"}
-    mock_extract.return_value = (fake_extraction, MagicMock())
+    mock_extract.return_value = (fake_extraction, MagicMock(), 0)
     mock_session_instance = MagicMock()
     mock_session.return_value = mock_session_instance
 
@@ -437,3 +437,37 @@ def test_extraction_thread_creates_own_session(
     mock_session.assert_called_once()
     # Session must be closed in the finally block
     mock_session_instance.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Evaluate query parameter tests (Phase 10 Plan 02)
+# ---------------------------------------------------------------------------
+
+
+@patch("policy_extractor.api.upload._run_extraction")
+def test_upload_evaluate_param(mock_run):
+    """POST /polizas/upload?evaluate=true passes evaluate=True to _run_extraction."""
+    response = client.post(
+        "/polizas/upload?evaluate=true",
+        files={"file": ("test.pdf", io.BytesIO(_VALID_PDF_BYTES), "application/pdf")},
+    )
+    assert response.status_code == 202
+    # Verify _run_extraction was called with evaluate=True as 5th positional arg
+    mock_run.assert_called_once()
+    call_args = mock_run.call_args
+    # evaluate is passed as 5th positional arg: (job_id, save_path, model, force, evaluate)
+    assert call_args.args[4] is True, f"Expected evaluate=True, got args={call_args.args}"
+
+
+@patch("policy_extractor.api.upload._run_extraction")
+def test_upload_no_evaluate_by_default(mock_run):
+    """POST /polizas/upload without evaluate param passes evaluate=False to _run_extraction."""
+    response = client.post(
+        "/polizas/upload",
+        files={"file": ("test.pdf", io.BytesIO(_VALID_PDF_BYTES), "application/pdf")},
+    )
+    assert response.status_code == 202
+    mock_run.assert_called_once()
+    call_args = mock_run.call_args
+    # evaluate is passed as 5th positional arg defaulting to False
+    assert call_args.args[4] is False, f"Expected evaluate=False, got args={call_args.args}"
