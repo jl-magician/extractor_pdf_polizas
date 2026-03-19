@@ -1,67 +1,87 @@
-# Extractor PDF Pólizas
+# Extractor PDF Polizas
 
 ## What This Is
 
-Sistema de extracción inteligente de información de pólizas de seguros en formato PDF. Utiliza IA (Claude API) para interpretar y extraer datos estructurados de pólizas provenientes de ~10 aseguradoras diferentes, cada una con 5-7 tipos de seguros (~50-70 estructuras de PDF distintas). Diseñado para una oficina de agentes de seguros que procesa más de 200 pólizas mensuales de forma manual.
+Sistema de extraccion inteligente de informacion de polizas de seguros en formato PDF. Utiliza IA (Claude API con Haiku) para interpretar y extraer datos estructurados de polizas provenientes de ~10 aseguradoras diferentes, cada una con 5-7 tipos de seguros (~50-70 estructuras de PDF distintas). Incluye CLI completo (`poliza-extractor`), base de datos SQLite, API REST (FastAPI), y procesamiento por lotes con seguimiento de costos.
 
 ## Core Value
 
-Extraer automáticamente toda la información posible de cualquier póliza de seguro en PDF — sin importar la aseguradora o estructura — y almacenarla de forma estructurada para consulta, reporteo e integración con otros sistemas.
+Extraer automaticamente toda la informacion posible de cualquier poliza de seguro en PDF — sin importar la aseguradora o estructura — y almacenarla de forma estructurada para consulta, reporteo e integracion con otros sistemas.
+
+## Current State (v1.0 shipped 2026-03-19)
+
+- **Python LOC:** 5,161 across 96 files
+- **Tech stack:** Python 3.11+, Pydantic v2, SQLAlchemy 2.0, PyMuPDF, ocrmypdf, Anthropic SDK, Typer, Rich, FastAPI
+- **Tests:** 153 passing, 2 skipped (Tesseract-dependent)
+- **CLI:** `poliza-extractor` with extract, batch, export, import-json, serve subcommands
+- **API:** FastAPI CRUD at localhost:8000 with Swagger docs
+- **Database:** SQLite with polizas, asegurados, coberturas, ingestion_cache tables
 
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Extraccion de datos de PDFs de polizas usando Claude API (texto digital y escaneados con OCR) — v1.0
+- ✓ Soporte para PDFs en espanol e ingles — v1.0
+- ✓ Extraccion flexible que se adapte a las ~50-70 estructuras diferentes sin templates fijos — v1.0
+- ✓ Captura de todos los datos posibles: contratante, asegurado(s), costo, coberturas, sumas aseguradas, compania, vigencia, agente, forma de pago, deducibles, etc. — v1.0
+- ✓ Manejo de multiples asegurados (personas o bienes) por poliza — v1.0
+- ✓ Base de datos local para almacenar toda la informacion extraida — v1.0
+- ✓ API/JSON para exponer los datos estructurados — v1.0
+- ✓ Interfaz de linea de comandos para procesar PDFs individual o en lote — v1.0
+- ✓ Esquema de datos dinamico que soporte campos variables por tipo de poliza/aseguradora — v1.0
 
 ### Active
 
-- [ ] Extracción de datos de PDFs de pólizas usando Claude API (texto digital y escaneados con OCR)
-- [ ] Soporte para PDFs en español e inglés
-- [ ] Extracción flexible que se adapte a las ~50-70 estructuras diferentes sin templates fijos
-- [ ] Captura de todos los datos posibles: contratante, asegurado(s), costo, coberturas, sumas aseguradas, compañía, vigencia, agente, forma de pago, deducibles, etc.
-- [ ] Manejo de múltiples asegurados (personas o bienes) por póliza
-- [ ] Base de datos local para almacenar toda la información extraída
-- [ ] API/JSON para exponer los datos estructurados
-- [ ] Interfaz de línea de comandos para procesar PDFs individual o en lote
-- [ ] Esquema de datos dinámico que soporte campos variables por tipo de póliza/aseguradora
+(None — all v1 requirements shipped. Define v2 requirements with `/gsd:new-milestone`)
 
 ### Out of Scope
 
-- Exportación a Excel — v2, se construirá sobre la base de datos
-- Generación de reportes PDF — v2, se construirá sobre la base de datos
-- Interfaz web — v2+, primero se valida la extracción y almacenamiento local
-- Aplicación móvil — fuera de alcance por ahora
-- Edición manual de datos extraídos en UI — v2+
-- Integración directa con sistemas de aseguradoras — fuera de alcance
+- Exportacion a Excel — v2, se construira sobre la base de datos
+- Generacion de reportes PDF — v2, se construira sobre la base de datos
+- Interfaz web — v2+, primero se valida la extraccion y almacenamiento local
+- Aplicacion movil — fuera de alcance por ahora
+- Edicion manual de datos extraidos en UI — v2+
+- Integracion directa con sistemas de aseguradoras — fuera de alcance
+- Alembic migrations — v2, cuando el esquema evolucione
+- Async/concurrent batch processing — v2 optimization
+- Sonnet as quality evaluator — v2 (QAL-03)
+- Golden dataset regression suite — v2 (QAL-01)
 
 ## Context
 
-- Oficina de agentes de seguros en México que trabaja con 10 aseguradoras
-- Cada aseguradora tiene 5-7 tipos de seguros (auto, vida, gastos médicos, hogar, etc.)
-- Actualmente todo el proceso de extracción es manual: alguien lee cada PDF y copia datos
-- Los PDFs son mixtos: algunos son texto digital seleccionable, otros son imágenes escaneadas
-- El volumen es de más de 200 pólizas nuevas por mes
-- A futuro, los datos extraídos servirán como base para un sistema propio de gestión de pólizas
-- Los PDFs están en español principalmente, con algunos en inglés
+- Oficina de agentes de seguros en Mexico que trabaja con 10 aseguradoras
+- Cada aseguradora tiene 5-7 tipos de seguros (auto, vida, gastos medicos, hogar, etc.)
+- Actualmente todo el proceso de extraccion es manual: alguien lee cada PDF y copia datos
+- Los PDFs son mixtos: algunos son texto digital seleccionable, otros son imagenes escaneadas
+- El volumen es de mas de 200 polizas nuevas por mes
+- A futuro, los datos extraidos serviran como base para un sistema propio de gestion de polizas
+- Los PDFs estan en espanol principalmente, con algunos en ingles
+- v1.0 shipped with full pipeline: ingest → extract → persist → query
 
 ## Constraints
 
-- **LLM Provider**: Claude API (Anthropic) — el usuario ya tiene acceso
-- **Plataforma inicial**: Windows 11, aplicación local de escritorio/CLI
-- **PDFs mixtos**: Debe soportar tanto texto digital como imágenes escaneadas (OCR necesario)
-- **Idioma**: Soporte para español e inglés en los PDFs
-- **Escalabilidad**: Debe manejar 200+ pólizas/mes con tiempos razonables
-- **Almacenamiento**: Base de datos local, con capacidad de exportar a JSON para integración futura
+- **LLM Provider**: Claude API (Anthropic) — Haiku default, Sonnet configurable
+- **Plataforma**: Windows 11, aplicacion local CLI + API REST
+- **PDFs mixtos**: Soporta texto digital e imagenes escaneadas (OCR via ocrmypdf + Tesseract)
+- **Idioma**: Soporte para espanol e ingles en los PDFs
+- **Escalabilidad**: Debe manejar 200+ polizas/mes con tiempos razonables
+- **Almacenamiento**: SQLite local con JSON export y FastAPI query layer
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Claude API para extracción | Usuario ya tiene API key; Claude maneja bien documentos complejos y multilingües | — Pending |
-| IA sin templates fijos | 50-70 estructuras diferentes hacen insostenible mantener templates; IA se adapta automáticamente | — Pending |
-| Local-first, web después | Validar la extracción antes de invertir en infraestructura web | — Pending |
-| BD + JSON/API como v1 | Base sólida sobre la cual construir Excel/reportes/web después | — Pending |
+| Claude API para extraccion | Usuario ya tiene API key; Claude maneja bien documentos complejos y multilingues | ✓ Good — works with tool_use for structured output |
+| IA sin templates fijos | 50-70 estructuras diferentes hacen insostenible mantener templates; IA se adapta automaticamente | ✓ Good — single-pass extraction handles variety |
+| Local-first, web despues | Validar la extraccion antes de invertir en infraestructura web | ✓ Good — CLI + API delivered in v1 |
+| BD + JSON/API como v1 | Base solida sobre la cual construir Excel/reportes/web despues | ✓ Good — SQLite + FastAPI CRUD operational |
+| Haiku default, Sonnet configurable | Cost efficiency for 200+ policies/month; --model flag for quality upgrade | ✓ Good — configurable via Settings |
+| Single-pass extraction | One API call per PDF instead of two-pass classify+extract | ✓ Good — simpler, cheaper, sufficient quality |
+| Upsert by (numero_poliza, aseguradora) | Dedup on re-extraction without losing data | ✓ Good — handles prompt version updates cleanly |
+| Skip Alembic for v1 | create_all() sufficient for greenfield; add when schema evolves | ✓ Good — no migration overhead in v1 |
+| Spanish domain terms in field names | Agency team reads JSON/DB directly | ✓ Good — consistent across Pydantic + SQLAlchemy |
+| Per-page PDF classification | Image coverage ratio handles mixed PDFs correctly | ✓ Good — watermark filtering prevents false positives |
 
 ---
-*Last updated: 2026-03-17 after initialization*
+*Last updated: 2026-03-19 after v1.0 milestone*
