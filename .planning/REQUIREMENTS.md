@@ -87,40 +87,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MIG-01 | — | Pending |
-| MIG-02 | — | Pending |
-| MIG-03 | — | Pending |
-| EXP-01 | — | Pending |
-| EXP-02 | — | Pending |
-| EXP-03 | — | Pending |
-| EXP-04 | — | Pending |
-| EXP-05 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| API-06 | — | Pending |
-| ASYNC-01 | — | Pending |
-| ASYNC-02 | — | Pending |
-| ASYNC-03 | — | Pending |
-| ASYNC-04 | — | Pending |
-| ASYNC-05 | — | Pending |
-| QAL-01 | — | Pending |
-| QAL-02 | — | Pending |
-| QAL-03 | — | Pending |
-| QAL-04 | — | Pending |
-| QAL-05 | — | Pending |
-| REG-01 | — | Pending |
-| REG-02 | — | Pending |
-| REG-03 | — | Pending |
-| REG-04 | — | Pending |
+| MIG-01 | Phase 6 | Pending |
+| MIG-02 | Phase 6 | Pending |
+| MIG-03 | Phase 6 | Pending |
+| EXP-01 | Phase 7 | Pending |
+| EXP-02 | Phase 7 | Pending |
+| EXP-03 | Phase 7 | Pending |
+| EXP-04 | Phase 7 | Pending |
+| EXP-05 | Phase 7 | Pending |
+| API-01 | Phase 8 | Pending |
+| API-02 | Phase 8 | Pending |
+| API-03 | Phase 8 | Pending |
+| API-04 | Phase 8 | Pending |
+| API-05 | Phase 8 | Pending |
+| API-06 | Phase 8 | Pending |
+| ASYNC-01 | Phase 9 | Pending |
+| ASYNC-02 | Phase 9 | Pending |
+| ASYNC-03 | Phase 9 | Pending |
+| ASYNC-04 | Phase 9 | Pending |
+| ASYNC-05 | Phase 9 | Pending |
+| QAL-01 | Phase 10 | Pending |
+| QAL-02 | Phase 10 | Pending |
+| QAL-03 | Phase 10 | Pending |
+| QAL-04 | Phase 10 | Pending |
+| QAL-05 | Phase 10 | Pending |
+| REG-01 | Phase 11 | Pending |
+| REG-02 | Phase 11 | Pending |
+| REG-03 | Phase 11 | Pending |
+| REG-04 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28
+- Mapped to phases: 28
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 — traceability complete after roadmap creation*

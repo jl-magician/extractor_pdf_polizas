@@ -1,8 +1,11 @@
-# Roadmap: Extractor PDF Pólizas
+# Roadmap: Extractor PDF Polizas
 
 ## Overview
 
-Five phases that take the project from nothing to a fully operational CLI tool for extracting insurance policy data from any PDF — regardless of insurer or format — and persisting it in a queryable local database with a REST API. Phase 1 establishes the non-retrofittable data contract. Phases 2-3 build the processing pipeline. Phase 4 delivers the user-facing CLI. Phase 5 wires storage and the API layer.
+Six phases (6-11) that take the v1.0 shipped system and add HTTP integration, concurrency, schema versioning, export formats, and extraction quality tooling. All phases are strictly additive — no v1.0 component is replaced. Phase 6 (Alembic) is a hard prerequisite for Phase 10 (evaluation columns). Phases 7, 8, and 9 are independent of each other but all depend on the stable v1.0 pipeline. Phases 10 and 11 build on the stable pipeline and optionally on each other.
+
+**Milestone:** v1.1 API & Quality
+**Phases in this milestone:** 6-11 (continuing from v1.0 phases 1-5)
 
 ## Phases
 
@@ -12,95 +15,108 @@ Five phases that take the project from nothing to a fully operational CLI tool f
 
 Decimal phases appear between their surrounding integers in numeric order.
 
+**v1.0 Phases (complete):**
 - [x] **Phase 1: Foundation** - Data model, Pydantic schemas, SQLite schema, project scaffolding (completed 2026-03-18)
 - [x] **Phase 2: Ingestion** - PDF type detection, OCR pipeline, result caching (completed 2026-03-18)
 - [x] **Phase 3: Extraction** - Claude API integration, structured output, confidence scoring (completed 2026-03-18)
 - [x] **Phase 4: CLI & Batch** - Single-file and batch CLI, progress, idempotency, cost tracking (completed 2026-03-18)
 - [x] **Phase 5: Storage & API** - SQLite persistence, JSON export, FastAPI query layer (completed 2026-03-18)
 
+**v1.1 Phases (current milestone):**
+- [ ] **Phase 6: Migrations** - Alembic initialized with SQLite batch mode, baseline migration, evaluation columns migration
+- [ ] **Phase 7: Export** - Excel and CSV export from stored polizas with multi-sheet workbook and correct numeric types
+- [ ] **Phase 8: PDF Upload API** - HTTP endpoint to POST a PDF and receive async extraction results with job polling
+- [ ] **Phase 9: Async Batch** - Concurrent batch processing with configurable concurrency, WAL mode, and rate limit backoff
+- [ ] **Phase 10: Quality Evaluator** - Opt-in Sonnet evaluation of Haiku extractions with stored scores and CLI/API flags
+- [ ] **Phase 11: Regression Suite** - Golden dataset fixtures with field-level fuzzy comparison and regression pytest marker
+
 ## Phase Details
 
-### Phase 1: Foundation
-**Goal**: The non-retrofittable data contracts are in place before any extraction code is written
-**Depends on**: Nothing (first phase)
-**Requirements**: DATA-01, DATA-02, DATA-03, DATA-04, DATA-05
+### Phase 6: Migrations
+**Goal**: Schema versioning is in place so any future column addition or structural change is managed safely through a migration chain
+**Depends on**: Phase 5 (v1.0 complete — existing schema to baseline)
+**Requirements**: MIG-01, MIG-02, MIG-03
 **Success Criteria** (what must be TRUE):
-  1. A Pydantic schema exists that captures all required policy fields including a list of insured parties and a list of coverages
-  2. The SQLite schema has a policies table, a separate insured_parties table (one-to-many), and all monetary amounts stored with an explicit currency code column
-  3. All date fields in the schema are typed as ISO 8601 (YYYY-MM-DD) with explicit format conversion documented
-  4. Every policy record stores source_file_hash, model_id, prompt_version, and extracted_at (provenance columns)
-  5. The dynamic/variable fields per insurer are stored in a JSON overflow column without breaking the core typed columns
-**Plans**: 2 plans
-Plans:
-- [x] 01-01-PLAN.md — Project scaffolding + Pydantic v2 extraction schemas
-- [x] 01-02-PLAN.md — SQLAlchemy ORM models + comprehensive test suite
+  1. Running `alembic upgrade head` on a fresh checkout applies all migrations and produces a correctly structured database
+  2. Running `alembic upgrade head` on the existing production database stamps it without altering any table or losing any data
+  3. After migration 002 runs, the polizas table has evaluation_score and evaluation_json columns
+  4. `alembic current` shows the correct head revision on any database (new or existing)
+**Plans**: TBD
 
-### Phase 2: Ingestion
-**Goal**: The system reliably routes any PDF — digital or scanned — to the correct processing path before touching the LLM
-**Depends on**: Phase 1
-**Requirements**: ING-01, ING-02, ING-05
+### Phase 7: Export
+**Goal**: Users can export their stored polizas to Excel or CSV for use in spreadsheet tools, with correct numeric and date formatting
+**Depends on**: Phase 6 (Alembic in place before any schema-touching module is introduced)
+**Requirements**: EXP-01, EXP-02, EXP-03, EXP-04, EXP-05
 **Success Criteria** (what must be TRUE):
-  1. A digital PDF with selectable text is classified as "digital" without invoking OCR
-  2. A scanned PDF (image-only pages) is classified as "scanned" and OCR is applied before any further processing
-  3. OCR output includes Spanish-language text accurately extracted from a sample scanned policy
-  4. A PDF that has already been processed returns the cached result without re-running OCR or paying API costs
-**Plans**: 2 plans
-Plans:
-- [x] 02-01-PLAN.md — Ingestion contracts, dependencies, PDF classifier (ING-01)
-- [x] 02-02-PLAN.md — OCR runner, cache, ingest_pdf() orchestrator (ING-02, ING-05)
+  1. User runs `poliza-extractor export --format xlsx output.xlsx` and receives a multi-sheet workbook with polizas, asegurados, and coberturas sheets
+  2. User runs `poliza-extractor export --format csv output.csv` and receives a CSV file with all poliza records
+  3. Excel and CSV exports accept the same `--aseguradora`, `--desde`, and `--hasta` filter flags as the existing JSON export
+  4. Opening the Excel file in a spreadsheet tool shows prima_total and other monetary values as numbers (not text), enabling SUM formulas to work correctly
+  5. Date columns in the Excel file are formatted as dates, not strings
+**Plans**: TBD
 
-### Phase 3: Extraction
-**Goal**: The system extracts all available policy fields from any PDF using Claude API with validated structured output
-**Depends on**: Phase 2
-**Requirements**: EXT-01, EXT-02, EXT-03, EXT-04, EXT-05
+### Phase 8: PDF Upload API
+**Goal**: External systems can POST a PDF over HTTP and receive structured extraction results without running the CLI
+**Depends on**: Phase 6 (stable schema), Phase 5 (existing FastAPI app to extend)
+**Requirements**: API-01, API-02, API-03, API-04, API-05, API-06
 **Success Criteria** (what must be TRUE):
-  1. Running extraction on a digital or scanned PDF produces a Pydantic-validated JSON object with all core fields populated (or null where absent — never invented values)
-  2. The insurer name and insurance type are automatically classified from PDF content without any hard-coded template
-  3. Each extracted field in the output includes a confidence indicator
-  4. Extraction works correctly on PDFs written entirely in Spanish and on PDFs written in English
-**Plans**: 2 plans
-Plans:
-- [x] 03-01-PLAN.md — Schema update, extraction config, prompt module, schema builder, test scaffold (EXT-01, EXT-02, EXT-04, EXT-05)
-- [x] 03-02-PLAN.md — Extraction client, hallucination verification, extract_policy() orchestrator (EXT-01 through EXT-05)
+  1. User sends `POST /polizas/upload` with a PDF file as multipart/form-data and receives a 202 response with a job ID
+  2. User polls `GET /jobs/{id}` and eventually sees status "complete" with the full extracted poliza in the response body
+  3. The uploaded PDF triggers the complete pipeline (ingest → extract → persist) and the result is queryable via existing CRUD endpoints
+  4. If the server is restarted, uploading the same PDF again succeeds and produces a result (job_store loss on restart is documented, not a crash)
+  5. After extraction completes, no temporary PDF files remain on disk
+**Plans**: TBD
 
-### Phase 4: CLI & Batch
-**Goal**: Users can process one or many PDFs from the command line with full visibility into progress and cost
-**Depends on**: Phase 3
-**Requirements**: ING-03, ING-04, CLI-01, CLI-02, CLI-03, CLI-04, CLI-05
+### Phase 9: Async Batch
+**Goal**: Users can process large PDF batches significantly faster by running extractions concurrently without hitting SQLite lock errors or API rate limits
+**Depends on**: Phase 6 (WAL mode configuration is a migration-adjacent DB concern), Phase 4 (existing sync batch to extend)
+**Requirements**: ASYNC-01, ASYNC-02, ASYNC-03, ASYNC-04, ASYNC-05
 **Success Criteria** (what must be TRUE):
-  1. User can run `extract <file.pdf>` from the command line and receive extraction output for a single policy
-  2. User can run `batch <folder/>` and all PDFs in that folder are processed, with a live progress display showing current file, total count, and percentage
-  3. If one PDF in a batch fails, processing continues with the remaining files and the failure is reported in the final summary
-  4. Re-running the same command on already-processed PDFs skips those files without re-extracting or creating duplicate records
-  5. After each execution the tool reports the number of tokens consumed and the estimated API cost in USD
-**Plans**: 2 plans
-Plans:
-- [x] 04-01-PLAN.md — Pipeline modifications (usage tokens, model override) + cli_helpers + test scaffold (CLI-04, CLI-05)
-- [x] 04-02-PLAN.md — Typer CLI with extract/batch subcommands, Rich progress, entry point (ING-03, ING-04, CLI-01, CLI-02, CLI-03, CLI-05)
+  1. User runs `poliza-extractor batch folder/ --concurrency 3` and all PDFs are processed with 3 concurrent workers
+  2. Processing 10 PDFs concurrently completes without any "database is locked" errors
+  3. When the Anthropic API returns a rate limit error, the CLI automatically retries with backoff and eventually succeeds (no silent None results)
+  4. The Rich progress bar and final summary table still display correctly during concurrent runs
+  5. Running the same batch twice (idempotency) still skips already-processed files and produces no duplicate records
+**Plans**: TBD
 
-### Phase 5: Storage & API
-**Goal**: All extracted data is persisted in SQLite and queryable via both JSON export and a REST API
-**Depends on**: Phase 4
-**Requirements**: STOR-01, STOR-02, STOR-03, STOR-04
+### Phase 10: Quality Evaluator
+**Goal**: Users can optionally invoke a Sonnet-powered scoring pass on any extraction to assess completeness, accuracy, and hallucination risk
+**Depends on**: Phase 6 (evaluation columns from migration 002), Phase 3 (stable extraction pipeline to evaluate)
+**Requirements**: QAL-01, QAL-02, QAL-03, QAL-04, QAL-05
 **Success Criteria** (what must be TRUE):
-  1. After extraction, the complete structured policy data is retrievable from the local SQLite database
-  2. User can export a policy (or set of policies) as a JSON file from the command line
-  3. The FastAPI server starts locally and responds to GET requests returning policy data in JSON format
-  4. API supports filtering results by insurer, date range, agent name, and policy type
-**Plans**: 2 plans
-Plans:
-- [ ] 05-01-PLAN.md — Writer module (upsert_policy, orm_to_schema) + CLI auto-persist wiring (STOR-01)
-- [ ] 05-02-PLAN.md — Export/import/serve CLI subcommands + FastAPI CRUD with filtering (STOR-02, STOR-03, STOR-04)
+  1. User runs `poliza-extractor extract file.pdf --evaluate` and receives extraction output plus a quality score and field-level assessment
+  2. Running extraction without `--evaluate` completes without any Sonnet API call (evaluator is never in the default path)
+  3. Evaluation scores and details are retrievable from the database after the command completes
+  4. User sends `POST /polizas/upload?evaluate=true` and the returned job result includes evaluation fields alongside the extraction
+  5. The CLI output clearly separates Haiku extraction cost from Sonnet evaluation cost
+**Plans**: TBD
+
+### Phase 11: Regression Suite
+**Goal**: A repeatable, automated test suite catches extraction quality regressions by comparing field-by-field output against known-good fixtures
+**Depends on**: Phase 3 (stable extraction pipeline), Phase 10 (evaluator available to enrich fixtures if desired)
+**Requirements**: REG-01, REG-02, REG-03, REG-04
+**Success Criteria** (what must be TRUE):
+  1. Running `pytest -m regression` executes the golden dataset suite and produces a pass/fail result per fixture
+  2. Running `pytest` (default, no marker) does NOT run regression tests (they are excluded from the default suite)
+  3. When an extraction result differs from the fixture, the test output identifies exactly which fields drifted and by how much
+  4. The fixture set covers at least one real policy PDF per insurer type represented in pdfs-to-test/ with no PII committed to the repository
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 2/2 | Complete   | 2026-03-18 |
-| 2. Ingestion | 2/2 | Complete   | 2026-03-18 |
-| 3. Extraction | 2/2 | Complete   | 2026-03-18 |
-| 4. CLI & Batch | 2/2 | Complete   | 2026-03-18 |
-| 5. Storage & API | 2/2 | Complete   | 2026-03-18 |
+| 1. Foundation | 2/2 | Complete | 2026-03-18 |
+| 2. Ingestion | 2/2 | Complete | 2026-03-18 |
+| 3. Extraction | 2/2 | Complete | 2026-03-18 |
+| 4. CLI & Batch | 2/2 | Complete | 2026-03-18 |
+| 5. Storage & API | 2/2 | Complete | 2026-03-18 |
+| 6. Migrations | 0/? | Not started | - |
+| 7. Export | 0/? | Not started | - |
+| 8. PDF Upload API | 0/? | Not started | - |
+| 9. Async Batch | 0/? | Not started | - |
+| 10. Quality Evaluator | 0/? | Not started | - |
+| 11. Regression Suite | 0/? | Not started | - |
