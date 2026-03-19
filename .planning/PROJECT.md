@@ -24,7 +24,7 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 
 - **Python LOC:** 5,161 across 96 files
 - **Tech stack:** Python 3.11+, Pydantic v2, SQLAlchemy 2.0, PyMuPDF, ocrmypdf, Anthropic SDK, Typer, Rich, FastAPI
-- **Tests:** 199 passing, 2 skipped (Tesseract-dependent)
+- **Tests:** 211 passing, 2 skipped (Tesseract-dependent)
 - **CLI:** `poliza-extractor` with extract, batch, export, import-json, serve subcommands
 - **API:** FastAPI CRUD at localhost:8000 with Swagger docs
 - **Database:** SQLite with polizas, asegurados, coberturas, ingestion_cache tables
@@ -46,7 +46,7 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 ### Active
 
 - ✓ PDF Upload API endpoint for external integrations — Validated in Phase 8: PDF Upload API
-- [ ] Async/concurrent batch processing for throughput
+- ✓ Async/concurrent batch processing for throughput — Validated in Phase 9: Async Batch
 - [ ] Golden dataset regression suite for extraction quality
 - [ ] Sonnet quality evaluator to verify Haiku extractions
 - ✓ Alembic migrations for schema versioning — Validated in Phase 6: Migrations
@@ -96,4 +96,4 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 | Per-page PDF classification | Image coverage ratio handles mixed PDFs correctly | ✓ Good — watermark filtering prevents false positives |
 
 ---
-*Last updated: 2026-03-19 after Phase 8 (PDF Upload API) completion*
+*Last updated: 2026-03-19 after Phase 9 (Async Batch) completion*
