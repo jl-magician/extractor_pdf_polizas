@@ -103,8 +103,8 @@ Plans:
   5. The CLI output clearly separates Haiku extraction cost from Sonnet evaluation cost
 **Plans:** 2 plans
 Plans:
-- [ ] 10-01-PLAN.md — [to be planned]
-- [ ] 10-02-PLAN.md — [to be planned]
+- [ ] 10-01-PLAN.md — Core evaluation module (evaluation.py) with Sonnet tool_use, DB persistence, unit tests
+- [ ] 10-02-PLAN.md — CLI --evaluate flag on extract/batch + upload API evaluate=true param + integration tests
 
 ### Phase 11: Regression Suite
 **Goal**: A repeatable, automated test suite catches extraction quality regressions by comparing field-by-field output against known-good fixtures
@@ -136,5 +136,5 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 7. Export | 2/2 | Complete   | 2026-03-19 |
 | 8. PDF Upload API | 2/2 | Complete   | 2026-03-19 |
 | 9. Async Batch | 2/2 | Complete   | 2026-03-19 |
-| 10. Quality Evaluator | 0/? | Not started | - |
+| 10. Quality Evaluator | 0/2 | Not started | - |
 | 11. Regression Suite | 0/? | Not started | - |
