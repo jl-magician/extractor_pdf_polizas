@@ -18,6 +18,7 @@ dependencies = [
     "rich>=13.0.0",
     "fastapi>=0.135.1",
     "uvicorn[standard]>=0.42.0",
+    "openpyxl>=3.1.5",
 ]
 
 [project.scripts]
