@@ -82,6 +82,7 @@ def extract(
     ),
     verbose: bool = typer.Option(False, "--verbose", help="Show detailed output"),
     quiet: bool = typer.Option(False, "--quiet", help="Suppress all output except JSON"),
+    evaluate: bool = typer.Option(False, "--evaluate", help="Run Sonnet quality evaluation after extraction"),
 ) -> None:
     """Extract structured data from a single insurance policy PDF.
 
@@ -117,6 +118,27 @@ def extract(
             upsert_policy(session, policy)
         except Exception as exc:  # noqa: BLE001
             console.print(f"[yellow]WARN[/yellow] Persistence failed: {exc}")
+
+        # Optional Sonnet quality evaluation (QAL-04: only runs when --evaluate flag given)
+        if evaluate:
+            from policy_extractor.evaluation import evaluate_policy
+            from policy_extractor.storage.writer import update_evaluation_columns
+            eval_result = evaluate_policy(ingestion_result, policy)
+            if eval_result is not None:
+                update_evaluation_columns(
+                    session,
+                    policy.numero_poliza,
+                    policy.aseguradora,
+                    eval_result.score,
+                    eval_result.evaluation_json,
+                    eval_result.evaluated_at,
+                    eval_result.model_id,
+                )
+                if not quiet:
+                    console.print(f"[bold]Quality score:[/bold] {eval_result.score:.2f}")
+                    _print_cost(eval_result.model_id, eval_result.usage.input_tokens, eval_result.usage.output_tokens)
+            else:
+                console.print("[yellow]WARN[/yellow] Evaluation failed — extraction saved without evaluation")
 
         # Optionally write to file
         if output_dir is not None:

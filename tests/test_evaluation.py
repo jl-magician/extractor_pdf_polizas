@@ -405,6 +405,95 @@ class TestUpdateEvaluationColumns:
 
 
 # ---------------------------------------------------------------------------
+# Tests: CLI integration — --evaluate flag on extract command
+# ---------------------------------------------------------------------------
+
+class TestCliEvaluateFlag:
+    """Integration tests confirming --evaluate triggers evaluate_policy."""
+
+    def test_evaluate_called_with_flag(self, tmp_path):
+        """With --evaluate flag, evaluate_policy and update_evaluation_columns are called."""
+        from typer.testing import CliRunner
+        from policy_extractor.cli import app
+
+        runner = CliRunner()
+        pdf_file = tmp_path / "test.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4 fake content")
+
+        mock_usage = MagicMock()
+        mock_usage.input_tokens = 500
+        mock_usage.output_tokens = 200
+
+        mock_eval_result = MagicMock()
+        mock_eval_result.score = 0.88
+        mock_eval_result.evaluation_json = '{"completeness": 0.9}'
+        mock_eval_result.evaluated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        mock_eval_result.model_id = "claude-sonnet-4-5-20250514"
+        mock_eval_result.usage = mock_usage
+
+        mock_policy = MagicMock()
+        mock_policy.numero_poliza = "POL-001"
+        mock_policy.aseguradora = "GNP"
+        mock_policy.model_dump_json = MagicMock(return_value='{"numero_poliza": "POL-001"}')
+
+        mock_usage_extraction = MagicMock()
+        mock_usage_extraction.input_tokens = 1000
+        mock_usage_extraction.output_tokens = 300
+
+        with patch("policy_extractor.cli.init_db"), \
+             patch("policy_extractor.cli.SessionLocal") as mock_session_cls, \
+             patch("policy_extractor.cli.compute_file_hash", return_value="abc123"), \
+             patch("policy_extractor.cli.is_already_extracted", return_value=False), \
+             patch("policy_extractor.cli.ingest_pdf") as mock_ingest, \
+             patch("policy_extractor.cli.extract_policy", return_value=(mock_policy, mock_usage_extraction, 0)), \
+             patch("policy_extractor.storage.writer.upsert_policy") as mock_upsert, \
+             patch("policy_extractor.evaluation.evaluate_policy", return_value=mock_eval_result) as mock_evaluate, \
+             patch("policy_extractor.storage.writer.update_evaluation_columns") as mock_update_eval:
+
+            mock_session_cls.return_value = MagicMock()
+            mock_ingest.return_value = MagicMock()
+
+            result = runner.invoke(app, ["extract", str(pdf_file), "--evaluate"])
+
+        assert mock_evaluate.called, "evaluate_policy should have been called"
+        assert mock_update_eval.called, "update_evaluation_columns should have been called"
+
+    def test_evaluate_not_called_without_flag(self, tmp_path):
+        """Without --evaluate flag, evaluate_policy is NOT called."""
+        from typer.testing import CliRunner
+        from policy_extractor.cli import app
+
+        runner = CliRunner()
+        pdf_file = tmp_path / "test.pdf"
+        pdf_file.write_bytes(b"%PDF-1.4 fake content")
+
+        mock_policy = MagicMock()
+        mock_policy.numero_poliza = "POL-001"
+        mock_policy.aseguradora = "GNP"
+        mock_policy.model_dump_json = MagicMock(return_value='{"numero_poliza": "POL-001"}')
+
+        mock_usage_extraction = MagicMock()
+        mock_usage_extraction.input_tokens = 1000
+        mock_usage_extraction.output_tokens = 300
+
+        with patch("policy_extractor.cli.init_db"), \
+             patch("policy_extractor.cli.SessionLocal") as mock_session_cls, \
+             patch("policy_extractor.cli.compute_file_hash", return_value="abc123"), \
+             patch("policy_extractor.cli.is_already_extracted", return_value=False), \
+             patch("policy_extractor.cli.ingest_pdf") as mock_ingest, \
+             patch("policy_extractor.cli.extract_policy", return_value=(mock_policy, mock_usage_extraction, 0)), \
+             patch("policy_extractor.storage.writer.upsert_policy"), \
+             patch("policy_extractor.evaluation.evaluate_policy") as mock_evaluate:
+
+            mock_session_cls.return_value = MagicMock()
+            mock_ingest.return_value = MagicMock()
+
+            runner.invoke(app, ["extract", str(pdf_file)])
+
+        assert not mock_evaluate.called, "evaluate_policy should NOT be called without --evaluate flag"
+
+
+# ---------------------------------------------------------------------------
 # Tests: Constants
 # ---------------------------------------------------------------------------
 
