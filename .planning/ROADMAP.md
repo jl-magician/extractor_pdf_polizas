@@ -5,7 +5,7 @@
 Six phases (6-11) that take the v1.0 shipped system and add HTTP integration, concurrency, schema versioning, export formats, and extraction quality tooling. All phases are strictly additive — no v1.0 component is replaced. Phase 6 (Alembic) is a hard prerequisite for Phase 10 (evaluation columns). Phases 7, 8, and 9 are independent of each other but all depend on the stable v1.0 pipeline. Phases 10 and 11 build on the stable pipeline and optionally on each other.
 
 **Milestone:** v1.1 API & Quality
-**Phases in this milestone:** 6-11 (continuing from v1.0 phases 1-5)
+**Phases in this milestone:** 6-12 (continuing from v1.0 phases 1-5)
 
 ## Phases
 
@@ -120,10 +120,21 @@ Plans:
 - [ ] 11-01-PLAN.md — Regression package (PiiRedactor, FieldDiffer, DriftReport), pytest marker config, gitignore, unit tests
 - [ ] 11-02-PLAN.md — create-fixture CLI subcommand, parametrized regression test module
 
+### Phase 12: Milestone Polish
+**Goal**: Close tech debt and cosmetic gaps identified by milestone audit before archiving v1.1
+**Depends on**: Phase 11 (all prior phases complete)
+**Requirements**: REG-02 (partial fix)
+**Gap Closure:** Closes gaps from v1.1 audit
+**Success Criteria** (what must be TRUE):
+  1. FieldDiffer handles Decimal/float monetary values without spurious failures from serialization roundtrip
+  2. All 6 VALIDATION.md files have `nyquist_compliant: true` in frontmatter
+  3. SUMMARY frontmatter for phases 9 and 10 include all requirement IDs
+**Plans:** TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
+Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -138,3 +149,4 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 9. Async Batch | 2/2 | Complete   | 2026-03-19 |
 | 10. Quality Evaluator | 2/2 | Complete    | 2026-03-19 |
 | 11. Regression Suite | 2/2 | Complete    | 2026-03-19 |
+| 12. Milestone Polish | 0/? | Not started | - |
