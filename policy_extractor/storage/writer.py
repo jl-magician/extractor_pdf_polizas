@@ -6,7 +6,25 @@ Exports:
 """
 from __future__ import annotations
 
+import json
+from datetime import date, datetime
+from decimal import Decimal
+
 from sqlalchemy.orm import Session
+
+
+def _json_safe(obj: dict) -> dict:
+    """Convert a dict to JSON-safe types (handles datetime, date, Decimal)."""
+    return json.loads(json.dumps(obj, default=_json_serializer))
+
+
+def _json_serializer(obj):
+    """JSON serializer for objects not serializable by default json code."""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 from policy_extractor.schemas.asegurado import AseguradoExtraction
 from policy_extractor.schemas.cobertura import CoberturaExtraction
@@ -69,9 +87,10 @@ def upsert_policy(session: Session, extraction: PolicyExtraction) -> Poliza:
         setattr(poliza, field, getattr(extraction, field))
 
     # Store campos_adicionales merged with confianza (STOR-01: confianza stored in DB)
+    # Convert to JSON-safe types (datetime, Decimal in _raw_response)
     merged = dict(extraction.campos_adicionales)
     merged["confianza"] = extraction.confianza
-    poliza.campos_adicionales = merged
+    poliza.campos_adicionales = _json_safe(merged)
 
     # Append new children
     for aseg_ext in extraction.asegurados:
