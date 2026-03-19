@@ -1,9 +1,9 @@
 ---
 phase: 8
 slug: pdf-upload-api
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-19
 ---
 
