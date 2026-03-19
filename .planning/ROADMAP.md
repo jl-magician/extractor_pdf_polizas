@@ -56,7 +56,10 @@ Plans:
   3. Excel and CSV exports accept the same `--aseguradora`, `--desde`, and `--hasta` filter flags as the existing JSON export
   4. Opening the Excel file in a spreadsheet tool shows prima_total and other monetary values as numbers (not text), enabling SUM formulas to work correctly
   5. Date columns in the Excel file are formatted as dates, not strings
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
+- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
 
 ### Phase 8: PDF Upload API
 **Goal**: External systems can POST a PDF over HTTP and receive structured extraction results without running the CLI
@@ -68,7 +71,10 @@ Plans:
   3. The uploaded PDF triggers the complete pipeline (ingest -> extract -> persist) and the result is queryable via existing CRUD endpoints
   4. If the server is restarted, uploading the same PDF again succeeds and produces a result (job_store loss on restart is documented, not a crash)
   5. After extraction completes, no temporary PDF files remain on disk
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
+- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
 
 ### Phase 9: Async Batch
 **Goal**: Users can process large PDF batches significantly faster by running extractions concurrently without hitting SQLite lock errors or API rate limits
@@ -80,7 +86,10 @@ Plans:
   3. When the Anthropic API returns a rate limit error, the CLI automatically retries with backoff and eventually succeeds (no silent None results)
   4. The Rich progress bar and final summary table still display correctly during concurrent runs
   5. Running the same batch twice (idempotency) still skips already-processed files and produces no duplicate records
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
+- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
 
 ### Phase 10: Quality Evaluator
 **Goal**: Users can optionally invoke a Sonnet-powered scoring pass on any extraction to assess completeness, accuracy, and hallucination risk
@@ -92,7 +101,10 @@ Plans:
   3. Evaluation scores and details are retrievable from the database after the command completes
   4. User sends `POST /polizas/upload?evaluate=true` and the returned job result includes evaluation fields alongside the extraction
   5. The CLI output clearly separates Haiku extraction cost from Sonnet evaluation cost
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
+- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
 
 ### Phase 11: Regression Suite
 **Goal**: A repeatable, automated test suite catches extraction quality regressions by comparing field-by-field output against known-good fixtures
@@ -103,7 +115,10 @@ Plans:
   2. Running `pytest` (default, no marker) does NOT run regression tests (they are excluded from the default suite)
   3. When an extraction result differs from the fixture, the test output identifies exactly which fields drifted and by how much
   4. The fixture set covers at least one real policy PDF per insurer type represented in pdfs-to-test/ with no PII committed to the repository
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
+- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
 
 ## Progress
 
@@ -118,7 +133,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 4. CLI & Batch | 2/2 | Complete | 2026-03-18 |
 | 5. Storage & API | 2/2 | Complete | 2026-03-18 |
 | 6. Migrations | 2/2 | Complete   | 2026-03-19 |
-| 7. Export | 0/? | Not started | - |
+| 7. Export | 0/2 | Planning complete | - |
 | 8. PDF Upload API | 0/? | Not started | - |
 | 9. Async Batch | 0/? | Not started | - |
 | 10. Quality Evaluator | 0/? | Not started | - |
