@@ -3,7 +3,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import JSON, Date, DateTime, ForeignKey, Numeric, String
+import sqlalchemy as sa
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -44,6 +45,12 @@ class Poliza(Base):
 
     # JSON overflow (DATA-02)
     campos_adicionales: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Evaluation fields (MIG-03, QAL-03 — populated by Phase 10 evaluator)
+    evaluation_score: Mapped[Optional[float]] = mapped_column(nullable=True)
+    evaluation_json: Mapped[Optional[str]] = mapped_column(sa.Text(), nullable=True)
+    evaluated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    evaluated_model_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationships (DATA-01)
     asegurados: Mapped[list["Asegurado"]] = relationship(
