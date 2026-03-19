@@ -1,90 +1,260 @@
 # Stack Research
 
 **Domain:** Insurance PDF data extraction system (LLM-powered, local-first, Python CLI + API)
-**Researched:** 2026-03-17
-**Confidence:** HIGH — all versions verified against PyPI, all core claims verified against official Anthropic docs
+**Researched:** 2026-03-18 (updated for v1.1)
+**Confidence:** HIGH — all versions verified against PyPI; async patterns verified against official FastAPI docs
 
 ---
 
-## Recommended Stack
+## v1.0 Stack (Shipped — Do Not Re-add)
 
-### Core Technologies
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Python | 3.11+ | Runtime |
+| `anthropic` | >=0.86.0 | Claude API client (sync `Anthropic` + ships `AsyncAnthropic`) |
+| `pymupdf` | >=1.27.2 | PDF parsing, per-page text extraction |
+| `pydantic` | >=2.12.5 | Data validation + output schema |
+| `sqlalchemy` | >=2.0.48 | ORM for SQLite storage |
+| `fastapi` | >=0.135.1 | CRUD REST API |
+| `uvicorn[standard]` | >=0.42.0 | ASGI server |
+| `typer` | >=0.9.0 | CLI interface |
+| `rich` | >=13.0.0 | Terminal output formatting |
+| `ocrmypdf` | >=17.3.0 | OCR preprocessing for scanned PDFs |
+| `pytesseract` | >=0.3.13 | Tesseract OCR direct calls |
+| `pdf2image` | >=1.17.0 | PDF page to PIL image |
+| `python-dotenv` | >=1.0.1 | Environment variable management |
+| `loguru` | >=0.7 | Structured logging |
+| `pytest` | (dev) | Test runner |
+| `ruff` | (dev) | Linter + formatter |
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Python | 3.11+ | Runtime | 3.11 required by ocrmypdf 17.x; best balance of current ecosystem support and stability on Windows |
-| anthropic (SDK) | 0.85.0 | Claude API client | Official Anthropic SDK; native PDF document block support (base64 + Files API); handles both digital-text and vision-based PDFs in one call |
-| PyMuPDF | 1.27.2 | PDF parsing (digital-text PDFs) | Fastest Python PDF library; extracts text with layout preservation; detects whether PDF has selectable text (vs. scanned); needed to pre-check before sending to Claude |
-| pydantic | 2.12.5 | Data validation + output schema | Industry standard for typed data models; instructor uses pydantic models to define Claude's output schema; models for PolicyData, Insured, Coverage, etc. |
-| instructor | 1.14.5 | Structured LLM output | Wraps anthropic SDK to enforce pydantic-defined JSON output from Claude; handles retries on validation failure; removes need to manually parse Claude's response |
-| SQLAlchemy | 2.0.48 | ORM for local database | Production-stable 2.0 style; supports SQLite for local-first operation and PostgreSQL for future web migration — same code, different connection string |
-| FastAPI | 0.135.1 | JSON/REST API layer | Native pydantic v2 integration; auto-generates OpenAPI docs; same type system as extraction layer; future-ready for web UI |
-| Typer | 0.24.1 | CLI interface | Same author as FastAPI; uses same type-hint pattern; single-file or batch PDF processing commands |
-| ocrmypdf | 17.3.0 | OCR preprocessing for scanned PDFs | Wraps Tesseract internally; adds searchable text layer to scanned PDFs before sending to Claude; preserves PDF structure; Spanish language pack support built-in |
+---
 
-### Supporting Libraries
+## v1.1 Stack Additions
+
+These are the **only new dependencies** needed for the six v1.1 features. Existing libraries cover everything else.
+
+### Core Additions (Production)
+
+| Technology | Version | Feature | Why |
+|------------|---------|---------|-----|
+| `alembic` | `>=1.18.4` | Alembic migrations | The canonical SQLAlchemy migration tool. v1.18.4 is current stable (Feb 2026). Batch mode handles SQLite's ALTER TABLE limitations natively via move-and-copy — mandatory for SQLite schema evolution. Autogenerates migration scripts from `Base.metadata` with zero model changes. |
+| `python-multipart` | `>=0.0.22` | PDF Upload API | FastAPI's `UploadFile` will raise a 422 error at startup if this is missing. Required for `multipart/form-data` file parsing. v0.0.22 released Jan 2026. |
+| `openpyxl` | `>=3.1.5` | Excel export | Read/write `.xlsx` without an Excel installation. Supports formatting, multiple sheets, column widths. No pandas/numpy dependency — direct workbook manipulation in ~50 lines for the poliza schema. Pure Python, no C extensions beyond lxml. |
+| `aiofiles` | `>=25.1.0` | PDF Upload API | Async-safe file I/O. Required when saving uploaded PDFs to disk inside an `async def` endpoint — without it, `open()` blocks the event loop and kills concurrent throughput. v25.1.0 (Oct 2025) supports Python 3.9+. |
+
+### Dev / Test Additions
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| pdf2image | 1.17.0 | PDF page → PIL image | When ocrmypdf pre-OCR output is insufficient and you need raw image pages sent directly to Claude vision; requires Poppler on Windows |
-| pytesseract | 0.3.13 | Direct Tesseract OCR | Fallback or quality-check against ocrmypdf output; useful for per-page confidence scoring to decide if manual review is needed |
-| python-dotenv | 1.0.1 | Environment variable management | Store ANTHROPIC_API_KEY outside code; required on Windows where shell env management is less convenient |
-| alembic | 1.15.x | Database schema migrations | When schema evolves (new insurer types, new coverage fields); tracks migration history |
-| httpx | 0.27.x | Async HTTP client | Already a dependency of anthropic SDK; use for any future webhook or external API calls |
-| rich | 13.x | Terminal output formatting | Progress bars and tables for batch CLI processing; shows extraction status per PDF |
-| loguru | 0.7.x | Structured logging | Simple drop-in for Python logging; critical for debugging extraction failures at 200+ PDFs/month volume |
+| `pytest-asyncio` | `>=1.3.0` | Async test harness | Required to `await` coroutines inside pytest test functions. v1.3.0 (Nov 2025). Set `asyncio_mode = "auto"` in `pyproject.toml` to avoid per-test `@pytest.mark.asyncio` decorators. |
+| `httpx` | `>=0.28.1` | FastAPI async test client | FastAPI's official tool for testing async endpoints. `httpx.AsyncClient` with `ASGITransport` exercises the full ASGI stack without a live server. v0.28.1 (Dec 2024). Note: httpx is already a transitive dependency of the `anthropic` SDK — this pins a minimum. |
 
-### Development Tools
+---
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| uv | Fast Python package manager + virtual env | Replaces pip + venv; dramatically faster installs; lock file support; use `uv sync` for reproducible envs on Windows |
-| pytest | Test runner | Test extraction quality with fixture PDFs from each insurer; parametrize over PDF corpus |
-| pytest-asyncio | Async test support | Required for testing async FastAPI routes and any async anthropic SDK calls |
-| ruff | Linter + formatter | Replaces black + flake8 + isort in one tool; fast; configure in pyproject.toml |
+## What NOT to Add for v1.1
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `celery` + `redis` | Adds external broker infrastructure, worker processes, and operational complexity entirely disproportionate to 200 polizas/month on a local Windows machine. | `asyncio.Semaphore` + `asyncio.gather` inside the existing batch command. No external dependencies. |
+| `xlsxwriter` | Write-only — cannot read or modify existing `.xlsx` files. If "update existing export" is needed later, it must be replaced. | `openpyxl` (reads and writes) |
+| `pandas` | Pulls in ~30MB of numpy + pandas just to write rows. The poliza schema is a flat Pydantic model; direct openpyxl row writes are 50 lines and have no binary dependency. | Direct `openpyxl` workbook manipulation |
+| `sqlmodel` | Dual-inheritance model conflicts with existing plain SQLAlchemy `Base`. Migration requires rewriting all ORM models, the storage writer, and ~153 tests. Zero benefit. | Keep existing `sqlalchemy.orm` + separate Pydantic schemas |
+| `aiosqlite` / `asyncpg` | Async DB drivers require converting all sessions to `AsyncSession`. The extraction bottleneck is the Claude API call (1–3 s per PDF), not SQLite writes. Converting session layer is a large refactor for negligible gain. | Existing synchronous `SessionLocal`; offload to `run_in_executor` if needed |
+| `alembic_utils` | Adds PostgreSQL-specific helpers (views, stored functions) not applicable to SQLite. | Plain `alembic` with `render_as_batch=True` |
+| `pytest-httpx` | Mocks `httpx` calls at a low level — useful for testing code that makes external HTTP calls. The evaluator calls the real Anthropic SDK (`anthropic.Anthropic`), not bare `httpx`. Mock the SDK client directly. | `unittest.mock.patch` on `anthropic.Anthropic` or `AsyncAnthropic` |
+
+---
+
+## Integration Details per Feature
+
+### PDF Upload API
+
+**Dependencies added:** `python-multipart`, `aiofiles`
+
+**Pattern:**
+```python
+# New route added to existing policy_extractor/api/__init__.py app
+from fastapi import UploadFile, File, BackgroundTasks
+import aiofiles, tempfile, asyncio
+
+@app.post("/upload", status_code=202)
+async def upload_pdf(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+):
+    if file.content_type != "application/pdf":
+        raise HTTPException(400, "Only PDF files accepted")
+    # Write to temp file asynchronously — does not block event loop
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    async with aiofiles.open(tmp.name, "wb") as f:
+        await f.write(await file.read())
+    # Kick off extraction in threadpool (extraction is sync/blocking)
+    background_tasks.add_task(run_extraction_sync, tmp.name)
+    return {"status": "accepted", "filename": file.filename}
+```
+
+The existing sync `extract_with_retry` pipeline runs inside `background_tasks.add_task` without modification. For synchronous response (wait for result), use `await asyncio.get_event_loop().run_in_executor(None, run_extraction_sync, tmp_path)` instead.
+
+### Async/Concurrent Batch
+
+**Dependencies added:** none
+
+The `anthropic` SDK (already installed) ships `AsyncAnthropic` — the async counterpart of the existing `Anthropic` client with identical API except `async/await`:
+
+```python
+from anthropic import AsyncAnthropic
+import asyncio
+
+async def extract_batch_concurrent(pdf_paths: list[str], concurrency: int = 3):
+    client = AsyncAnthropic()
+    sem = asyncio.Semaphore(concurrency)  # Cap concurrent Claude calls
+
+    async def extract_one(path: str):
+        async with sem:
+            # async version of call_extraction_api
+            message = await client.messages.create(...)
+            ...
+
+    await asyncio.gather(*[extract_one(p) for p in pdf_paths])
+```
+
+Use `concurrency=3` as default. Anthropic Haiku rate limits are generous, but SQLite requires serialized writes — use a `threading.Lock` around the `upsert_policy` call or route all DB writes through a serial asyncio queue.
+
+### Golden Dataset Regression Suite
+
+**Dependencies added:** none
+
+Directory structure:
+```
+tests/golden/
+  pdfs/           # Reference PDFs (one per insurer+type combination)
+  expected/       # Corresponding JSON files (PolicyExtraction.model_dump())
+  test_golden.py  # Pytest module
+```
+
+Gate behind a custom pytest mark to avoid burning tokens in CI:
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+markers = ["golden: runs live Claude API calls (deselect with -m 'not golden')"]
+```
+
+Run in full: `pytest -m golden`. Run without: `pytest -m "not golden"` (default CI).
+
+### Sonnet Quality Evaluator
+
+**Dependencies added:** none
+
+New module `policy_extractor/extraction/evaluator.py`. Reuses existing `Anthropic` sync client (or `AsyncAnthropic` for batch evaluation):
+
+```python
+from pydantic import BaseModel
+
+class QualityScore(BaseModel):
+    completeness: float          # 0.0–1.0
+    field_scores: dict[str, str] # field_name → "ok" | "missing" | "wrong"
+    notes: str
+
+def evaluate_extraction(policy: PolicyExtraction, source_text: str) -> QualityScore:
+    # Sends policy JSON + source text to claude-sonnet-4-5 with rubric prompt
+    # Returns structured QualityScore via tool_use (same pattern as extraction)
+    ...
+```
+
+No new library — reuses Pydantic + `anthropic` SDK + `tool_use` pattern already established in `extraction/client.py`.
+
+### Alembic Migrations
+
+**Dependencies added:** `alembic`
+
+**Critical SQLite requirement:** `render_as_batch=True` in `env.py` is mandatory. SQLite does not support `ALTER TABLE DROP COLUMN` or `ALTER TABLE ALTER COLUMN` natively; Alembic batch mode handles this via recreate-and-copy.
+
+Setup:
+```bash
+alembic init alembic   # Creates alembic/ dir + alembic.ini in project root
+```
+
+`alembic/env.py` changes:
+```python
+from policy_extractor.storage.models import Base
+from policy_extractor.config import settings
+
+target_metadata = Base.metadata
+
+def run_migrations_online():
+    connectable = create_engine(f"sqlite:///{settings.DB_PATH}")
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,   # Required for SQLite
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+```
+
+First migration:
+```bash
+alembic revision --autogenerate -m "initial_schema_snapshot"
+alembic upgrade head
+```
+
+Startup strategy: keep `init_db()` for new installs (creates tables), add `alembic upgrade head` for existing installs that need migration. The `create_all()` is idempotent and safe alongside Alembic.
+
+### Excel Export
+
+**Dependencies added:** `openpyxl`
+
+New function in `policy_extractor/cli_helpers.py`:
+```python
+import openpyxl
+from openpyxl.styles import Font
+
+def export_to_excel(polizas: list[Poliza], output_path: str) -> None:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Polizas"
+    headers = ["ID", "Numero", "Aseguradora", "Tipo", "Contratante", "Prima", ...]
+    ws.append(headers)
+    for row in headers:
+        ws.cell(1, col+1).font = Font(bold=True)
+    for poliza in polizas:
+        ws.append([poliza.id, poliza.numero_poliza, ...])
+    wb.save(output_path)
+```
+
+The existing Typer `export` subcommand gains an `--excel / --json` flag (default json to preserve backward compat).
 
 ---
 
 ## Installation
 
-```bash
-# Create virtual environment and install all dependencies
-uv venv
-uv pip install anthropic==0.85.0 pymupdf==1.27.2 pydantic==2.12.5 instructor==1.14.5
-uv pip install sqlalchemy==2.0.48 fastapi==0.135.1 "uvicorn[standard]" typer==0.24.1
-uv pip install ocrmypdf==17.3.0 pdf2image==1.17.0 pytesseract
-uv pip install python-dotenv rich loguru alembic
+Update `pyproject.toml`:
 
-# Dev dependencies
-uv pip install --dev pytest pytest-asyncio ruff
+```toml
+[project]
+dependencies = [
+    # Existing v1.0 deps ...
+    "alembic>=1.18.4",
+    "python-multipart>=0.0.22",
+    "openpyxl>=3.1.5",
+    "aiofiles>=25.1.0",
+]
 
-# Windows: Tesseract must be installed separately
-# Download from: https://github.com/UB-Mannheim/tesseract/wiki
-# Install Spanish language pack: tesseract-ocr-spa.exe
-# Add to PATH: C:\Program Files\Tesseract-OCR
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "pytest-asyncio>=1.3.0", "httpx>=0.28.1"]
 
-# Windows: Poppler must be installed separately (for pdf2image)
-# Download: https://github.com/oschwartz10612/poppler-windows/releases
-# Add bin/ folder to PATH or pass poppler_path= argument
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = ["golden: runs live Claude API calls (deselect with -m 'not golden')"]
 ```
 
----
-
-## Architecture Decision: When to Use Claude's Native PDF Support vs. OCR Pre-processing
-
-This is the critical fork in the extraction pipeline:
-
-**Digital-text PDFs (selectable text):**
-1. Use PyMuPDF to detect if PDF has extractable text (`page.get_text()` returns non-empty)
-2. Send PDF directly to Claude via `document` block (base64 or Files API)
-3. Claude processes both the extracted text AND the rendered visual — best accuracy
-
-**Scanned PDFs (image-only):**
-1. Run ocrmypdf first to produce a text-layer PDF
-2. Send that OCR-enhanced PDF to Claude as a document block
-3. Claude gets both OCR text (imperfect) and visual — higher accuracy than OCR alone
-
-**Why this hybrid approach:** Claude's PDF support processes each page as an image AND extracts text simultaneously (as of February 2025). For scanned PDFs, sending the raw scan still works but pre-OCR with ocrmypdf improves accuracy because Claude gets text confirmation alongside the visual. The cost is approximately 1,500–3,000 tokens per page for text-heavy documents.
+Install:
+```bash
+pip install alembic>=1.18.4 python-multipart>=0.0.22 openpyxl>=3.1.5 aiofiles>=25.1.0
+pip install --upgrade pytest-asyncio httpx   # dev only
+```
 
 ---
 
@@ -92,58 +262,11 @@ This is the critical fork in the extraction pipeline:
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| instructor + pydantic | langchain | Never for this project — LangChain adds abstraction overhead without benefit when using a single provider (Claude) with direct SDK |
-| instructor + pydantic | raw tool_use JSON parsing | Only if instructor becomes incompatible with a future anthropic SDK version; same output, more boilerplate |
-| SQLAlchemy + SQLite | TinyDB / JSON files | If schema were truly flat and queries never needed; insurance policies have relational data (policy → insureds → coverages) that needs proper relations |
-| SQLAlchemy + SQLite | PostgreSQL from day one | When multi-user web access is needed; SQLAlchemy makes migration trivial — just change DATABASE_URL |
-| FastAPI | Flask | Flask lacks native async; pydantic integration requires extra plugins; FastAPI is now the standard for new Python APIs |
-| ocrmypdf | Unstructured.io | Unstructured is excellent for RAG/chunk workflows; overkill here — we want raw text for Claude, not chunked embeddings |
-| PyMuPDF | pdfplumber | pdfplumber is better for coordinate-based table extraction but is 10x slower; not needed when Claude handles structure understanding |
-| Typer | argparse / click | argparse has no type hints; Typer is built on Click but with zero boilerplate; same Click ecosystem under the hood |
-| uv | pip + venv | pip is slower; uv resolves dependencies faster and produces lock files; especially valuable on Windows where pip can struggle with binary dependencies |
-
----
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| PyPDF2 | Abandoned in 2023; superseded by pypdf; extract quality is inferior to PyMuPDF | PyMuPDF for full extraction; pypdf only if you need minimal PDF manipulation without MuPDF dependency |
-| Camelot / tabula-py | Table extraction libraries designed for structured PDFs with defined table regions; insurance PDFs vary too much in layout; Claude handles tables directly | Claude's visual comprehension via document blocks |
-| LangChain | Adds unnecessary abstraction for a single-provider, single-task pipeline; version compatibility issues are frequent; debugging is harder | Direct anthropic SDK + instructor |
-| textract | Windows support is broken/requires WSL; relies on external binaries that conflict on Windows 11 | ocrmypdf (Tesseract-based, Windows native) |
-| EasyOCR | PyTorch dependency (~2GB); slow on CPU; accuracy not significantly better than Tesseract 5.x for Spanish printed text; unnecessary for insurance policy documents (printed, not handwritten) | ocrmypdf + Tesseract with spa language pack |
-| SQLite JSON-only schema | Storing all extracted data as a single JSON blob loses queryability — you cannot filter by insurer, date range, or coverage type without loading all rows | SQLAlchemy ORM with structured columns + JSON column only for variable/overflow fields |
-| Alembic auto-migrate on startup | Auto-migration on app start is dangerous in production; can corrupt data | Explicit `alembic upgrade head` as a deploy/setup step |
-
----
-
-## Stack Patterns by Variant
-
-**If a PDF is digital-text (detected by PyMuPDF):**
-- Skip OCR entirely
-- Send PDF as base64 document block to Claude directly
-- Lower cost, faster processing, higher accuracy
-
-**If a PDF is scanned (image-only):**
-- Run `ocrmypdf --language spa+eng input.pdf ocr_output.pdf`
-- Send `ocr_output.pdf` to Claude as document block
-- Claude uses OCR text as anchor + visual confirmation
-
-**If a PDF exceeds 32MB or 100 pages:**
-- Split with PyMuPDF: `doc.select([0..49])` to produce sub-documents
-- Process each chunk, merge extracted fields in application layer
-- Uncommon for insurance policies but handle gracefully
-
-**If batch processing 200+ PDFs/month:**
-- Use Anthropic Message Batches API (`client.messages.batches.create`)
-- 50% cost reduction vs. synchronous calls
-- Results available within 24 hours; suitable for end-of-day batch jobs
-
-**If schema evolves (new insurer, new coverage type):**
-- Add JSON overflow column to store insurer-specific fields not in base schema
-- Use pydantic `model_extra = "allow"` to capture arbitrary fields from Claude
-- Run Alembic migration to add columns when a field becomes standard
+| `openpyxl` | `xlsxwriter` | Only if producing heavily formatted reports with charts and no need to ever read/modify existing files |
+| `asyncio.Semaphore` + `AsyncAnthropic` | `celery` + `redis` | Only at 10,000+ PDFs/month or when cross-machine distributed workers are required |
+| `alembic` batch mode | Raw `CREATE TABLE / INSERT / DROP` scripts | Never — Alembic tracks revision history and handles rollback; hand-rolled scripts do not |
+| `httpx.AsyncClient` in tests | `requests.Session` + `TestClient` | `TestClient` is fine for sync endpoints; async upload endpoint requires `httpx.AsyncClient` |
+| FastAPI `BackgroundTasks` | `asyncio.create_task` | `create_task` for fire-and-forget within request; `BackgroundTasks` runs after response is sent — both work; `BackgroundTasks` is simpler |
 
 ---
 
@@ -151,47 +274,31 @@ This is the critical fork in the extraction pipeline:
 
 | Package | Compatible With | Notes |
 |---------|-----------------|-------|
-| anthropic 0.85.0 | instructor 1.14.5 | Instructor uses `instructor.from_anthropic(client)` pattern; verified working |
-| pydantic 2.12.5 | instructor 1.14.5 | Instructor requires pydantic v2; pydantic v1 is EOL and incompatible |
-| pydantic 2.12.5 | FastAPI 0.135.1 | FastAPI 0.100+ requires pydantic v2; fully compatible |
-| SQLAlchemy 2.0.48 | alembic 1.15.x | Alembic 1.13+ required for SQLAlchemy 2.0 compatibility |
-| ocrmypdf 17.3.0 | Python 3.11+ | ocrmypdf 17.x dropped support for Python 3.10; requires 3.11 minimum |
-| PyMuPDF 1.27.2 | Python 3.9-3.13 | No external MuPDF install needed since 1.24.0; bundled binaries |
-
----
-
-## Claude API Constraints (Verified from Official Docs)
-
-These limits directly affect system design decisions:
-
-| Constraint | Value | Impact |
-|------------|-------|--------|
-| Max PDF size per request | 32 MB | Most insurance policies are <5MB; not a practical limit |
-| Max pages per request (claude-sonnet-4-6) | 100 pages | Use claude-sonnet-4-6 (200k context); standard policies are <50 pages |
-| Max pages per request (claude-opus-4-6) | 600 pages | Reserve for edge cases; opus costs 3x more |
-| Token cost per page | 1,500–3,000 tokens | Budget ~2,000 tokens/page + 2,000 for extraction prompt; 10-page policy ≈ 22,000 tokens |
-| Supported formats | Standard PDF, no encryption | Reject password-protected PDFs before sending |
-| PDF via Files API | Reusable file_id | Upload once, query multiple times; useful for re-extraction with improved prompts |
+| `alembic>=1.18.4` | `sqlalchemy>=2.0.48` | Alembic 1.15+ required for SQLAlchemy 2.0; 1.18.x fully verified on SA 2.0 |
+| `alembic>=1.18.4` | Python 3.10+ | Project uses Python 3.11+; compatible |
+| `openpyxl>=3.1.5` | Python 3.8+ | No conflicts with project stack |
+| `aiofiles>=25.1.0` | Python 3.9+ | No conflicts with Python 3.11+ |
+| `pytest-asyncio>=1.3.0` | Python 3.10+ | Compatible with Python 3.11+ |
+| `httpx>=0.28.1` | `fastapi>=0.135.1` | FastAPI's `TestClient` is built on httpx internally; both use the same httpx version — no conflict |
+| `python-multipart>=0.0.22` | `fastapi>=0.135.1` | FastAPI declares python-multipart as a soft dependency; installing it unlocks `UploadFile` support |
 
 ---
 
 ## Sources
 
-- [Anthropic PDF Support — Official Docs](https://platform.claude.com/docs/en/build-with-claude/pdf-support) — PDF limits, document block format, Files API (HIGH confidence)
-- [anthropic PyPI](https://pypi.org/project/anthropic/) — SDK version 0.85.0 (HIGH confidence, verified March 2026)
-- [instructor PyPI](https://pypi.org/project/instructor/) — version 1.14.5 (HIGH confidence, verified March 2026)
-- [Instructor + Anthropic Integration](https://python.useinstructor.com/integrations/anthropic/) — Pydantic structured output pattern (HIGH confidence)
-- [PyMuPDF PyPI](https://pypi.org/project/PyMuPDF/) — version 1.27.2 (HIGH confidence, verified March 2026)
-- [ocrmypdf PyPI](https://pypi.org/project/ocrmypdf/) — version 17.3.0, Python 3.11+ requirement (HIGH confidence)
-- [SQLAlchemy PyPI](https://pypi.org/project/SQLAlchemy/) — version 2.0.48 stable (HIGH confidence)
-- [FastAPI PyPI](https://pypi.org/project/fastapi/) — version 0.135.1 (HIGH confidence)
-- [Typer PyPI](https://pypi.org/project/typer/) — version 0.24.1 (HIGH confidence)
-- [pdf2image PyPI](https://pypi.org/project/pdf2image/) — version 1.17.0 (MEDIUM confidence — last release Jan 2024, still maintained)
-- [PyMuPDF4LLM docs](https://pymupdf.readthedocs.io/en/latest/pymupdf4llm/) — LLM-optimized extraction patterns (HIGH confidence)
-- [I Tested 7 Python PDF Extractors (2025 Edition)](https://dev.to/onlyoneaman/i-tested-7-python-pdf-extractors-so-you-dont-have-to-2025-edition-akm) — PyMuPDF performance comparison (MEDIUM confidence)
-- [Best Python PDF to Text Parser Libraries: A 2026 Evaluation](https://unstract.com/blog/evaluating-python-pdf-to-text-libraries/) — Current library landscape (MEDIUM confidence)
+- [PyPI: alembic](https://pypi.org/project/alembic/) — v1.18.4 verified Feb 2026
+- [Alembic batch docs](https://alembic.sqlalchemy.org/en/latest/batch.html) — SQLite `render_as_batch` requirement confirmed HIGH confidence
+- [PyPI: openpyxl](https://pypi.org/project/openpyxl/) — v3.1.5 verified
+- [PyPI: python-multipart](https://pypi.org/project/python-multipart/) — v0.0.22 verified Jan 2026
+- [PyPI: aiofiles](https://pypi.org/project/aiofiles/) — v25.1.0 verified Oct 2025
+- [PyPI: pytest-asyncio](https://pypi.org/project/pytest-asyncio/) — v1.3.0 verified Nov 2025
+- [PyPI: httpx](https://pypi.org/project/httpx/) — v0.28.1 verified Dec 2024
+- [FastAPI docs: Request Files](https://fastapi.tiangolo.com/tutorial/request-files/) — `python-multipart` requirement confirmed HIGH confidence
+- [FastAPI docs: Async Tests](https://fastapi.tiangolo.com/advanced/async-tests/) — `httpx.AsyncClient` + `ASGITransport` pattern confirmed HIGH confidence
+- [FastAPI docs: Background Tasks](https://fastapi.tiangolo.com/tutorial/background-tasks/) — `BackgroundTasks` pattern for post-upload processing
+- [Anthropic SDK GitHub](https://github.com/anthropics/anthropic-sdk-python) — `AsyncAnthropic` ships in existing `anthropic` package; no extra install needed HIGH confidence
 
 ---
 
-*Stack research for: Insurance PDF data extraction system (extractor_pdf_polizas)*
-*Researched: 2026-03-17*
+*Stack research for: extractor_pdf_polizas v1.1 (PDF Upload API, async batch, golden dataset, Sonnet evaluator, Alembic migrations, Excel export)*
+*Researched: 2026-03-18*

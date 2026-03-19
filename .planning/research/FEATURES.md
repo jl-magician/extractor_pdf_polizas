@@ -1,8 +1,23 @@
 # Feature Research
 
-**Domain:** Insurance policy PDF data extraction (AI-powered, local CLI, agency use)
-**Researched:** 2026-03-17
-**Confidence:** HIGH (corroborated across InsurGrid, KlearStack, Docsumo, GroupBWT, AltexSoft, AWS IDP documentation)
+**Domain:** PDF extraction pipeline — v1.1 API & Quality addons (insurance policy system)
+**Researched:** 2026-03-18
+**Confidence:** HIGH
+
+---
+
+## Context: What Already Exists (v1.0, NOT in scope here)
+
+The following are fully shipped and stable:
+
+- PDF ingestion with per-page digital/scanned classification (PyMuPDF + image coverage ratio)
+- OCR fallback via ocrmypdf + Tesseract for scanned pages
+- Claude Haiku extraction with tool_use forced structured output
+- CLI subcommands: extract / batch / export / import-json / serve
+- SQLite persistence with upsert dedup on (numero_poliza, aseguradora)
+- FastAPI CRUD: GET/POST/PUT/DELETE /polizas — JSON body only, no PDF upload
+
+This document covers only the **six new features** for v1.1.
 
 ---
 
@@ -10,145 +25,112 @@
 
 ### Table Stakes (Users Expect These)
 
-Features that an insurance agency expects to exist. Missing any of these = the system doesn't do its job.
+Features the milestone explicitly requires. Missing any makes the v1.1 milestone incomplete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Digital PDF text extraction | Modern PDFs have selectable text; not extracting it directly is a regression | LOW | Use PyMuPDF or pdfplumber; fast, no AI cost |
-| Scanned PDF / image OCR | Many Mexican insurance policies are scanned; non-negotiable for this office | MEDIUM | OCR layer (e.g., Tesseract, pytesseract) before LLM; quality directly impacts accuracy |
-| LLM-powered field extraction | Template-based parsers fail across 50-70 structures; AI is the only scalable path | MEDIUM | Claude API; structured JSON output via tool_use or response schema |
-| Core field extraction: policy number, insurer, validity dates, premium | These are the first fields any agent asks about when looking up a policy | LOW | Validated across all competitor products as baseline |
-| Insured party extraction (people and assets) | Every policy names at least one insured; multiple insured parties per policy is common | MEDIUM | Must handle both person entities and asset entities (vehicle, property, etc.) |
-| Contractor / policyholder extraction | The contractor (contratante) is often different from the insured; critical for billing | LOW | Standard field in Mexican insurance documentation |
-| Coverage extraction (type, amount, deductible) | Agencies compare coverage across carriers; without this the tool has no analytical value | HIGH | Nested/structured data; coverages vary widely by policy type; must handle lists |
-| Payment information extraction | Installment schedules, payment method, total premium — needed for billing workflows | MEDIUM | Includes fractional premiums, payment frequency |
-| Agent / producer extraction | Agencies need to know which agent is associated with each policy | LOW | Often a simple named field but sometimes embedded in header |
-| Spanish and English language support | The document set is explicitly mixed-language | MEDIUM | Claude handles this natively; OCR layer needs multilingual mode |
-| Structured JSON output | Downstream use (DB storage, future API, future web UI) requires structured data | LOW | Define a canonical schema; nest coverages and insured parties as arrays |
-| Local database storage | 200+ policies/month requires searchable persistence, not just files | MEDIUM | SQLite is sufficient for v1; schema must accommodate variable fields per policy type |
-| CLI for single and batch processing | The stated interface requirement; agents must process both individual and folder batches | LOW | Python CLI with argparse or Typer; batch reads a directory, processes all PDFs |
-| Idempotent re-processing | Running the same PDF twice must not create duplicate records | LOW | Hash PDF content (SHA-256) as primary key before extraction |
-| Processing status / progress feedback | Batch runs of 50+ PDFs need visible progress; blind processing is unusable | LOW | tqdm or simple print counters; structured status per-file output |
-| Basic error reporting | When extraction fails or a file is corrupt, the user needs to know which file and why | LOW | Per-file error log; do not let one bad PDF abort the entire batch |
+| PDF Upload API endpoint | External integrations require HTTP-native PDF upload, not CLI-only; the current API accepts JSON bodies only | MEDIUM | POST /polizas/upload multipart/form-data; UploadFile parameter; calls existing ingest_pdf -> extract_policy -> upsert_policy pipeline |
+| Async/concurrent batch processing | Current batch is sequential; 200+ PDFs/month creates a throughput bottleneck with no parallelism | MEDIUM | asyncio.Semaphore(N) wrapping extract_policy via run_in_executor; configurable concurrency; Windows asyncio event loop must be confirmed |
+| Alembic migrations | create_all() silently skips columns on existing DBs; schema must evolve safely as features land | LOW | alembic init; render_as_batch=True in env.py for SQLite ALTER TABLE support; initial revision stamps current schema |
+| Excel export from stored polizas | Agency team works in Excel; JSON is not their native format for reporting and sharing | LOW | pandas + openpyxl; multi-sheet workbook: Polizas / Asegurados / Coberturas sheets; Spanish column names |
 
 ### Differentiators (Competitive Advantage)
 
-Features that go beyond what the market baseline provides and create real value for this specific use case.
+Features that improve extraction quality — the core value of the product.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Confidence scoring per field | Tells the operator which extracted values are uncertain and need human review; reduces silent errors that become billing problems | MEDIUM | Claude can return a confidence flag per field alongside the value; enables human-in-the-loop triage |
-| Extraction provenance / audit trail | Records which PDF produced which data, when, and with which model version; enables error tracing and re-extraction | MEDIUM | Store source_file, extraction_timestamp, model_version, raw_llm_output alongside structured data |
-| Dynamic schema per policy type | Different insurers and policy types have different fields (auto vs. vida vs. GMM); forcing all into one rigid schema loses data | HIGH | Use a core schema + JSONB blob for extra fields; allows querying core fields while preserving everything |
-| Multiple insured entities per policy | Policies can cover fleets (multiple vehicles) or families (multiple people); losing these is a functional failure | HIGH | Extract as an array; each entity has its own type, name, attributes |
-| Raw LLM output storage | Storing the unprocessed LLM response enables re-parsing without re-calling the API when the schema evolves | LOW | Simple text column alongside structured fields; nearly zero cost |
-| Insurer auto-detection | Identifying which of the 10 insurers issued a policy unlocks insurer-specific post-processing or field mapping | MEDIUM | Can be done with LLM as a classification step or rule-based on extracted company name |
-| Extraction dry-run / preview mode | Shows what would be extracted before committing to DB; useful for validating new insurer formats | LOW | Print-to-console mode without DB write; easily implemented |
-| JSON export per policy or batch | Enables downstream integrations without waiting for the future web API | LOW | Already follows from JSON output; add a --export flag |
-| Re-extraction on schema change | When the data model evolves, re-run extraction on existing PDFs without paying re-OCR cost | MEDIUM | Separate OCR/text-extraction step (cached) from LLM-extraction step; only re-call LLM |
-| Extraction quality report | After a batch run, summarize: N extracted OK, N with low-confidence fields, N failed | LOW | Aggregate the per-file status into a summary printed at end of run |
+| Golden dataset regression suite | Catch prompt regressions before they reach production; validate any extraction change against known-good PDFs | MEDIUM | JSON fixture files with expected field subsets; pytest parametrize; field-level fuzzy scoring (not exact full-match) |
+| Sonnet quality evaluator | Haiku occasionally misses fields or produces plausible-but-wrong values; Sonnet-as-judge detects this without human review | HIGH | Second Anthropic API call with structured rubric (completeness, accuracy, no hallucination); tool_use forced output; opt-in via flag or config |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem desirable but introduce complexity, maintenance burden, or misaligned scope for v1.
-
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Hard-coded per-insurer templates | Fast and accurate for known formats | Collapses under format changes; requires maintenance for every new insurer version; 50-70 structures makes this O(n) maintenance forever | Let Claude handle variation; use dynamic prompting with examples rather than rigid templates |
-| Real-time processing webhook / streaming | "Extract as soon as a PDF lands" sounds fast | Adds infrastructure complexity (file watchers, queues, retry logic) not needed for 200/month at manual workflow pace | Batch CLI is sufficient; agents process in batches already |
-| Web UI for data review and editing in v1 | Agents want to see and correct data visually | Web UI is a separate product scope; building it before validating extraction accuracy wastes effort | v1: CLI + JSON output. Flag low-confidence fields in output. Web UI is explicitly v2+ |
-| ML model fine-tuning / local model | "Own the model" for cost or privacy | Fine-tuning requires labeled training data (not yet available), GPU infrastructure, and ongoing retraining; Claude API delivers far better accuracy with zero infrastructure | Use Claude API; costs ~$0.001-0.003 per policy at current pricing; entirely affordable at 200/month |
-| Real-time confidence recalibration | Adaptive thresholds that learn from corrections | Requires labeled feedback loop, labeled corrections storage, and retraining pipeline — a full ML system, not an extraction tool | Set a fixed confidence threshold (e.g., flag fields below 0.80); adjust threshold manually after observing real error patterns |
-| Direct insurer system integration | "Pull policies automatically from insurer portals" | Each insurer has different authentication, APIs, or lacks them entirely; legal and contractual concerns | Agents continue uploading PDFs; extraction is the automation win, not ingestion |
-| Excel/CSV export in v1 | Agents are used to Excel | Export is trivially built on top of the database later; building it now before schema is validated wastes effort | Explicitly deferred to v2; JSON covers integration needs in v1 |
-| Automatic policy renewal detection | "Flag policies expiring soon" | Requires date comparison logic, scheduler, and notification system — premature before core extraction is validated | Validity dates are extracted; agents can query/filter from the database themselves |
+| Full async FastAPI with async SQLAlchemy | "FastAPI is async, use it everywhere" | SQLAlchemy sync sessions with SQLite gain nothing from async I/O at local scale; adds significant complexity | Keep sync endpoints; use BackgroundTasks only for the long-running PDF upload path |
+| Celery + Redis job queue for async batch | "Proper" distributed background job pattern | Redis is an operational dependency that does not belong in a local Windows desktop app; overkill for 200 PDFs/month | asyncio.gather + semaphore in CLI batch; FastAPI BackgroundTasks for single-file HTTP upload |
+| Permanent storage of uploaded PDFs via API | "Re-process any time from the server" | Disk management complexity; dedup is already hash-based via ingestion_cache | Write UploadFile to tempfile, extract, delete tempfile; re-uploading same PDF is idempotent via hash cache |
+| Real-time SSE progress stream for batch | "Show progress in future UI" | Premature for a CLI-first tool; stateful server complexity | Return job_id on async POST /upload; poll GET /upload/{job_id}/status if async path is ever added |
+| Sonnet evaluator as a separate microservice | "Decouple quality from extraction" | Network hop latency + deployment complexity for a local tool | Run evaluator as in-process function after Haiku extraction, gated by --evaluate flag |
+| Auto-running evaluator on every extraction | "Always know extraction quality" | Sonnet costs ~20x Haiku; evaluating 200 PDFs/month would multiply API costs by 20x | Opt-in via flag (--evaluate) or env var; run on demand for spot-checks and regression fixtures |
+| Alembic on every dev iteration | "Always use migrations" | Autogenerate is not perfect; manual review required; slows inner dev loop | Generate migrations only when shipping schema changes; dev flow uses alembic upgrade head |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[OCR Pipeline (Tesseract/pytesseract)]
-    └──required-by──> [LLM Extraction (Claude API)]
-                          └──required-by──> [Structured JSON Output]
-                                                └──required-by──> [Database Storage]
-                                                └──required-by──> [JSON Export]
+[PDF Upload API]
+    └──requires──> [existing ingest_pdf()]
+    └──requires──> [existing extract_policy()]
+    └──requires──> [existing upsert_policy()]
+    └──optional──> [Async background task (for non-blocking upload)]
 
-[PDF Ingestion (file read)]
-    └──required-by──> [Digital Text Extraction (pdfplumber)]
-    └──required-by──> [OCR Pipeline]
+[Async Batch Processing]
+    └──requires──> [existing extract_policy() callable]
+    └──shares──>   [same semaphore concurrency pattern as PDF Upload async path]
 
-[PDF Hash Fingerprinting]
-    └──required-by──> [Idempotent Re-processing]
-    └──enables──> [Re-extraction on Schema Change (skip OCR, re-run LLM)]
+[Golden Dataset Regression Suite]
+    └──requires──> [fixture PDF files (or stored ingestion text) + expected JSON subsets]
+    └──requires──> [existing extract_policy() callable from tests]
+    └──enhances──> [Sonnet Quality Evaluator] (goldens define what "correct" means for calibration)
 
-[Database Storage]
-    └──required-by──> [Extraction Quality Report]
-    └──required-by──> [JSON Export (batch)]
-    └──required-by──> [Future Web UI (v2+)]
+[Sonnet Quality Evaluator]
+    └──requires──> [existing PolicyExtraction Pydantic schema]
+    └──requires──> [Anthropic SDK already in dependencies]
+    └──requires──> [assembled_text from ingestion (source to evaluate against)]
+    └──enhances──> [Golden Dataset Regression Suite] (evaluator scores goldens automatically)
 
-[Confidence Scoring per Field]
-    └──enhances──> [Extraction Quality Report]
-    └──enhances──> [Human-in-the-Loop Review]
+[Alembic Migrations]
+    └──requires──> [existing SQLAlchemy models in storage/models.py]
+    └──must precede──> [any feature that adds DB columns in v1.1]
 
-[Dynamic Schema]
-    └──conflicts-with──> [Hard-Coded Per-Insurer Templates]
-    └──required-by──> [Multiple Insured Entities per Policy]
-
-[Raw LLM Output Storage]
-    └──enables──> [Re-extraction on Schema Change]
+[Excel Export]
+    └──requires──> [existing SQLAlchemy ORM query layer]
+    └──requires──> [existing orm_to_schema() in storage/writer.py]
+    └──independent of all other v1.1 features]
 ```
 
 ### Dependency Notes
 
-- **OCR Pipeline required by LLM Extraction:** Claude cannot read image-only PDFs; text must be materialized first via OCR before being passed in the prompt.
-- **PDF Hash required by Idempotent Re-processing:** Without a fingerprint, the system cannot detect if the same PDF was already processed, causing duplicate records.
-- **PDF Hash enables Re-extraction:** Cached OCR text (keyed by hash) means schema changes only require re-calling the LLM, not re-running OCR — saves time and cost.
-- **Raw LLM Output Storage enables Re-extraction:** If the structured schema changes, the raw response can be re-parsed without an API call (if the new schema asks for a subset of already-extracted data).
-- **Dynamic Schema required by Multiple Insured Entities:** A flat schema cannot represent a one-to-many relationship between a policy and its insured entities; the schema must support arrays/nested objects.
-- **Confidence Scoring enhances Quality Report:** The quality report only becomes meaningful when it can summarize which fields had low confidence, not just which files errored.
+- **Alembic must be set up first.** Any v1.1 feature that adds DB columns (e.g., upload job tracking table) needs Alembic already wired in, or those columns must bypass it and create an inconsistency.
+- **Golden dataset enables Sonnet evaluator calibration.** You cannot trust evaluator scores without ground-truth examples to validate against. Build goldens before relying on evaluator output.
+- **PDF Upload API reuses all v1.0 pipeline components.** No new extraction logic is needed — only HTTP plumbing (multipart parsing, tempfile I/O, error mapping to HTTP status codes).
+- **Async batch and PDF upload share concurrency logic.** Build the semaphore-controlled async runner once; use it from both CLI batch command and API upload endpoint.
+- **Sonnet evaluator requires assembled_text.** The evaluator must compare the Haiku output against the source document text. The ingestion pipeline produces this text; it must be passed through or retrievable from ingestion_cache.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v1)
+### Launch With (v1.1)
 
-Minimum viable product — validates that the extraction approach works and produces usable structured data.
+Minimum to deliver the milestone goals with no shortcuts that create future debt:
 
-- [ ] Digital PDF text extraction (pdfplumber / PyMuPDF) — direct path for non-scanned PDFs; fast and accurate
-- [ ] OCR pipeline for scanned PDFs (pytesseract + preprocessing) — required for the office's document mix
-- [ ] Claude API extraction with structured JSON output — the core value proposition
-- [ ] Core schema: policy number, insurer/company, contractor, insured parties (array), validity dates, premium, payment info, agent, coverages (array with type/amount/deductible), raw_llm_output
-- [ ] PDF SHA-256 fingerprinting for idempotency — prevents duplicate records on re-run
-- [ ] Local SQLite database storage — persistence for 200+/month
-- [ ] CLI: single-file and batch-folder processing modes — stated project requirement
-- [ ] Spanish and English language support — document set is mixed
-- [ ] Per-file error handling and basic error log — batch runs must not abort on one bad file
-- [ ] Progress feedback during batch runs — operator sanity for large batches
-- [ ] Extraction status output: OK / low-confidence fields / failed — minimum visibility into extraction quality
+- [ ] Alembic initialized: `alembic init`, `env.py` configured, initial revision stamps current schema — unblocks schema evolution
+- [ ] PDF Upload API: `POST /polizas/upload` (multipart/form-data); synchronous path (blocks until extraction done); returns PolicyExtraction JSON 201; returns 422 with error detail on failure; tempfile deleted after processing
+- [ ] Async/concurrent batch CLI: `--concurrency N` option (default 3); asyncio.Semaphore wrapping run_in_executor calls; preserves existing Rich progress bar and summary table
+- [ ] Excel export CLI: `poliza-extractor export --format xlsx --output polizas.xlsx`; multi-sheet workbook (Polizas / Asegurados / Coberturas); same filter flags as existing JSON export
+- [ ] Golden dataset regression suite: `tests/regression/fixtures/` directory with `{name}.expected.json` files keyed to PDFs or ingestion text; pytest parametrize; field-level comparison with tolerance; `@pytest.mark.regression` marker for selective run
+- [ ] Sonnet quality evaluator: `evaluate_extraction(policy, source_text, model) -> EvaluationResult`; EvaluationResult has score (0.0-1.0), issues (list[str]), model_id, tokens_used; invoked with `--evaluate` flag in CLI extract
 
 ### Add After Validation (v1.x)
 
-Add once core extraction is working and schema has stabilized.
+Add once v1.1 core is stable and tested:
 
-- [ ] Confidence scoring per field — add once we know which fields are reliably extracted and which are not; requires a few weeks of real data
-- [ ] Extraction provenance logging (source_file, timestamp, model_version) — adds traceability; low complexity once schema is stable
-- [ ] JSON export per policy or batch (--export flag) — useful for agent manual review; trivial add-on
-- [ ] Dry-run / preview mode — useful for validating new insurers without committing to DB
-- [ ] Insurer auto-detection as a discrete classification step — enables insurer-specific quality metrics
-- [ ] Extraction quality summary report at end of batch — aggregate view of confidence/errors
+- [ ] Async PDF upload with job status polling (`GET /upload/{job_id}/status`) — add when UI integration is scoped
+- [ ] Excel export from API (`GET /polizas/export?format=xlsx`) — add after CLI Excel is validated by users
+- [ ] Evaluator auto-triggered selectively in batch (e.g., sample 10% of extractions) — add once evaluator is calibrated against goldens
+- [ ] Expanded golden dataset (20+ fixtures covering all 10 insurers) — add incrementally as real PDFs are confirmed correct
 
 ### Future Consideration (v2+)
 
-Defer until core extraction is validated and product-market fit is established.
+Defer until product-market fit for the API layer is validated:
 
-- [ ] Web UI for data review and editing — explicitly out of scope per PROJECT.md; build on validated DB
-- [ ] Excel / CSV export — trivial once DB is stable; deferred per PROJECT.md
-- [ ] Re-extraction pipeline for schema migrations — needed when schema changes in v2; complexity not justified in v1
-- [ ] Policy comparison features (side-by-side coverage analysis) — high value but requires stable schema and v2 UI
-- [ ] Renewal / expiry alerting — requires scheduler; deferred until agents have validated the extracted dates
-- [ ] Full REST API — v2+ per PROJECT.md; JSON CLI export covers v1 integration needs
+- [ ] Celery/Redis distributed job queue — only relevant at >10,000 PDFs/month or multi-tenant scale
+- [ ] Web UI for upload and review — explicitly out of scope per PROJECT.md
+- [ ] Automated golden dataset expansion from production data — needs human review workflow first
+- [ ] Policy comparison and analytics (coverage gap analysis across insurers) — requires stable schema and UI
 
 ---
 
@@ -156,69 +138,167 @@ Defer until core extraction is validated and product-market fit is established.
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Digital text extraction | HIGH | LOW | P1 |
-| OCR for scanned PDFs | HIGH | MEDIUM | P1 |
-| Claude API extraction + JSON output | HIGH | MEDIUM | P1 |
-| Core schema extraction (all required fields) | HIGH | MEDIUM | P1 |
-| CLI batch + single processing | HIGH | LOW | P1 |
-| SQLite database storage | HIGH | LOW | P1 |
-| PDF hash idempotency | HIGH | LOW | P1 |
-| Error handling + per-file status | HIGH | LOW | P1 |
-| Spanish/English support | HIGH | LOW | P1 |
-| Confidence scoring per field | HIGH | MEDIUM | P2 |
-| Extraction provenance logging | MEDIUM | LOW | P2 |
-| JSON export flag | MEDIUM | LOW | P2 |
-| Dry-run / preview mode | MEDIUM | LOW | P2 |
-| Extraction quality summary report | MEDIUM | LOW | P2 |
-| Insurer auto-detection | MEDIUM | MEDIUM | P2 |
-| Dynamic schema (JSONB extra fields) | MEDIUM | MEDIUM | P2 |
-| Re-extraction pipeline (schema migration) | MEDIUM | HIGH | P3 |
-| Web UI data review | HIGH | HIGH | P3 |
-| Policy comparison / analytics | HIGH | HIGH | P3 |
-| Renewal / expiry alerts | MEDIUM | MEDIUM | P3 |
+| Alembic migrations | LOW (infrastructure) | LOW | P1 — unblocks schema evolution; set up first |
+| PDF Upload API (sync) | HIGH | MEDIUM | P1 — core integration use case for v1.1 |
+| Async concurrent batch | HIGH | MEDIUM | P1 — throughput fix needed at 200+ PDFs/month |
+| Excel export | HIGH | LOW | P1 — immediate agency value; low complexity |
+| Golden dataset regression | MEDIUM (dev quality) | MEDIUM | P2 — quality safety net; high dev value, low end-user visibility |
+| Sonnet quality evaluator | MEDIUM | HIGH | P2 — quality improvement; opt-in; high API cost makes it non-default |
 
 **Priority key:**
-- P1: Must have for launch — without these, the system does not work
-- P2: Should have — adds reliability and operator visibility; add when P1 is solid
-- P3: Nice to have — deferred to v2+; builds on validated foundation
+- P1: Must have for v1.1 launch — milestone incomplete without it
+- P2: Should have — high value but can slip to v1.2 if time constrained
+- P3: Nice to have, future consideration
 
 ---
 
-## Competitor Feature Analysis
+## Implementation Notes by Feature
 
-| Feature | InsurGrid | KlearStack | Our Approach |
-|---------|-----------|------------|--------------|
-| Core field extraction | Yes, declaration pages only | Yes, all insurance docs | Same via Claude; broader document scope |
-| Scanned PDF / OCR | Yes | Yes (multi-format) | Tesseract preprocessing + Claude |
-| Multi-language | English-focused | 50+ languages | Claude handles Spanish/English natively |
-| Template-free extraction | Yes (ML-trained) | Yes (AI/NLP) | Yes (Claude prompt-based, no templates) |
-| Confidence scoring | Yes (real-time validation) | Implicit (99% accuracy claim) | Per-field confidence flag in LLM response |
-| Human review workflow | Yes (portal review) | Yes (dashboard correction) | v1: low-confidence flags in CLI output; v2: UI |
-| Structured JSON output | Yes (REST API) | Yes (REST API) | Yes (file + DB; future REST API v2) |
-| Batch processing | Yes | Yes | Yes (CLI batch mode) |
-| Carrier/insurer detection | Yes (350+ carriers) | Generic | Via extracted company name + optional classification |
-| Multiple insured parties | Partial (decl pages) | Not specified | Explicit array in schema |
-| Local/on-premise deployment | No (cloud SaaS) | No (cloud SaaS) | Yes (local-first, Windows) |
-| Cost model | Per-user SaaS subscription | Per-page SaaS | Per-API-call (Claude); ~$0.001-0.003/policy |
-| Mexican insurer support | Unknown (US-focused) | Generic | Native; prompt in Spanish supported |
+### PDF Upload API
 
-**Key differentiation:** InsurGrid and KlearStack are cloud SaaS products with per-user pricing. This system is local-first, single-tenant, uses Claude API (pay-per-use at ~$0.001-0.003/policy at 200/month = ~$0.20-0.60/month in API costs), and is purpose-built for a Mexican agency's specific 10-insurer set with Spanish-primary documents.
+**Expected behavior:** `POST /polizas/upload` accepts `file: UploadFile` via multipart/form-data. The server:
+1. Validates content_type is `application/pdf`; returns 415 if not
+2. Validates file size <= configurable max (default 50 MB); returns 413 if exceeded
+3. Writes bytes to `tempfile.NamedTemporaryFile(suffix=".pdf")`
+4. Calls `ingest_pdf(tmp_path, session)` -> `extract_policy(result)` -> `upsert_policy(session, policy)`
+5. Returns PolicyExtraction as JSON with status 201
+6. Deletes tempfile in a `finally` block regardless of outcome
+
+Re-uploading the same PDF is idempotent: ingestion_cache hash check skips re-OCR; upsert dedup skips duplicate DB write.
+
+**FastAPI pattern:**
+```python
+from fastapi import UploadFile, File
+@app.post("/polizas/upload", status_code=201)
+async def upload_pdf(file: UploadFile = File(...), db: DbDep = Depends(get_db)):
+    ...
+```
+
+Note: `python-multipart` must be added to dependencies for UploadFile to work in FastAPI.
+
+### Async/Concurrent Batch Processing
+
+**Expected behavior:** The CLI `batch` command gains `--concurrency N` (default 3). Internally, asyncio.gather runs N PDFs simultaneously. Each slot calls `asyncio.get_event_loop().run_in_executor(None, process_one_pdf, pdf)` since `ingest_pdf` and `extract_policy` are synchronous. An `asyncio.Semaphore(N)` gates concurrent Claude API calls.
+
+**Key constraints:**
+- Claude API rate limits: Haiku tier is ~50 RPM / 50K TPM for free tier; 3-5 concurrent is safe
+- OCR (Tesseract) is CPU-bound; do not set concurrency > number of CPU cores
+- Windows asyncio: Python 3.11+ on Windows uses ProactorEventLoop by default, which works with run_in_executor; no special policy needed
+- Rich Progress: thread-safe for advances from executor threads via `progress.advance(task_id)` in thread callbacks
+
+### Golden Dataset Regression Suite
+
+**Expected behavior:** Directory structure:
+```
+tests/regression/
+    fixtures/
+        gnp_auto_sample.pdf          (or: gnp_auto_sample.txt — pre-extracted ingestion text)
+        gnp_auto_sample.expected.json
+        qualitas_gmm_sample.expected.json
+        ...
+    conftest.py                       (fixture discovery + parametrize)
+    test_regression.py                (test body)
+```
+
+Each `.expected.json` contains only the fields that must match (not the full PolicyExtraction). Tests compare with tolerance:
+- Dates: exact match on YYYY-MM-DD string
+- Amounts (prima_total, suma_asegurada): within 1% relative tolerance
+- Strings (numero_poliza, aseguradora): case-insensitive exact match
+- Optional fields missing from extraction: warning only, not failure
+
+Tests are marked `@pytest.mark.regression` to allow fast unit test runs to exclude them:
+```
+pytest -m "not regression"   # fast CI
+pytest -m regression         # full quality check
+```
+
+**Important design choice:** Do not require storing actual PDFs in the test suite if they contain real policyholder data. Store pre-extracted `assembled_text` strings instead (output of ingestion pipeline), which contain no original PII beyond what the LLM would see anyway. This avoids GDPR/data concerns in a team repository.
+
+### Sonnet Quality Evaluator
+
+**Expected behavior:**
+```python
+def evaluate_extraction(
+    policy: PolicyExtraction,
+    source_text: str,
+    model: str = "claude-sonnet-4-5",
+) -> EvaluationResult:
+    ...
+
+@dataclass
+class EvaluationResult:
+    score: float           # 0.0 (bad) to 1.0 (perfect)
+    issues: list[str]      # human-readable problem descriptions
+    model_id: str
+    tokens_used: int
+```
+
+The evaluator sends a second Anthropic API call with:
+- Source text (the assembled PDF text from ingestion)
+- The Haiku-extracted PolicyExtraction as JSON
+- A rubric asking Sonnet to score: completeness (all visible fields captured), accuracy (values match source text), hallucination (values not present in source)
+
+Uses `tool_use` with forced tool call for structured EvaluationResult output — same pattern as extraction.
+
+The evaluator does NOT block persistence. It runs after `upsert_policy()` completes. A score below threshold logs a warning but does not rollback the saved record.
+
+**Cost awareness:** Sonnet costs approximately 20x Haiku per token. A typical policy extraction uses ~3K-8K input tokens. Evaluating every extraction at Sonnet rates would cost $0.15-$0.40 per policy vs. $0.001-0.003 for Haiku extraction. The `--evaluate` flag must default to off.
+
+### Alembic Migrations
+
+**Expected behavior:**
+1. `alembic init alembic` creates `alembic/` directory and `alembic.ini`
+2. `alembic/env.py` configured with `target_metadata = Base.metadata` and DB URL from settings
+3. SQLite requires `render_as_batch=True` in `env.py` context to handle ALTER TABLE via batch recreate
+4. `alembic revision --autogenerate -m "initial_schema"` generates the initial migration (manually reviewed before committing)
+5. `alembic upgrade head` stamps the existing DB and becomes the baseline for all future changes
+
+The `alembic upgrade head` call is added to app startup (alongside existing `init_db()`) so the API server always runs on the latest schema.
+
+**SQLite-specific:** SQLite does not support `ALTER TABLE ADD COLUMN ... NOT NULL` or dropping columns natively. Alembic's batch mode wraps changes as: copy table -> recreate with new schema -> copy data back -> drop old. This is automatic when `render_as_batch=True` is set.
+
+### Excel Export
+
+**Expected behavior:** `poliza-extractor export --format xlsx --output polizas.xlsx` (extends existing `export` subcommand with `--format` flag).
+
+Multi-sheet workbook:
+- **"Polizas"**: one row per policy; columns = all Poliza scalar fields in Spanish; `campos_adicionales` serialized as compact JSON string
+- **"Asegurados"**: one row per insured; columns = poliza_id + all Asegurado fields; `campos_adicionales` as JSON string
+- **"Coberturas"**: one row per coverage; columns = poliza_id + all Cobertura fields; `campos_adicionales` as JSON string
+
+Date columns formatted as YYYY-MM-DD strings. Decimal columns as Python float (Excel native number). Boolean columns as 1/0.
+
+**Dependencies to add to pyproject.toml:**
+```
+pandas>=2.0
+openpyxl>=3.1
+```
+
+`python-multipart` must also be added for UploadFile support:
+```
+python-multipart>=0.0.9
+```
 
 ---
 
 ## Sources
 
-- [InsurGrid Policy Data Extraction](https://www.insurgrid.com/policy-data-extraction) — competitor feature baseline
-- [InsurGrid AI Features](https://insurgrid.com/insurgrid-ai) — carrier detection, accuracy claims
-- [KlearStack Insurance Data Extraction](https://klearstack.com/insurance-data-extraction) — competitor feature baseline
-- [Insurance Data Extraction in 2026: Scaling AI Workflows & ROI](https://groupbwt.com/blog/data-extraction-insurance/) — governance requirements, workflow patterns
-- [How to Extract Data from Insurance Policies in 2025](https://klearstack.com/insurance-data-extraction) — IDP pipeline overview
-- [Intelligent Document Processing for Insurance - AltexSoft](https://www.altexsoft.com/blog/idp-intelligent-document-processing-insurance/) — IDP feature taxonomy
-- [AI and Human-in-the-Loop - Applied Systems](https://www.insurancebusinessmag.com/us/news/technology/ai-and-humanintheloop-applied-systems-smarter-model-for-insurance-data-accuracy-558623.aspx) — confidence scoring and routing patterns
-- [Best OCR for Insurance Document Processing 2025](https://unstract.com/blog/best-ocr-for-insurance-document-processing-automation/) — OCR considerations for mixed-quality PDFs
-- [Intelligent Document Processing - Indico Data](https://indicodata.ai/intelligent-document-processing-for-property-and-casualty-insurance/) — IDP table stakes
-- [Insurance Data Extraction - Docsumo](https://www.docsumo.com/blogs/data-extraction/insurance-industry) — field extraction standards
+- [FastAPI Request Files — official docs](https://fastapi.tiangolo.com/tutorial/request-files/)
+- [FastAPI Background Tasks — official docs](https://fastapi.tiangolo.com/tutorial/background-tasks/)
+- [File Uploading and Background Tasks on FastAPI — Medium](https://medium.com/@marcelo.benencase/file-uploading-and-background-tasks-on-fastapi-883d73f5ea61)
+- [Limit concurrency with semaphore in Python asyncio — Redowan's Reflections](https://rednafi.com/python/limit-concurrency-with-semaphore/)
+- [Processing Files with Controlled Concurrency Using AsyncIO and Semaphores — Medium](https://medium.com/@WamiqRaza/processing-files-with-controlled-concurrency-using-python-asyncio-and-semaphores-7cc09abe5954)
+- [Alembic batch migrations for SQLite — official docs](https://alembic.sqlalchemy.org/en/latest/batch.html)
+- [Alembic autogenerate — official docs](https://alembic.sqlalchemy.org/en/latest/autogenerate.html)
+- [LLM-as-a-Judge evaluation — Langfuse docs](https://langfuse.com/docs/evaluation/evaluation-methods/llm-as-a-judge)
+- [LLM-as-a-judge complete guide — Evidently AI](https://www.evidentlyai.com/llm-guide/llm-as-a-judge)
+- [Benchmarking LLM-as-a-Judge for 5W1H Extraction Evaluation — MDPI Electronics 2025](https://www.mdpi.com/2079-9292/15/3/659)
+- [Building a golden dataset for AI evaluation — Maxim AI](https://www.getmaxim.ai/articles/building-a-golden-dataset-for-ai-evaluation-a-step-by-step-guide/)
+- [pytest-regressions overview — official docs](https://pytest-regressions.readthedocs.io/en/latest/overview.html)
+- [pandas DataFrame.to_excel — official docs](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_excel.html)
+- [Excel writing showdown: Pandas, XlsxWriter, Openpyxl — Medium](https://medium.com/@badr.t/excel-file-writing-showdown-pandas-xlsxwriter-and-openpyxl-29ff5bcb4fcd)
 
 ---
-*Feature research for: Insurance PDF data extraction system (extractor_pdf_polizas)*
-*Researched: 2026-03-17*
+
+*Feature research for: extractor-pdf-polizas v1.1 API & Quality milestone*
+*Researched: 2026-03-18*

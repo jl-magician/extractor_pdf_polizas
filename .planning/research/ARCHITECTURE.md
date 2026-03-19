@@ -1,419 +1,565 @@
 # Architecture Research
 
-**Domain:** Insurance PDF extraction + LLM structured data pipeline
-**Researched:** 2026-03-17
-**Confidence:** HIGH (Claude API official docs) / MEDIUM (pipeline patterns from multiple sources)
+**Domain:** Insurance PDF extraction + LLM structured data pipeline (v1.1 integration)
+**Researched:** 2026-03-18
+**Confidence:** HIGH — all integration points derived directly from v1.0 source code
 
-## Standard Architecture
+---
 
-### System Overview
+## Context: v1.0 Architecture Baseline
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Entry Layer (CLI)                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │  Single PDF  │  │  Batch mode  │  │  API server      │   │
-│  │  command     │  │  (folder)    │  │  (future web)    │   │
-│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘   │
-│         └─────────────────┴─────────────────── ┘            │
-│                            │                                 │
-├────────────────────────────▼────────────────────────────────┤
-│                    Ingestion Layer                           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐       ┌────────────────────────────┐   │
-│  │  PDF Loader      │       │  OCR Detection             │   │
-│  │  (file → bytes)  │──────▶│  (digital vs scanned?)     │   │
-│  └──────────────────┘       └────────────────┬───────────┘   │
-│                                              │               │
-├──────────────────────────────────────────────▼──────────────┤
-│                    Extraction Layer                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────┐    │
-│  │               Claude API Client                       │    │
-│  │   • Sends PDF as base64 document block               │    │
-│  │   • Handles both digital text + scanned images       │    │
-│  │   • Receives structured JSON via tool_use schema     │    │
-│  └──────────────────────────┬───────────────────────────┘    │
-│                             │                                │
-├─────────────────────────────▼───────────────────────────────┤
-│                    Validation Layer                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌────────────────────┐  ┌──────────────────────────────┐    │
-│  │  Pydantic Schema   │  │  Field-level validation       │    │
-│  │  Validation        │  │  (dates, currency, RFC, etc.) │    │
-│  └─────────┬──────────┘  └──────────────┬───────────────┘    │
-│            └─────────────────────────── ┘                    │
-│                           │                                  │
-├───────────────────────────▼─────────────────────────────────┤
-│                    Storage Layer                             │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐  ┌──────────────────────────────────┐   │
-│  │  SQLite DB       │  │  Raw JSON files                  │   │
-│  │  (structured     │  │  (original API response,         │   │
-│  │   core fields)   │  │   audit trail, unknown fields)   │   │
-│  └──────────────────┘  └──────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────┤
-│                    Query/API Layer                           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐  ┌──────────────────────────────────┐   │
-│  │  CLI query tool  │  │  FastAPI JSON endpoints          │   │
-│  │  (immediate use) │  │  (for future web/integrations)   │   │
-│  └──────────────────┘  └──────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| CLI Entry | Accept file paths, options (single/batch), invoke pipeline | `click` or `typer` Python library |
-| PDF Loader | Open PDF file, read bytes, detect if path is valid | `pathlib` + file I/O |
-| OCR Detection | Determine if PDF has selectable text or is image-only | `pymupdf` (fitz) text coverage heuristic |
-| Claude API Client | Send PDF to Claude, receive structured extraction, retry on failure | `anthropic` Python SDK, base64 document blocks |
-| Pydantic Schema | Define expected fields, types, optional vs required; validate LLM output | `pydantic` v2 models |
-| Field Validator | Post-extraction checks: date format, currency range, RFC/ID patterns | Pydantic field validators + regex |
-| Storage Writer | Persist structured data to SQLite core tables + JSON blob for extras | `sqlmodel` or `sqlite3` + `json` |
-| Raw JSON Store | Save full Claude response per PDF for debugging / re-processing | Flat files in `data/raw/` folder |
-| Query CLI | Simple data retrieval: search by insurer, date, policy number | `sqlite3` queries via CLI |
-| FastAPI Server | REST endpoints exposing stored data as JSON | `fastapi` + `uvicorn` (built in v1 for future use) |
-
-## Recommended Project Structure
+v1.0 delivered a working synchronous pipeline with a clear layered structure:
 
 ```
-extractor_pdf_polizas/
-├── cli.py                    # Main CLI entry point (typer app)
-├── config.py                 # API keys, DB path, settings (from env)
-│
-├── ingestion/
-│   ├── __init__.py
-│   ├── loader.py             # Read PDF file → bytes
-│   └── detector.py           # Detect digital vs scanned PDF
-│
-├── extraction/
-│   ├── __init__.py
-│   ├── client.py             # Claude API calls (send PDF, get response)
-│   ├── prompts.py            # Extraction prompt templates
-│   └── schemas.py            # Pydantic models for extracted data
-│
-├── validation/
-│   ├── __init__.py
-│   └── validators.py         # Field-level validation rules (dates, RFC, etc.)
-│
-├── storage/
-│   ├── __init__.py
-│   ├── database.py           # SQLite setup, migrations, connection
-│   ├── models.py             # SQLModel/SQLAlchemy table definitions
-│   └── writer.py             # Save extracted data to DB + raw JSON
-│
-├── api/
-│   ├── __init__.py
-│   ├── main.py               # FastAPI app + routes
-│   └── serializers.py        # Response shapes for API consumers
-│
-├── data/
-│   ├── raw/                  # Raw Claude API responses (JSON files)
-│   ├── input/                # PDFs to process (drop folder for batch)
-│   └── polizas.db            # SQLite database file
-│
-└── tests/
-    ├── fixtures/             # Sample PDFs for testing (anonymized)
-    ├── test_extraction.py
-    ├── test_validation.py
-    └── test_storage.py
+policy_extractor/
+├── config.py               # Settings (env vars, model, DB path)
+├── schemas/                # Pydantic v2 models (PolicyExtraction, Asegurado, Cobertura)
+├── ingestion/              # ingest_pdf() → IngestionResult
+│   ├── classifier.py       # Per-page digital/scanned detection
+│   ├── ocr_runner.py       # ocrmypdf + fallback OCR
+│   └── cache.py            # IngestionCache table (hash → result)
+├── extraction/             # extract_policy(IngestionResult) → PolicyExtraction
+│   ├── client.py           # call_extraction_api(), parse_and_validate(), extract_with_retry()
+│   ├── prompt.py           # SYSTEM_PROMPT_V1, assemble_text()
+│   ├── schema_builder.py   # build_extraction_tool()
+│   └── verification.py     # verify_no_hallucination()
+├── storage/                # SQLAlchemy ORM + SQLite
+│   ├── database.py         # get_engine(), init_db(), SessionLocal
+│   ├── models.py           # Poliza, Asegurado, Cobertura, IngestionCache
+│   └── writer.py           # upsert_policy(), orm_to_schema()
+├── api/                    # FastAPI
+│   └── __init__.py         # GET/POST/PUT/DELETE /polizas (no file upload)
+└── cli.py                  # Typer: extract, batch, export, import, serve
 ```
 
-### Structure Rationale
+**Sync pipeline (one PDF):**
+```
+ingest_pdf(path, session) → IngestionResult
+    ↓
+extract_policy(ingestion_result, model) → (PolicyExtraction, Usage)
+    ↓
+upsert_policy(session, extraction) → Poliza (SQLite)
+```
 
-- **ingestion/:** Isolated file handling — no LLM concerns here. Detector decides early whether to tell Claude "this is scanned" in the prompt.
-- **extraction/:** All Claude API interaction lives here. `schemas.py` is the contract between LLM output and the rest of the system. Changing the schema only touches this module.
-- **validation/:** Separated from extraction intentionally — LLM gives a best-effort result, validation catches what's wrong without tangling with API calls.
-- **storage/:** Single responsibility: persist. `writer.py` accepts a validated Pydantic object and writes it; it does not know about Claude.
-- **api/:** The FastAPI layer is thin — it reads from DB and serializes. No business logic here.
-- **data/raw/:** Saving raw Claude responses enables re-processing if schemas change without re-calling the API and paying again.
+**Current state of each new feature:**
+- PDF Upload API: FastAPI exists but only accepts JSON body — no file upload endpoint
+- Async/concurrent batch: CLI batch is a sequential `for` loop — one PDF at a time
+- Golden dataset regression: no test fixtures with known-good expected outputs
+- Sonnet quality evaluator: no second-pass LLM evaluation; Haiku extracts, that's it
+- Alembic migrations: `Base.metadata.create_all()` only — no migration history
+- Excel export: `export` CLI command writes JSON only; no `.xlsx` output
 
-## Architectural Patterns
+---
 
-### Pattern 1: PDF-as-Document to Claude (Native Vision)
+## v1.1 System Overview
 
-**What:** Send the entire PDF as a `document` content block to Claude. Claude converts each page to an image internally and processes both text and visual layout. No pre-processing OCR step required.
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                         Entry Layer                                │
+├────────────────────────┬──────────────────────────────────────────┤
+│   CLI (Typer)          │   HTTP API (FastAPI)                      │
+│  extract / batch       │  GET/POST/PUT/DELETE /polizas             │
+│  export --format xlsx  │  POST /polizas/upload  [NEW]             │
+│  batch --concurrent N  │  POST /batch/submit    [NEW - optional]  │
+└────────────┬───────────┴──────────────┬───────────────────────────┘
+             │                          │
+┌────────────▼──────────────────────────▼───────────────────────────┐
+│                     Pipeline Layer                                  │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Async Pipeline Orchestrator  [NEW]                          │   │
+│  │  asyncio.gather() over asyncio-wrapped ingest+extract calls  │   │
+│  └──────────────────────────────┬──────────────────────────────┘   │
+│                                  │                                  │
+│  ┌────────────────┐  ┌───────────▼──────────┐  ┌───────────────┐  │
+│  │  ingestion/    │  │  extraction/          │  │  evaluation/  │  │
+│  │  ingest_pdf()  │  │  extract_policy()     │  │  [NEW]        │  │
+│  │  (unchanged)   │  │  (unchanged sync fn)  │  │  evaluate_    │  │
+│  └────────────────┘  └──────────────────────┘  │  with_sonnet()│  │
+│                                                  └───────────────┘  │
+└────────────────────────────────────────────────────────────────────┘
+             │                          │
+┌────────────▼──────────────────────────▼───────────────────────────┐
+│                     Storage Layer                                   │
+│                                                                     │
+│  ┌────────────────────────────────────────────────────────────┐    │
+│  │  SQLite (managed by Alembic)  [UPGRADED from create_all]   │    │
+│  │  polizas / asegurados / coberturas / ingestion_cache       │    │
+│  │  + new columns added via Alembic migration scripts         │    │
+│  └────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+│  ┌──────────────────────┐  ┌─────────────────────────────────┐    │
+│  │  tests/golden/       │  │  Export layer  [NEW]            │    │
+│  │  [NEW — regression   │  │  export_to_excel() in           │    │
+│  │   fixture store]     │  │  storage/exporter.py            │    │
+│  └──────────────────────┘  └─────────────────────────────────┘    │
+└────────────────────────────────────────────────────────────────────┘
+```
 
-**When to use:** Always, for this project. Claude handles both digital text and scanned PDFs natively. For scanned PDFs, Claude's vision reads the image. For digital PDFs, Claude gets both the extracted text and page images.
+---
 
-**Trade-offs:** Simpler pipeline (no local OCR library dependency). Token cost is higher (~1,500-3,000 tokens/page for text + image cost per page). For a 10-page policy at ~$3/1M tokens, extraction per policy is approximately $0.05-0.15. At 200 policies/month = $10-30/month.
+## Component Responsibilities
 
-**Example:**
+### Existing Components (v1.0 — unchanged or minimally modified)
+
+| Component | v1.0 Responsibility | v1.1 Change |
+|-----------|---------------------|-------------|
+| `ingestion/` | PDF classification, OCR, caching | None — stays synchronous; wrapped in executor for async batch |
+| `extraction/client.py` | Anthropic API calls, validation, retry | None — stays synchronous |
+| `extraction/__init__.py` | `extract_policy()` orchestrator | None |
+| `storage/models.py` | ORM models (Poliza, Asegurado, Cobertura, IngestionCache) | Additive columns via Alembic migration (evaluation fields) |
+| `storage/writer.py` | `upsert_policy()`, `orm_to_schema()` | None |
+| `storage/database.py` | Engine, SessionLocal, `init_db()` | Remove `create_all()` call from `init_db()`; Alembic takes over |
+| `api/__init__.py` | GET/POST/PUT/DELETE /polizas | Add `POST /polizas/upload` endpoint |
+| `cli.py` | extract, batch, export, import, serve | Modify `batch` to support `--concurrent N`; modify `export` to support `--format xlsx` |
+
+### New Components (v1.1)
+
+| Component | Responsibility | Location |
+|-----------|---------------|----------|
+| Async batch orchestrator | Run N concurrent ingest+extract+persist pipelines using `asyncio` + `ThreadPoolExecutor` | `policy_extractor/pipeline.py` (new module) |
+| PDF upload endpoint | Accept `multipart/form-data` file upload, save to temp file, run pipeline, return JSON | Added to `policy_extractor/api/__init__.py` |
+| Sonnet evaluator | Second-pass LLM call comparing Haiku extraction against source text; returns quality score + field-level corrections | `policy_extractor/evaluation/__init__.py` (new module) |
+| Golden dataset runner | Pytest parametrized test that runs extraction on fixture PDFs and diffs against stored expected JSON | `tests/golden/` (new directory) |
+| Alembic migrations | Schema versioning — replaces `create_all()` as sole DDL mechanism | `alembic/` (new directory at project root) |
+| Excel exporter | Read poliza rows from DB, build `openpyxl` workbook with one sheet per entity type | `policy_extractor/storage/exporter.py` (new file) |
+
+---
+
+## Integration Points Per Feature
+
+### 1. PDF Upload API
+
+**Integration type:** New endpoint added to existing FastAPI app.
+
+**Integration point:** `policy_extractor/api/__init__.py` — add one new route using FastAPI's `UploadFile`.
+
+**Data flow:**
+```
+POST /polizas/upload  (multipart/form-data, field: "file")
+    ↓
+FastAPI saves upload to tempfile.NamedTemporaryFile (suffix=".pdf")
+    ↓
+Existing: ingest_pdf(temp_path, session)   ← same function, new caller
+    ↓
+Existing: extract_policy(ingestion_result, model)  ← same function
+    ↓
+Existing: upsert_policy(session, policy)   ← same function
+    ↓
+Return: PolicyExtraction JSON (201 Created)
+    ↓
+Cleanup: temp file deleted in finally block
+```
+
+**What changes:**
+- `api/__init__.py`: add `POST /polizas/upload` route (15-20 lines)
+- `pyproject.toml`: add `python-multipart` dependency (FastAPI requires it for `UploadFile`)
+- Nothing else changes — the pipeline functions are reused as-is
+
+**Constraint:** The sync pipeline (ingest + extract) can take 5-60 seconds per PDF (OCR + API call). FastAPI will block the event loop on this route unless an async wrapper is added. For v1.1 at low concurrency (single user, local), blocking is acceptable. If async is needed, wrap in `asyncio.get_event_loop().run_in_executor(None, ...)`.
+
+---
+
+### 2. Async/Concurrent Batch Processing
+
+**Integration type:** New async orchestration layer wrapping existing sync functions.
+
+**Core pattern:** `ingest_pdf()` and `extract_policy()` are synchronous and call blocking I/O (OCR subprocess, Anthropic HTTP). The correct approach is `ThreadPoolExecutor` + `asyncio.run_in_executor()`, not rewriting them as async. Python's GIL is not a bottleneck here because both functions spend time waiting on I/O (disk for OCR, network for Anthropic).
+
+**New file:** `policy_extractor/pipeline.py`
+
 ```python
-import anthropic
-import base64
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-def extract_policy(pdf_path: Path, schema_prompt: str) -> dict:
-    client = anthropic.Anthropic()
-    pdf_bytes = pdf_path.read_bytes()
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+async def process_pdf_async(pdf: Path, session, model: str | None) -> tuple[str, bool]:
+    """Run the full pipeline for one PDF in a thread pool."""
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        result = await loop.run_in_executor(executor, _process_sync, pdf, session, model)
+    return result
 
-    message = client.messages.create(
-        model="claude-sonnet-4-5",  # balance cost/quality
-        max_tokens=4096,
-        messages=[{
-            "role": "user",
-            "content": [
-                {
-                    "type": "document",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "application/pdf",
-                        "data": pdf_b64,
-                    },
-                },
-                {"type": "text", "text": schema_prompt},
-            ],
-        }],
-    )
-    return message.content
+async def batch_async(pdfs: list[Path], session, model: str | None, concurrency: int = 4):
+    """Process up to `concurrency` PDFs simultaneously."""
+    semaphore = asyncio.Semaphore(concurrency)
+    async def bounded(pdf):
+        async with semaphore:
+            return await process_pdf_async(pdf, session, model)
+    return await asyncio.gather(*[bounded(pdf) for pdf in pdfs], return_exceptions=True)
 ```
 
-### Pattern 2: Pydantic Schema as Extraction Contract
+**Integration point in `cli.py`:** The existing `batch` command calls `_process_sync` in a loop. Add `--concurrent N` flag. When `N > 1`, call `asyncio.run(batch_async(pdfs, session, model, N))` instead of the loop.
 
-**What:** Define a Pydantic v2 model representing every field you want to extract. Use this model both as the prompt schema description (auto-generate JSON Schema for the prompt) and as the validation target for LLM output.
+**SQLAlchemy session concern:** SQLAlchemy `Session` is not thread-safe. Each concurrent worker needs its own session. The orchestrator must create one `Session` per task, not share a global session. The existing `SessionLocal()` factory is already set up to create independent sessions — just call it inside each worker function.
 
-**When to use:** Always. This is the key architectural decision that makes the extraction reliable and the data consistent regardless of how messy or varied the source PDF is.
+**Expected throughput improvement:** The main bottleneck is the Anthropic API call (~3-15 seconds per policy). With concurrency=4, 4 PDFs are in-flight simultaneously. For 200 policies/month in a nightly batch, this reduces wall-clock time from ~40 min to ~10 min with concurrency=4.
 
-**Trade-offs:** Up-front effort to define good schemas. Optional fields (most insurance fields are conditional) require `Optional[X] = None` which is verbose. The benefit is that downstream code (storage, API) can rely on typed data.
+---
 
-**Example:**
+### 3. Golden Dataset Regression Suite
+
+**Integration type:** New pytest test directory — no production code changes.
+
+**What it is:** A set of real (anonymized) PDF fixtures paired with known-good expected `PolicyExtraction` JSON files. Pytest runs extraction on each fixture and compares the result to the expected output.
+
+**New directory:** `tests/golden/`
+
+```
+tests/golden/
+├── conftest.py              # Parametrize over fixture pairs
+├── fixtures/
+│   ├── axa_auto_digital.pdf          # Real PDF (anonymized)
+│   ├── axa_auto_digital.expected.json
+│   ├── gnp_gmm_scanned.pdf
+│   ├── gnp_gmm_scanned.expected.json
+│   └── ...
+└── test_golden.py           # Parametrized extraction comparison
+```
+
+**Key design decisions:**
+
+1. Golden tests are marked `@pytest.mark.integration` (or `@pytest.mark.golden`) and excluded from the default test run (`pytest -m "not golden"`). They require real Anthropic API calls and should run in CI only on demand or before releases.
+
+2. Comparison strategy: do not do exact string equality on all fields. Use field-by-field comparison with tolerance for confidence scores and `campos_adicionales` ordering. The critical assertion is that `numero_poliza`, `aseguradora`, `tipo_seguro`, `inicio_vigencia`, `fin_vigencia`, and `prima_total` match exactly (or within ±$0.01 for monetary).
+
+3. Expected JSON files are committed to git and updated intentionally when prompt changes are made. This makes prompt regressions visible in code review.
+
+4. The test fixture PDFs must be either synthetic or fully anonymized (remove all real personal data — names, RFC, CURP, addresses). Use PyMuPDF to redact before committing.
+
+**Integration with evaluator (optional):** When the Sonnet evaluator is enabled, golden tests can also assert that the Sonnet evaluation score for the fixture extraction is above a threshold (e.g., >0.85).
+
+---
+
+### 4. Sonnet Quality Evaluator
+
+**Integration type:** New module called optionally after extraction — does not replace Haiku extraction.
+
+**New module:** `policy_extractor/evaluation/__init__.py`
+
+**Architecture:** The evaluator is a second Anthropic API call that takes:
+- The assembled PDF text (already available from `IngestionResult`)
+- The Haiku extraction result (`PolicyExtraction` as JSON)
+
+And returns a structured quality assessment:
+- Per-field confidence scores
+- A list of suspected errors with corrections
+- An overall quality score (0.0–1.0)
+
+**Pydantic schema for evaluation result:**
 ```python
-from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import date
+class FieldEvaluation(BaseModel):
+    field_name: str
+    haiku_value: str | None
+    assessment: Literal["correct", "incorrect", "unverifiable"]
+    correction: str | None = None
+    explanation: str | None = None
 
-class Asegurado(BaseModel):
-    nombre: str
-    rfc: Optional[str] = None
-    fecha_nacimiento: Optional[date] = None
-
-class PolicyExtraction(BaseModel):
-    numero_poliza: str
-    aseguradora: str
-    tipo_seguro: str
-    fecha_inicio_vigencia: Optional[date] = None
-    fecha_fin_vigencia: Optional[date] = None
-    prima_total: Optional[float] = None
-    moneda: Optional[str] = "MXN"
-    contratante: Optional[str] = None
-    asegurados: list[Asegurado] = Field(default_factory=list)
-    coberturas: list[dict] = Field(default_factory=list)
-    deducible: Optional[str] = None
-    suma_asegurada: Optional[float] = None
-    agente: Optional[str] = None
-    campos_adicionales: dict = Field(default_factory=dict)
-    # ^ catch-all for insurer-specific fields not in core schema
+class EvaluationResult(BaseModel):
+    overall_score: float  # 0.0–1.0
+    fields_evaluated: list[FieldEvaluation]
+    summary: str
+    evaluator_model: str
+    evaluated_at: datetime
 ```
 
-### Pattern 3: Hybrid SQLite Storage (Core Columns + JSON Blob)
+**Integration options (in order of invasiveness):**
 
-**What:** Store well-known, frequently queried fields as proper SQLite columns. Store the remainder (insurer-specific fields, full extracted object) in a JSON TEXT column. This accommodates the 50-70 structure variations without requiring schema migrations every time a new insurer is added.
+| Option | When | How |
+|--------|------|-----|
+| CLI flag `--evaluate` on `extract` command | Single PDF evaluation | After `extract_policy()`, call `evaluate_extraction()`, print score to stderr |
+| CLI flag `--evaluate` on `batch` command | Batch evaluation | Run evaluation on each result; include score in summary table |
+| Stored evaluation column in DB | Persistent quality tracking | Alembic migration adds `evaluation_score REAL`, `evaluation_json JSON` columns to `polizas` table |
+| Separate `evaluate` subcommand | Re-evaluate stored extractions | Read existing poliza from DB, re-call Sonnet, update evaluation columns |
 
-**When to use:** This project specifically, where core fields are predictable (policy number, insurer, dates, premium) but extended fields vary wildly by insurer and product type.
+**Recommended for v1.1:** Start with the CLI flag approach. The evaluator is expensive (Sonnet costs ~5x Haiku) and should be opt-in. Store evaluation results in `campos_adicionales` initially — add dedicated columns only if evaluation data becomes a query target.
 
-**Trade-offs:** SQL queries on core fields remain fast and indexable. JSON fields require `json_extract()` for filtering — acceptable for low-volume local use. Avoids EAV (entity-attribute-value) complexity or schema explosion with 50+ nullable columns.
+**Integration point with golden tests:** The golden dataset runner can use the evaluator to generate baseline quality scores for each fixture. This makes regression tracking objective: if a prompt change drops the average evaluation score below the baseline, it's a regression.
 
-**Example:**
+---
+
+### 5. Alembic Migrations
+
+**Integration type:** Replace `init_db()` as the DDL mechanism. Alembic runs migrations; `init_db()` is kept for tests only.
+
+**Why needed now:** v1.1 adds new columns (evaluation fields on `polizas`). Without Alembic, the only option is to drop and recreate the database — destroying all extracted data. Alembic handles additive schema changes non-destructively.
+
+**Setup:**
+```
+alembic/
+├── env.py                    # Points to policy_extractor.storage.models.Base
+├── script.py.mako            # Migration file template
+└── versions/
+    └── 001_initial_schema.py    # Baseline: polizas, asegurados, coberturas, ingestion_cache
+    └── 002_add_evaluation_cols.py  # v1.1: evaluation_score, evaluation_json on polizas
+```
+
+**Key `env.py` configuration:**
+
 ```python
-# SQLite table: policies
-# Core columns: id, numero_poliza, aseguradora, tipo_seguro,
-#               fecha_inicio, fecha_fin, prima_total, moneda,
-#               contratante, created_at, source_file
-# JSON column:  extracted_data (full Pydantic model as JSON)
-#               campos_adicionales (insurer-specific extras)
+# alembic/env.py
+from policy_extractor.storage.models import Base
+from policy_extractor.config import settings
 
-import sqlite3, json
+target_metadata = Base.metadata
 
-def save_policy(conn, extraction: PolicyExtraction, source_file: str):
-    conn.execute("""
-        INSERT INTO policies
-            (numero_poliza, aseguradora, tipo_seguro,
-             fecha_inicio, fecha_fin, prima_total, moneda,
-             contratante, source_file, extracted_data)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        extraction.numero_poliza,
-        extraction.aseguradora,
-        extraction.tipo_seguro,
-        str(extraction.fecha_inicio_vigencia),
-        str(extraction.fecha_fin_vigencia),
-        extraction.prima_total,
-        extraction.moneda,
-        extraction.contratante,
-        source_file,
-        extraction.model_dump_json(),  # full JSON blob
-    ))
+def get_url():
+    return f"sqlite:///{settings.DB_PATH}"
 ```
 
-## Data Flow
+**Migration for production databases:** Users with existing v1.0 databases need to run `alembic upgrade head` before using v1.1. The migration script must handle the case where tables already exist (use `autogenerate` comparison or manual `op.add_column` with `IF NOT EXISTS` guard).
 
-### Single PDF Processing Flow
+**Migration 002 example:**
+```python
+# alembic/versions/002_add_evaluation_cols.py
+def upgrade():
+    op.add_column('polizas', sa.Column('evaluation_score', sa.Numeric(4, 3), nullable=True))
+    op.add_column('polizas', sa.Column('evaluation_json', sa.JSON, nullable=True))
 
-```
-User runs: python cli.py extract poliza.pdf
-    │
-    ▼
-[CLI] validates file path exists, is .pdf
-    │
-    ▼
-[ingestion/loader.py] reads PDF → bytes
-    │
-    ▼
-[ingestion/detector.py] checks text coverage via pymupdf
-    │  (annotates metadata: "scanned=True/False", page count)
-    ▼
-[extraction/client.py] encodes PDF as base64
-    │  builds prompt with Pydantic schema description
-    │  calls anthropic.messages.create()
-    ▼
-[Claude API] processes PDF (pages as images + text)
-    │  returns JSON structured response
-    ▼
-[extraction/schemas.py] parses raw JSON → PolicyExtraction (Pydantic)
-    │  raises ValidationError if required fields missing
-    ▼
-[validation/validators.py] applies domain rules
-    │  (date coherence, currency format, RFC pattern)
-    │  logs warnings for fields that couldn't be extracted
-    ▼
-[storage/writer.py] writes to SQLite (core columns + JSON blob)
-    │  saves raw Claude response to data/raw/{uuid}.json
-    ▼
-[CLI] prints summary: "Extracted: Poliza #12345, AXA, Auto, 2025-01-01 → 2026-01-01"
+def downgrade():
+    op.drop_column('polizas', 'evaluation_score')
+    op.drop_column('polizas', 'evaluation_json')
 ```
 
-### Batch Processing Flow
+**`init_db()` change:** Remove `Base.metadata.create_all(engine)` from the production code path. Keep it only in `tests/conftest.py` for in-memory test databases where Alembic is not used. The application startup sequence becomes: `alembic upgrade head` (one-time or deploy-time) → `python -m policy_extractor.cli serve`.
+
+**`database.py` change:** Replace `init_db()` body with a function that just creates the engine and configures `SessionLocal`. The `create_all()` call moves to a `create_tables_for_tests()` helper used only in `conftest.py`.
+
+---
+
+### 6. Excel Export
+
+**Integration type:** New exporter module + new `--format` flag on the existing `export` CLI command.
+
+**New file:** `policy_extractor/storage/exporter.py`
+
+**New dependency:** `openpyxl` (pure Python, no binary deps, Windows-native).
+
+**Output structure (one workbook, multiple sheets):**
+
+| Sheet | Columns | One row per |
+|-------|---------|-------------|
+| Polizas | id, numero_poliza, aseguradora, tipo_seguro, inicio_vigencia, fin_vigencia, prima_total, moneda, nombre_contratante, nombre_agente, forma_pago, extracted_at | Policy |
+| Asegurados | poliza_id, numero_poliza, tipo, nombre_descripcion, fecha_nacimiento, rfc, curp, parentesco | Insured party |
+| Coberturas | poliza_id, numero_poliza, nombre_cobertura, suma_asegurada, deducible, moneda | Coverage |
+
+**Design rationale for multi-sheet:** A flat single-sheet export collapses the one-to-many relationships, either duplicating policy data for each asegurado/cobertura or losing coverage detail. Multi-sheet with `poliza_id` as the join key matches how the data is actually structured and how Excel users (pivot tables, VLOOKUP) expect to consume relational data.
+
+**Integration with existing `export` command:**
+
+```python
+# cli.py — existing export command modification
+@app.command(name="export")
+def export_policies(
+    ...
+    output: Optional[Path] = typer.Option(None, "--output", "-o"),
+    format: str = typer.Option("json", "--format", help="json or xlsx"),  # NEW
+) -> None:
+    ...
+    if format == "xlsx":
+        if output is None:
+            output = Path("polizas_export.xlsx")
+        from policy_extractor.storage.exporter import export_to_excel
+        export_to_excel(rows, output)
+    else:
+        # existing JSON path unchanged
+```
+
+**`export_to_excel()` function signature:**
+```python
+def export_to_excel(polizas: list[Poliza], output_path: Path) -> None:
+    """Write polizas + children to a multi-sheet .xlsx workbook."""
+```
+
+**Why openpyxl over xlsxwriter:** openpyxl supports both reading and writing; xlsxwriter is write-only. Either works for this use case, but openpyxl is the more common choice in the Python ecosystem and has better cross-platform compatibility.
+
+---
+
+## Data Flow Changes
+
+### v1.0 Single PDF Flow (unchanged)
 
 ```
-User runs: python cli.py batch ./input_folder/
-    │
-    ▼
-[CLI] glob all *.pdf in folder → list of paths
-    │  (optionally filters already-processed by checking DB)
-    ▼
-[loop] for each PDF, runs single PDF flow above
-    │  tracks: processed, failed, skipped counts
-    │  continues on per-PDF errors (logs, does not abort batch)
-    ▼
-[CLI] prints final summary table
+CLI extract <file>
+    ↓
+ingest_pdf(path, session) → IngestionResult
+    ↓
+extract_policy(ingestion_result) → (PolicyExtraction, Usage)
+    ↓
+upsert_policy(session, policy) → Poliza
+    ↓
+JSON to stdout
 ```
 
-### API Query Flow (v1 — local use)
+### v1.1 PDF Upload API Flow (new)
 
 ```
-GET /api/policies?aseguradora=AXA&year=2025
-    │
-    ▼
-[FastAPI route] parses query params
-    │
-    ▼
-[storage/database.py] builds SQL query with filters
-    │  SELECT * FROM policies WHERE aseguradora = ? AND fecha_inicio LIKE '2025%'
-    ▼
-[serializers.py] converts SQLite rows → Pydantic response models
-    │
-    ▼
-JSON response: [{numero_poliza, aseguradora, tipo_seguro, ...}]
+POST /polizas/upload (multipart PDF)
+    ↓
+Save to tempfile
+    ↓
+ingest_pdf(temp_path, session)     ← same fn
+    ↓
+extract_policy(ingestion_result)   ← same fn
+    ↓
+upsert_policy(session, policy)     ← same fn
+    ↓
+Delete tempfile
+    ↓
+Return 201 + PolicyExtraction JSON
 ```
+
+### v1.1 Concurrent Batch Flow (modified)
+
+```
+CLI batch <folder> --concurrent 4
+    ↓
+Glob PDFs → list[Path]
+    ↓
+asyncio.run(batch_async(pdfs, concurrency=4))
+    ↓                   ↓                   ↓                   ↓
+Worker 1               Worker 2            Worker 3            Worker 4
+session=SessionLocal() session=SessionLocal() ...               ...
+ingest_pdf()           ingest_pdf()         ...
+extract_policy()       extract_policy()
+upsert_policy()        upsert_policy()
+    ↓                   ↓                   ↓                   ↓
+asyncio.gather() collects results
+    ↓
+Rich summary table (succeeded / failed / skipped / cost)
+```
+
+### v1.1 Evaluation Flow (optional, per-PDF)
+
+```
+extract_policy(ingestion_result) → (PolicyExtraction, Usage)
+    ↓ [if --evaluate flag]
+evaluate_extraction(
+    assembled_text,       ← from ingestion_result
+    policy_json,          ← PolicyExtraction.model_dump_json()
+    model="claude-sonnet-4-5"
+) → EvaluationResult
+    ↓
+Store evaluation_score + evaluation_json in poliza.campos_adicionales
+    ↓ [or dedicated columns after migration 002]
+```
+
+---
+
+## Recommended Build Order
+
+Dependencies between new features determine this sequence:
+
+| Step | Feature | Depends On | Rationale |
+|------|---------|-----------|-----------|
+| 1 | Alembic setup + migration 001 (baseline) | Nothing new — just formalizes existing schema | Must be first so all subsequent schema changes go through migrations |
+| 2 | Excel export (`storage/exporter.py` + CLI flag) | Alembic (DB must be stable before adding exporter) | Standalone, no new API surface; fast win |
+| 3 | PDF upload API endpoint | Existing FastAPI + `python-multipart` | Touches only `api/__init__.py`; isolated |
+| 4 | Async batch orchestrator (`pipeline.py`) | Existing `ingest_pdf` + `extract_policy` | No model changes; pure orchestration; enables throughput |
+| 5 | Alembic migration 002 (evaluation columns) | Alembic (step 1) | Schema must exist before evaluator writes to it |
+| 6 | Sonnet evaluator (`evaluation/__init__.py`) | Migration 002 + extraction module | Needs schema columns and extraction to evaluate |
+| 7 | Golden dataset suite (`tests/golden/`) | Evaluator (optional) + working extraction | Needs real PDFs; can run without evaluator but richer with it |
+
+---
+
+## Modified vs New: Explicit Inventory
+
+### Files MODIFIED in v1.1
+
+| File | What Changes |
+|------|-------------|
+| `policy_extractor/storage/database.py` | Remove `create_all()` from production path; keep for tests via helper |
+| `policy_extractor/api/__init__.py` | Add `POST /polizas/upload` route; add `python-multipart` handling |
+| `policy_extractor/cli.py` | `batch` gets `--concurrent N` flag; `export` gets `--format xlsx` flag |
+| `pyproject.toml` | Add `openpyxl`, `python-multipart`, `alembic` dependencies |
+
+### Files CREATED in v1.1
+
+| File | Purpose |
+|------|---------|
+| `alembic/env.py` | Alembic environment config pointing to existing models |
+| `alembic/versions/001_initial_schema.py` | Baseline migration (polizas, asegurados, coberturas, ingestion_cache) |
+| `alembic/versions/002_add_evaluation_cols.py` | Adds evaluation_score + evaluation_json to polizas |
+| `policy_extractor/pipeline.py` | Async batch orchestrator with ThreadPoolExecutor |
+| `policy_extractor/storage/exporter.py` | `export_to_excel(polizas, path)` using openpyxl |
+| `policy_extractor/evaluation/__init__.py` | `evaluate_extraction()` via Sonnet API call |
+| `policy_extractor/schemas/evaluation.py` | `EvaluationResult`, `FieldEvaluation` Pydantic models |
+| `tests/golden/` | Directory with fixture PDFs + expected JSON + parametrized test |
+| `tests/golden/test_golden.py` | Pytest golden regression test |
+| `alembic.ini` | Alembic CLI config file |
+
+### Files UNCHANGED in v1.1
+
+Everything in `ingestion/`, `extraction/`, `storage/writer.py`, `storage/models.py` (except via Alembic migration), `schemas/poliza.py`, `schemas/asegurado.py`, `schemas/cobertura.py`, `config.py`.
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Shared SQLAlchemy Session Across Async Workers
+
+**What happens:** The async batch orchestrator creates one `Session` and passes it to all concurrent workers.
+
+**Why it's wrong:** `Session` is not thread-safe. Concurrent commits from multiple threads cause either silent data corruption or SQLite locking errors ("database is locked").
+
+**Do this instead:** Each worker function calls `SessionLocal()` independently. Sessions are created inside the worker, used for one PDF, then closed. The `SessionLocal` factory is thread-safe.
+
+### Anti-Pattern 2: Using `asyncio.sleep(0)` to Yield in Sync-Wrapped Code
+
+**What happens:** Developer wraps sync functions in `async def` with `await asyncio.sleep(0)` between calls, believing this gives concurrency.
+
+**Why it's wrong:** Synchronous blocking I/O (file reads, subprocess calls for OCR, `requests`-based HTTP) does not yield the event loop regardless of `await`. The GIL is held for sync I/O operations, so other coroutines cannot run.
+
+**Do this instead:** Use `loop.run_in_executor(executor, sync_fn, *args)`. This actually offloads the sync call to a thread, releasing the event loop for other coroutines.
+
+### Anti-Pattern 3: Running Alembic `upgrade head` in Application Code
+
+**What happens:** `startup` event or `init_db()` calls `alembic upgrade head` programmatically every time the app starts.
+
+**Why it's wrong:** Safe for development, dangerous in production. If a migration contains a bug, every app restart triggers the broken migration. Multiple process restarts can run the same migration concurrently.
+
+**Do this instead:** Run `alembic upgrade head` explicitly as a setup step (documented in README, run once per deployment). `init_db()` only creates the engine and configures `SessionLocal`; it does not run DDL.
+
+### Anti-Pattern 4: Saving Uploaded PDFs to the Uploads Folder Without Cleanup
+
+**What happens:** The upload endpoint writes the PDF to `data/uploads/` and forgets to delete it after processing.
+
+**Why it's wrong:** On a local machine processing 200+ PDFs/month, the uploads folder accumulates gigabytes of data. The source PDF is already captured via `source_file_hash` in the database; keeping the file offers no benefit.
+
+**Do this instead:** Use `tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)` and delete the file in a `finally` block after `ingest_pdf()` completes. The ingestion cache stores the content hash — the file is not needed again.
+
+### Anti-Pattern 5: Exact String Equality in Golden Tests
+
+**What happens:** Golden test asserts `policy.model_dump_json() == expected_json` (byte-for-byte).
+
+**Why it's wrong:** LLM outputs have non-deterministic formatting in string fields (whitespace, punctuation differences), floating-point representation differences in `prima_total`, and `campos_adicionales` key ordering variation. Tests fail constantly despite correct extraction.
+
+**Do this instead:** Compare field-by-field with tolerance: string fields use case-insensitive contains or normalized comparison; monetary fields allow ±0.01; dates use `==` on `date` objects; `campos_adicionales` is excluded from strict comparison.
+
+---
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 0-200 policies/month (current) | Monolith is correct. Single process, SQLite, no queue needed. Run batch manually or via Windows Task Scheduler. |
-| 500-2000 policies/month | Add simple job queue (SQLite-backed with `rq` or just a `processing_status` column). Consider prompt caching for repeated insurer templates. |
-| 2000+ policies/month | Move to PostgreSQL. Add async processing with Celery or `asyncio`. Consider Anthropic Batch API (50% cost reduction for non-urgent processing). |
+| Current: 200 policies/month, 1 user, local | Concurrency=4, SQLite WAL mode, sync API upload (blocking is fine) |
+| 2,000 policies/month, 1 user | Increase concurrency to 8-16; consider Anthropic Batch API (50% cost reduction, async 24h results) |
+| Multi-user web access | Move SessionLocal to per-request scope (already done); enable SQLite WAL; add nginx reverse proxy |
+| PostgreSQL migration | Change only `get_engine()` URL; SQLAlchemy 2.0 + Alembic handle the rest |
 
-### Scaling Priorities
-
-1. **First bottleneck:** Claude API rate limits and cost. Mitigation: use Anthropic Message Batches API for bulk processing, enable prompt caching for system prompt (saves tokens on repeated calls to same insurer type).
-2. **Second bottleneck:** SQLite write contention (only relevant for concurrent access). Mitigation: SQLite WAL mode, or migrate to PostgreSQL when web UI is added.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Template-per-Insurer Approach
-
-**What people do:** Build regex or XPath templates for each insurer (AXA template, GNP template, Qualitas template, etc.) to extract fixed fields from known positions.
-
-**Why it's wrong:** 50-70 PDF structures means 50-70 templates to maintain. Any change to an insurer's PDF format breaks the template silently. New insurers require developer work before the system can process them. This is exactly the manual work being replaced.
-
-**Do this instead:** Send the whole PDF to Claude with a schema describing what to extract. Claude handles layout variation automatically. One prompt serves all insurers.
-
-### Anti-Pattern 2: Pre-Processing OCR Before Sending to Claude
-
-**What people do:** Run Tesseract/PaddleOCR locally on the PDF, get plain text, then send that text to Claude for extraction.
-
-**Why it's wrong:** Discards layout information. OCR errors propagate into extraction. Extra dependency (Tesseract) with Windows installation friction. Claude's native PDF support already converts pages to images and extracts text — it does both simultaneously with better context about spatial relationships between fields.
-
-**Do this instead:** Send the raw PDF bytes as a base64 `document` block. Claude handles both digital text and scanned images natively. Reserve local OCR only as a fallback if Claude's PDF endpoint returns quality issues for a specific document.
-
-### Anti-Pattern 3: Strict Schema — Failing on Missing Fields
-
-**What people do:** Define all insurance fields as required in the Pydantic schema. Treat any missing field as a hard error.
-
-**Why it's wrong:** Insurance PDFs are notoriously inconsistent. Some policies lack certain fields (e.g., individual auto policies don't have "suma asegurada por bien"). Hard failures on every policy with unusual structure kills the batch and requires manual intervention.
-
-**Do this instead:** All fields except the identity fields (numero_poliza, aseguradora) should be `Optional`. Use a `campos_adicionales: dict` catch-all for truly unknown fields. Log extraction confidence warnings but persist what was extracted. Let users review incomplete extractions rather than blocking the pipeline.
-
-### Anti-Pattern 4: No Raw Response Storage
-
-**What people do:** Extract structured data, save to DB, discard the original API response.
-
-**Why it's wrong:** When the extraction schema changes (it will), or when a field was extracted wrongly, there's no way to re-process without re-calling the Claude API (paying again). Raw response storage is the audit trail.
-
-**Do this instead:** Always save the full Claude response JSON to `data/raw/{source_file_hash}.json` alongside the DB record. Implement a `re-process` CLI command that reads from raw JSON instead of calling Claude.
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Claude API (Anthropic) | REST via `anthropic` Python SDK. Base64 PDF document blocks. | Max 32MB per request, 100 pages/request. Use Files API for large PDFs to avoid re-uploading same file. Prompt cache eligible after 1024 tokens. |
-| Anthropic Files API | Upload PDF once, reference by `file_id` | Beta feature as of 2025. Useful for batch processing same PDF with multiple queries. Avoids repeated base64 encoding. |
-| Anthropic Message Batches API | Submit up to 100 requests per batch, async results | 50% cost reduction. Useful for nightly batch runs. Results available within 24 hours. |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| CLI ↔ extraction/ | Direct Python function calls | CLI is the orchestrator; extraction module is stateless |
-| extraction/ ↔ validation/ | Pydantic model passing | `client.py` returns raw dict; `schemas.py` parses to Pydantic; `validators.py` receives typed model |
-| extraction/ ↔ storage/ | Pydantic model passing | storage/writer.py receives validated PolicyExtraction; no knowledge of Claude |
-| storage/ ↔ api/ | SQLite connection + ORM queries | FastAPI reads from DB; no direct coupling to extraction layer |
-| CLI ↔ storage/ | DB connection for dedup check | CLI checks `processed_files` table before submitting to extraction; avoids re-processing |
-
-## Suggested Build Order
-
-Dependencies between components dictate this order:
-
-1. **schemas.py (Pydantic models)** — All other components depend on the data contract. Define this first, even if incomplete.
-2. **extraction/client.py** — Can be developed and tested in isolation with a single sample PDF. Proves Claude integration works.
-3. **storage/database.py + storage/models.py** — Define DB schema based on what extraction produces.
-4. **storage/writer.py** — Connects extraction output to storage. Proves end-to-end flow.
-5. **cli.py (single file mode)** — Wires ingestion → extraction → validation → storage into one command.
-6. **validation/validators.py** — Add domain validation incrementally; not a blocker for MVP.
-7. **cli.py (batch mode)** — Extends single-file mode with loop + error handling.
-8. **api/main.py (FastAPI)** — Built last. Reads from already-populated DB. Low risk.
+---
 
 ## Sources
 
-- Claude PDF Support official documentation: [https://platform.claude.com/docs/en/build-with-claude/pdf-support](https://platform.claude.com/docs/en/build-with-claude/pdf-support)
-- LLMs for Structured Data Extraction from PDFs (Unstract, 2026): [https://unstract.com/blog/comparing-approaches-for-using-llms-for-structured-data-extraction-from-pdfs/](https://unstract.com/blog/comparing-approaches-for-using-llms-for-structured-data-extraction-from-pdfs/)
-- Designing an LLM-Based Document Extraction System (Medium): [https://medium.com/@dikshithraj03/turning-messy-documents-into-structured-data-with-llms-d8a6242a31cc](https://medium.com/@dikshithraj03/turning-messy-documents-into-structured-data-with-llms-d8a6242a31cc)
-- Hybrid OCR-LLM Pipeline Pattern: [https://aiexpjourney.substack.com/p/hybrid-ocr-llm-not-a-bigger-model](https://aiexpjourney.substack.com/p/hybrid-ocr-llm-not-a-bigger-model)
-- Instructor (structured LLM outputs library): [https://python.useinstructor.com/](https://python.useinstructor.com/)
-- Pydantic AI structured outputs: [https://ai.pydantic.dev/output/](https://ai.pydantic.dev/output/)
-- SQLite JSON1 extension (hybrid schema pattern): [https://charlesleifer.com/blog/using-the-sqlite-json1-and-fts5-extensions-with-python/](https://charlesleifer.com/blog/using-the-sqlite-json1-and-fts5-extensions-with-python/)
-- AI-Powered Insurance Document Extractor (FastAPI + AI): [https://medium.com/@shibashishnayak97/building-an-ai-powered-insurance-document-extractor-with-fastapi-vertex-ai-streamlit-10d2568bc5e1](https://medium.com/@shibashishnayak97/building-an-ai-powered-insurance-document-extractor-with-fastapi-vertex-ai-streamlit-10d2568bc5e1)
-- Structured data extraction with LLM schemas (Simon Willison, 2025): [https://simonwillison.net/2025/Feb/28/llm-schemas/](https://simonwillison.net/2025/Feb/28/llm-schemas/)
+- FastAPI File Upload official docs: https://fastapi.tiangolo.com/tutorial/request-files/ — `UploadFile`, `File()`, `python-multipart` requirement (HIGH confidence)
+- Alembic official docs — Getting Started: https://alembic.sqlalchemy.org/en/latest/tutorial.html — `env.py`, `upgrade`, `autogenerate` (HIGH confidence)
+- SQLAlchemy 2.0 + Alembic compatibility: https://alembic.sqlalchemy.org/en/latest/changelog.html — Alembic 1.13+ required for SQLAlchemy 2.0 (HIGH confidence)
+- openpyxl official docs: https://openpyxl.readthedocs.io/en/stable/ — multi-sheet workbooks, column types (HIGH confidence)
+- Python asyncio + ThreadPoolExecutor pattern: https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.run_in_executor — blocking I/O in async context (HIGH confidence)
+- SQLite thread safety and WAL mode: https://www.sqlite.org/wal.html — concurrent readers, single writer, WAL vs journal mode (HIGH confidence)
+- v1.0 source code analysis (direct inspection): policy_extractor/ — all integration points derived from actual codebase (HIGH confidence)
 
 ---
-*Architecture research for: Insurance PDF data extraction + LLM pipeline*
-*Researched: 2026-03-17*
+
+*Architecture research for: extractor_pdf_polizas v1.1 (PDF Upload API, async batch, golden dataset, Sonnet evaluator, Alembic, Excel export)*
+*Researched: 2026-03-18*
