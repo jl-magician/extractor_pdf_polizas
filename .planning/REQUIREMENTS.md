@@ -9,9 +9,9 @@ Requirements for v1.1 API & Quality release. Each maps to roadmap phases.
 
 ### Migrations & Infrastructure
 
-- [ ] **MIG-01**: Alembic initialized with `render_as_batch=True` for SQLite compatibility
-- [ ] **MIG-02**: Baseline migration stamps existing schema without altering tables
-- [ ] **MIG-03**: Evaluation columns migration adds Sonnet evaluator fields to polizas table
+- [x] **MIG-01**: Alembic initialized with `render_as_batch=True` for SQLite compatibility
+- [x] **MIG-02**: Baseline migration stamps existing schema without altering tables
+- [x] **MIG-03**: Evaluation columns migration adds Sonnet evaluator fields to polizas table
 
 ### Export
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MIG-01 | Phase 6 | Pending |
-| MIG-02 | Phase 6 | Pending |
-| MIG-03 | Phase 6 | Pending |
+| MIG-01 | Phase 6 | Complete |
+| MIG-02 | Phase 6 | Complete |
+| MIG-03 | Phase 6 | Complete |
 | EXP-01 | Phase 7 | Pending |
 | EXP-02 | Phase 7 | Pending |
 | EXP-03 | Phase 7 | Pending |

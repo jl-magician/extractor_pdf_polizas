@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-19T14:59:24.127Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-19T16:04:19.149Z"
 last_activity: 2026-03-18 — Roadmap created for v1.1 milestone (phases 6-11)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -41,6 +41,7 @@ v1.1 Progress: [                              ] 0/6 phases
 | Test count | 153 passing | 153 passing (start) |
 | Requirements shipped | 24/24 | 0/28 |
 | Phases complete | 5/5 | 0/6 |
+| Phase 06-migrations P01 | 9 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Recent decisions affecting current work:
 - [v1.1]: In-memory job_store for upload API (acceptable for single-user local use; lost on restart)
 - [v1.1]: asyncio.Semaphore(3) as default concurrency — safe default pending account rate limit validation
 - [v1.1]: openpyxl for Excel export (not pandas — avoids 30 MB binary dep for a 50-line operation)
+- [Phase 06-01]: env.py URL isolation: only apply settings.DB_PATH fallback when alembic.ini has placeholder URL
+- [Phase 06-01]: Baseline migration 001 uses separate engine for create_all due to SQLAlchemy 2.0 autobegin transaction isolation
+- [Phase 06-01]: Migration 002 guards add_column with inspector check to prevent duplicate column error on fresh DBs
 
 ### Pending Todos
 
@@ -76,7 +80,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T14:59:24.124Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-migrations/06-CONTEXT.md
+Last session: 2026-03-19T16:04:19.146Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
 Next action: `/gsd:plan-phase 6`
