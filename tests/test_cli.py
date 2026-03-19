@@ -743,3 +743,193 @@ def test_rate_limit_retry_with_connection_error():
     assert policy is not None
     assert rl_retries == 1, f"Expected 1 retry, got {rl_retries}"
     mock_time.sleep.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Tests -- concurrent batch (Phase 9)
+# ---------------------------------------------------------------------------
+
+PATCH_THREADPOOL = "policy_extractor.cli.ThreadPoolExecutor"
+
+
+def test_batch_concurrent_3_workers(tmp_path):
+    """batch with --concurrency 3 and 3 PDFs: all 3 succeed, summary shows Succeeded = 3."""
+    for name in ["a.pdf", "b.pdf", "c.pdf"]:
+        (tmp_path / name).write_bytes(b"%PDF-1.4 fake")
+
+    mock_session = MagicMock()
+
+    with (
+        patch(PATCH_INIT_DB),
+        patch(PATCH_SESSION) as mock_session_cls,
+        patch(PATCH_HASH, return_value="abc123"),
+        patch(PATCH_IS_EXTRACTED, return_value=False),
+        patch(PATCH_INGEST, return_value=mock_ingestion_result()),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
+    ):
+        mock_session_cls.return_value = mock_session
+        mock_session_cls.configure = MagicMock()
+
+        result = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "3"])
+
+    assert result.exit_code == 0, result.output
+    assert "Succeeded" in result.output
+    assert "3" in result.output
+
+
+def test_concurrency_1_sequential(tmp_path):
+    """batch with --concurrency 1 runs sequential loop; ThreadPoolExecutor NOT instantiated."""
+    for name in ["x.pdf", "y.pdf"]:
+        (tmp_path / name).write_bytes(b"%PDF-1.4 fake")
+
+    mock_session = MagicMock()
+
+    with (
+        patch(PATCH_INIT_DB),
+        patch(PATCH_SESSION) as mock_session_cls,
+        patch(PATCH_HASH, return_value="abc123"),
+        patch(PATCH_IS_EXTRACTED, return_value=False),
+        patch(PATCH_INGEST, return_value=mock_ingestion_result()),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)) as mock_ext,
+        patch(PATCH_THREADPOOL) as mock_pool_cls,
+    ):
+        mock_session_cls.return_value = mock_session
+        mock_session_cls.configure = MagicMock()
+
+        result = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "1"])
+
+    assert result.exit_code == 0, result.output
+    mock_pool_cls.assert_not_called()
+    assert mock_ext.call_count == 2
+
+
+def test_concurrency_flag_validation(tmp_path):
+    """--concurrency 0 and --concurrency 11 are rejected by typer validation."""
+    (tmp_path / "a.pdf").write_bytes(b"%PDF-1.4 fake")
+
+    with (
+        patch(PATCH_INIT_DB),
+        patch(PATCH_SESSION) as mock_session_cls,
+        patch(PATCH_HASH, return_value="abc123"),
+        patch(PATCH_IS_EXTRACTED, return_value=False),
+        patch(PATCH_INGEST, return_value=mock_ingestion_result()),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
+    ):
+        mock_session_cls.configure = MagicMock()
+
+        result_zero = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "0"])
+        result_eleven = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "11"])
+
+    assert result_zero.exit_code != 0
+    assert result_eleven.exit_code != 0
+
+
+def test_batch_worker_own_session(tmp_path):
+    """batch with --concurrency 2: SessionLocal() is called at least 2 times (per-worker sessions)."""
+    for name in ["a.pdf", "b.pdf"]:
+        (tmp_path / name).write_bytes(b"%PDF-1.4 fake")
+
+    call_count = {"n": 0}
+
+    class TrackingSessionCls:
+        def __call__(self):
+            call_count["n"] += 1
+            sess = MagicMock()
+            sess.close = MagicMock()
+            return sess
+
+        def configure(self, **kwargs):
+            pass
+
+    with (
+        patch(PATCH_INIT_DB),
+        patch(PATCH_SESSION, TrackingSessionCls()),
+        patch(PATCH_HASH, return_value="abc123"),
+        patch(PATCH_IS_EXTRACTED, return_value=False),
+        patch(PATCH_INGEST, return_value=mock_ingestion_result()),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
+    ):
+        result = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "2"])
+
+    assert result.exit_code == 0, result.output
+    assert call_count["n"] >= 2, f"Expected >= 2 SessionLocal() calls, got {call_count['n']}"
+
+
+def test_batch_summary_retries_row(tmp_path):
+    """batch with --concurrency 2: summary shows Retries row with total retry count."""
+    pdf1 = tmp_path / "a.pdf"
+    pdf2 = tmp_path / "b.pdf"
+    pdf1.write_bytes(b"%PDF-1.4 fake")
+    pdf2.write_bytes(b"%PDF-1.4 fake")
+
+    mock_session = MagicMock()
+    extract_results = [
+        (mock_policy_extraction(), mock_usage(), 2),  # 2 retries
+        (mock_policy_extraction(), mock_usage(), 0),  # 0 retries
+    ]
+
+    with (
+        patch(PATCH_INIT_DB),
+        patch(PATCH_SESSION) as mock_session_cls,
+        patch(PATCH_HASH, return_value="abc123"),
+        patch(PATCH_IS_EXTRACTED, return_value=False),
+        patch(PATCH_INGEST, return_value=mock_ingestion_result()),
+        patch(PATCH_EXTRACT, side_effect=extract_results),
+    ):
+        mock_session_cls.return_value = mock_session
+        mock_session_cls.configure = MagicMock()
+
+        result = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "2"])
+
+    assert result.exit_code == 0, result.output
+    assert "Retries" in result.output
+    assert "2" in result.output
+
+
+def test_batch_idempotency_concurrent(tmp_path):
+    """batch with --concurrency 2: already-extracted files are skipped; extract_policy not called."""
+    for name in ["a.pdf", "b.pdf"]:
+        (tmp_path / name).write_bytes(b"%PDF-1.4 fake")
+
+    mock_session = MagicMock()
+
+    with (
+        patch(PATCH_INIT_DB),
+        patch(PATCH_SESSION) as mock_session_cls,
+        patch(PATCH_HASH, return_value="abc123"),
+        patch(PATCH_IS_EXTRACTED, return_value=True),
+        patch(PATCH_INGEST, return_value=mock_ingestion_result()),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)) as mock_ext,
+    ):
+        mock_session_cls.return_value = mock_session
+        mock_session_cls.configure = MagicMock()
+
+        result = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "2"])
+
+    assert result.exit_code == 0, result.output
+    mock_ext.assert_not_called()
+    assert "Skipped" in result.output
+
+
+def test_batch_no_lock_errors(tmp_path):
+    """batch with --concurrency 3 and 5 PDFs: all succeed, no 'locked' in output, exit code 0."""
+    for i in range(5):
+        (tmp_path / f"p{i}.pdf").write_bytes(b"%PDF-1.4 fake")
+
+    mock_session = MagicMock()
+
+    with (
+        patch(PATCH_INIT_DB),
+        patch(PATCH_SESSION) as mock_session_cls,
+        patch(PATCH_HASH, return_value="abc123"),
+        patch(PATCH_IS_EXTRACTED, return_value=False),
+        patch(PATCH_INGEST, return_value=mock_ingestion_result()),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
+    ):
+        mock_session_cls.return_value = mock_session
+        mock_session_cls.configure = MagicMock()
+
+        result = runner.invoke(app, ["batch", str(tmp_path), "--concurrency", "3"])
+
+    assert result.exit_code == 0, result.output
+    assert "locked" not in result.output.lower()
