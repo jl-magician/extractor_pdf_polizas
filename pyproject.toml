@@ -41,3 +41,7 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "regression: golden dataset regression suite (requires real PDFs in pdfs-to-test/)",
+]
+addopts = "-m 'not regression'"
