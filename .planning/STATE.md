@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 06 all plans executed — ready for Phase 7
-stopped_at: Phase 7 context gathered
-last_updated: "2026-03-19T16:31:24.975Z"
-last_activity: 2026-03-19 — Phase 06-02 complete — runtime migration guard, WAL mode, 9 migration tests
+status: unknown
+stopped_at: Phase 07-export Plan 01 complete
+last_updated: "2026-03-19T17:05:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State
@@ -20,18 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 6 — Alembic migrations (schema versioning foundation)
+**Current focus:** Phase 07 — export
 
 ## Current Position
 
-Phase: 6 (Migrations) — Complete
-Plan: 2/2 complete
-Status: Phase 06 all plans executed — ready for Phase 7
-Last activity: 2026-03-19 — Phase 06-02 complete — runtime migration guard, WAL mode, 9 migration tests
-
-```
-v1.1 Progress: [#####                         ] 1/6 phases
-```
+Phase: 07 (export) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -43,6 +36,7 @@ v1.1 Progress: [#####                         ] 1/6 phases
 | Phases complete | 5/5 | 0/6 |
 | Phase 06-migrations P01 | — | 2 tasks | 8 files |
 | Phase 06-migrations P02 | 2m | 2 tasks | 2 files |
+| Phase 07-export P01 | 12m | 1 task (TDD) | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +63,10 @@ Recent decisions affecting current work:
 - [Phase 06-02]: _get_alembic_cfg resolves alembic.ini via Path(__file__).parent.parent.parent to work from any CWD
 - [Phase 06-02]: Lazy alembic imports inside functions avoid overhead when migration not needed
 - [Phase 06-02]: Backup created only when current_rev != head_rev to avoid unnecessary I/O on up-to-date DBs
+- [Phase 07-01]: openpyxl lazy-imported inside export_xlsx body — keeps import cost out of CLI startup path
+- [Phase 07-01]: number_format applied per-cell after ws.append() — column-level format before append has no effect in openpyxl 3.x
+- [Phase 07-01]: Decimal-to-float coercion via _cell_value() helper — openpyxl writes Decimal as string otherwise
+- [Phase 07-01]: auto_filter.ref only set when ws.max_row > 1 — ws.dimensions returns "A1:A1" on empty sheets
 
 ### Pending Todos
 
@@ -84,7 +82,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T16:31:24.972Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-export/07-CONTEXT.md
-Next action: `/gsd:plan-phase 7`
+Last session: 2026-03-19T17:05:00.000Z
+Stopped at: Completed 07-export-01-PLAN.md
+Resume file: .planning/phases/07-export/07-02-PLAN.md
+Next action: `/gsd:execute-phase` for 07-02 (CLI wiring)

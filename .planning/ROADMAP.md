@@ -56,7 +56,7 @@ Plans:
   3. Excel and CSV exports accept the same `--aseguradora`, `--desde`, and `--hasta` filter flags as the existing JSON export
   4. Opening the Excel file in a spreadsheet tool shows prima_total and other monetary values as numbers (not text), enabling SUM formulas to work correctly
   5. Date columns in the Excel file are formatted as dates, not strings
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
 - [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
@@ -133,7 +133,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 4. CLI & Batch | 2/2 | Complete | 2026-03-18 |
 | 5. Storage & API | 2/2 | Complete | 2026-03-18 |
 | 6. Migrations | 2/2 | Complete   | 2026-03-19 |
-| 7. Export | 0/2 | Planning complete | - |
+| 7. Export | 1/2 | In Progress|  |
 | 8. PDF Upload API | 0/? | Not started | - |
 | 9. Async Batch | 0/? | Not started | - |
 | 10. Quality Evaluator | 0/? | Not started | - |

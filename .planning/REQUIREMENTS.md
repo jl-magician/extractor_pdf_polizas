@@ -15,11 +15,11 @@ Requirements for v1.1 API & Quality release. Each maps to roadmap phases.
 
 ### Export
 
-- [ ] **EXP-01**: User can export polizas to Excel (.xlsx) with multi-sheet workbook (polizas, asegurados, coberturas)
-- [ ] **EXP-02**: User can export polizas to CSV format
+- [x] **EXP-01**: User can export polizas to Excel (.xlsx) with multi-sheet workbook (polizas, asegurados, coberturas)
+- [x] **EXP-02**: User can export polizas to CSV format
 - [ ] **EXP-03**: CLI `export` command supports `--format xlsx` and `--format csv` flags
 - [ ] **EXP-04**: Excel/CSV exports use the same filter options as existing JSON export (aseguradora, date range, etc.)
-- [ ] **EXP-05**: Excel export produces correct numeric and date cell types (not text)
+- [x] **EXP-05**: Excel export produces correct numeric and date cell types (not text)
 
 ### PDF Upload API
 
@@ -90,11 +90,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIG-01 | Phase 6 | Complete |
 | MIG-02 | Phase 6 | Complete |
 | MIG-03 | Phase 6 | Complete |
-| EXP-01 | Phase 7 | Pending |
-| EXP-02 | Phase 7 | Pending |
+| EXP-01 | Phase 7 | Complete |
+| EXP-02 | Phase 7 | Complete |
 | EXP-03 | Phase 7 | Pending |
 | EXP-04 | Phase 7 | Pending |
-| EXP-05 | Phase 7 | Pending |
+| EXP-05 | Phase 7 | Complete |
 | API-01 | Phase 8 | Pending |
 | API-02 | Phase 8 | Pending |
 | API-03 | Phase 8 | Pending |
