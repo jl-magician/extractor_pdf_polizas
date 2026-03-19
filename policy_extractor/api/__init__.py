@@ -39,6 +39,7 @@ def on_startup() -> None:
     """Initialise the database on application startup."""
     engine = init_db(settings.DB_PATH)
     SessionLocal.configure(bind=engine)
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -220,3 +221,12 @@ def delete_poliza(poliza_id: int, db: DbDep) -> JSONResponse:
     db.delete(poliza)
     db.commit()
     return JSONResponse(content={"detail": "Policy deleted"})
+
+
+# ---------------------------------------------------------------------------
+# Upload router (Phase 8)
+# ---------------------------------------------------------------------------
+
+from policy_extractor.api.upload import router as upload_router, UPLOADS_DIR  # noqa: E402
+
+app.include_router(upload_router)
