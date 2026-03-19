@@ -48,10 +48,10 @@ Requirements for v1.1 API & Quality release. Each maps to roadmap phases.
 
 ### Regression Testing
 
-- [ ] **REG-01**: Golden dataset fixtures exist with known-good extraction results
-- [ ] **REG-02**: Regression tests compare extractions field-by-field with tolerance (not exact match)
-- [ ] **REG-03**: Regression tests are marked with `@pytest.mark.regression` and excluded from default test runs
-- [ ] **REG-04**: Regression test failures identify which specific fields drifted
+- [x] **REG-01**: Golden dataset fixtures exist with known-good extraction results
+- [x] **REG-02**: Regression tests compare extractions field-by-field with tolerance (not exact match)
+- [x] **REG-03**: Regression tests are marked with `@pytest.mark.regression` and excluded from default test runs
+- [x] **REG-04**: Regression test failures identify which specific fields drifted
 
 ## v2.0 Requirements
 
@@ -111,10 +111,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QAL-03 | Phase 10 | Complete |
 | QAL-04 | Phase 10 | Complete |
 | QAL-05 | Phase 10 | Complete |
-| REG-01 | Phase 11 | Pending |
-| REG-02 | Phase 11 | Pending |
-| REG-03 | Phase 11 | Pending |
-| REG-04 | Phase 11 | Pending |
+| REG-01 | Phase 11 | Complete |
+| REG-02 | Phase 11 | Complete |
+| REG-03 | Phase 11 | Complete |
+| REG-04 | Phase 11 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 28 total
