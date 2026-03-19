@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 10-quality-evaluator 10-01-PLAN.md
-last_updated: "2026-03-19T20:35:20.903Z"
+stopped_at: Completed 10-quality-evaluator 10-02-PLAN.md
+last_updated: "2026-03-19T20:42:24.412Z"
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -43,6 +43,7 @@ Plan: 1 of 2
 | Phase 09-async-batch P01 | 10m | 2 tasks | 5 files |
 | Phase 09-async-batch P02 | 3m | 2 tasks | 2 files |
 | Phase 10-quality-evaluator P01 | 4min | 1 tasks | 3 files |
+| Phase 10 P02 | 4m 22s | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,8 @@ Recent decisions affecting current work:
 - [Phase 10-quality-evaluator]: EVAL_MODEL_ID hardcoded to claude-sonnet-4-5-20250514 — no settings override, opt-in only
 - [Phase 10-quality-evaluator]: evaluate_policy() returns None on any Exception — never raises — batch callers rely on this contract
 - [Phase 10-quality-evaluator]: evaluation_json stored as TEXT string via json.dumps (not JSON column); score = (completeness + accuracy + (1-hallucination_risk)) / 3
+- [Phase 10]: evaluate_policy lazy-imported inside if evaluate: branch in all three entry points — zero Sonnet overhead unless opt-in
+- [Phase 10]: evaluation_score/evaluation_json always present in API result dict (None when not evaluated) — consistent shape for API callers
 
 ### Pending Todos
 
@@ -104,7 +107,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T20:35:20.899Z
-Stopped at: Completed 10-quality-evaluator 10-01-PLAN.md
+Last session: 2026-03-19T20:42:24.408Z
+Stopped at: Completed 10-quality-evaluator 10-02-PLAN.md
 Resume file: None
 Next action: `/gsd:execute-phase` for next phase (08+)

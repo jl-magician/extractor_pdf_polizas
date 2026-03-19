@@ -40,11 +40,11 @@ Requirements for v1.1 API & Quality release. Each maps to roadmap phases.
 
 ### Quality Evaluation
 
-- [ ] **QAL-01**: User can run Sonnet evaluation on an extraction via `--evaluate` CLI flag
+- [x] **QAL-01**: User can run Sonnet evaluation on an extraction via `--evaluate` CLI flag
 - [x] **QAL-02**: Sonnet evaluator scores extraction completeness, accuracy, and hallucination risk
 - [x] **QAL-03**: Evaluation results are stored in dedicated database columns
-- [ ] **QAL-04**: Evaluation is opt-in only — never runs in the default extraction path
-- [ ] **QAL-05**: API upload endpoint accepts optional `evaluate=true` query parameter
+- [x] **QAL-04**: Evaluation is opt-in only — never runs in the default extraction path
+- [x] **QAL-05**: API upload endpoint accepts optional `evaluate=true` query parameter
 
 ### Regression Testing
 
@@ -106,11 +106,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASYNC-03 | Phase 9 | Complete |
 | ASYNC-04 | Phase 9 | Complete |
 | ASYNC-05 | Phase 9 | Complete |
-| QAL-01 | Phase 10 | Pending |
+| QAL-01 | Phase 10 | Complete |
 | QAL-02 | Phase 10 | Complete |
 | QAL-03 | Phase 10 | Complete |
-| QAL-04 | Phase 10 | Pending |
-| QAL-05 | Phase 10 | Pending |
+| QAL-04 | Phase 10 | Complete |
+| QAL-05 | Phase 10 | Complete |
 | REG-01 | Phase 11 | Pending |
 | REG-02 | Phase 11 | Pending |
 | REG-03 | Phase 11 | Pending |

@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Export** - Excel and CSV export from stored polizas with multi-sheet workbook and correct numeric types (completed 2026-03-19)
 - [x] **Phase 8: PDF Upload API** - HTTP endpoint to POST a PDF and receive async extraction results with job polling (completed 2026-03-19)
 - [x] **Phase 9: Async Batch** - Concurrent batch processing with configurable concurrency, WAL mode, and rate limit backoff (completed 2026-03-19)
-- [ ] **Phase 10: Quality Evaluator** - Opt-in Sonnet evaluation of Haiku extractions with stored scores and CLI/API flags
+- [x] **Phase 10: Quality Evaluator** - Opt-in Sonnet evaluation of Haiku extractions with stored scores and CLI/API flags (completed 2026-03-19)
 - [ ] **Phase 11: Regression Suite** - Golden dataset fixtures with field-level fuzzy comparison and regression pytest marker
 
 ## Phase Details
@@ -101,7 +101,7 @@ Plans:
   3. Evaluation scores and details are retrievable from the database after the command completes
   4. User sends `POST /polizas/upload?evaluate=true` and the returned job result includes evaluation fields alongside the extraction
   5. The CLI output clearly separates Haiku extraction cost from Sonnet evaluation cost
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 10-01-PLAN.md — Core evaluation module (evaluation.py) with Sonnet tool_use, DB persistence, unit tests
 - [ ] 10-02-PLAN.md — CLI --evaluate flag on extract/batch + upload API evaluate=true param + integration tests
@@ -136,5 +136,5 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 7. Export | 2/2 | Complete   | 2026-03-19 |
 | 8. PDF Upload API | 2/2 | Complete   | 2026-03-19 |
 | 9. Async Batch | 2/2 | Complete   | 2026-03-19 |
-| 10. Quality Evaluator | 1/2 | In Progress|  |
+| 10. Quality Evaluator | 2/2 | Complete   | 2026-03-19 |
 | 11. Regression Suite | 0/? | Not started | - |
