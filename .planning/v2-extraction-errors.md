@@ -94,7 +94,7 @@ These errors were found during real-world testing of v1.0 with actual insurance 
 - **Problem:** 3-page PDF classified as "digital" but `get_text()` returns 0 chars on all pages
 - **Root cause:** Text is likely rendered as vector paths or small image tiles that don't trigger the 80% image coverage threshold
 - **Impact:** Claude gets empty text, returns all nulls with `<UNKNOWN>` for required fields
-- **Fix for v2:** Add minimum text length check after classification — if digital page has <10 chars, reclassify as "scanned" and OCR it
+- **Fix for v2:** Add automatic OCR fallback — after text extraction, if a "digital" page has <10 chars, automatically reclassify as "scanned" and OCR it. Also: if the full extraction returns all-null core fields or `<UNKNOWN>`, auto-retry the entire PDF through the OCR pipeline regardless of classification. This ensures no PDF is silently lost.
 
 ### 10. OCR call failure (Poliza - 001_LGS-RCGRA_07013104_01_0.pdf)
 - **Problem:** `ocr() missing 1 required positional argument: 'input_file_or_options'`
