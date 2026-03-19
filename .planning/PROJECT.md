@@ -8,6 +8,18 @@ Sistema de extraccion inteligente de informacion de polizas de seguros en format
 
 Extraer automaticamente toda la informacion posible de cualquier poliza de seguro en PDF — sin importar la aseguradora o estructura — y almacenarla de forma estructurada para consulta, reporteo e integracion con otros sistemas.
 
+## Current Milestone: v1.1 API & Quality
+
+**Goal:** Make the extraction pipeline integratable via HTTP, improve extraction quality with automated evaluation, and add throughput/export capabilities.
+
+**Target features:**
+- PDF Upload API — POST a PDF, get structured extraction back
+- Async/concurrent batch processing
+- Golden dataset regression suite
+- Sonnet quality evaluator for Haiku extractions
+- Alembic migrations for schema evolution
+- Excel export from stored polizas
+
 ## Current State (v1.0 shipped 2026-03-19)
 
 - **Python LOC:** 5,161 across 96 files
@@ -33,20 +45,20 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 
 ### Active
 
-(None — all v1 requirements shipped. Define v2 requirements with `/gsd:new-milestone`)
+- [ ] PDF Upload API endpoint for external integrations
+- [ ] Async/concurrent batch processing for throughput
+- [ ] Golden dataset regression suite for extraction quality
+- [ ] Sonnet quality evaluator to verify Haiku extractions
+- [ ] Alembic migrations for schema versioning
+- [ ] Excel export from stored polizas
 
 ### Out of Scope
 
-- Exportacion a Excel — v2, se construira sobre la base de datos
-- Generacion de reportes PDF — v2, se construira sobre la base de datos
-- Interfaz web — v2+, primero se valida la extraccion y almacenamiento local
+- Generacion de reportes PDF — v2.0, requiere web UI
+- Interfaz web — v2.0, primero se solidifica el backend
 - Aplicacion movil — fuera de alcance por ahora
-- Edicion manual de datos extraidos en UI — v2+
+- Edicion manual de datos extraidos en UI — v2.0, requiere web UI
 - Integracion directa con sistemas de aseguradoras — fuera de alcance
-- Alembic migrations — v2, cuando el esquema evolucione
-- Async/concurrent batch processing — v2 optimization
-- Sonnet as quality evaluator — v2 (QAL-03)
-- Golden dataset regression suite — v2 (QAL-01)
 
 ## Context
 
@@ -84,4 +96,4 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 | Per-page PDF classification | Image coverage ratio handles mixed PDFs correctly | ✓ Good — watermark filtering prevents false positives |
 
 ---
-*Last updated: 2026-03-19 after v1.0 milestone*
+*Last updated: 2026-03-18 after v1.1 milestone start*
