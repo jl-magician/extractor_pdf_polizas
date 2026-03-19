@@ -141,7 +141,7 @@ def test_extract_single_file(tmp_path):
         patch(PATCH_HASH, return_value="abc123"),
         patch(PATCH_IS_EXTRACTED, return_value=False),
         patch(PATCH_INGEST, return_value=mock_ingestion_result()),
-        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage())),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
     ):
         mock_session_cls.return_value = mock_session
         mock_session_cls.configure = MagicMock()
@@ -168,7 +168,7 @@ def test_batch_directory(tmp_path):
         patch(PATCH_HASH, return_value="abc123"),
         patch(PATCH_IS_EXTRACTED, return_value=False),
         patch(PATCH_INGEST, return_value=mock_ingestion_result()),
-        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage())),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
     ):
         mock_session_cls.return_value = mock_session
         mock_session_cls.configure = MagicMock()
@@ -192,7 +192,7 @@ def test_batch_progress_display(tmp_path):
         patch(PATCH_HASH, return_value="abc123"),
         patch(PATCH_IS_EXTRACTED, return_value=False),
         patch(PATCH_INGEST, return_value=mock_ingestion_result()),
-        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage())),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
     ):
         mock_session_cls.return_value = mock_session
         mock_session_cls.configure = MagicMock()
@@ -219,7 +219,7 @@ def test_force_reprocess(tmp_path):
         patch(PATCH_HASH, return_value="abc123"),
         patch(PATCH_IS_EXTRACTED, return_value=True),
         patch(PATCH_INGEST, return_value=mock_ingestion_result()),
-        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage())) as mock_ext,
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)) as mock_ext,
     ):
         mock_session_cls.return_value = mock_session
         mock_session_cls.configure = MagicMock()
@@ -235,7 +235,7 @@ def test_force_reprocess(tmp_path):
         patch(PATCH_HASH, return_value="abc123"),
         patch(PATCH_IS_EXTRACTED, return_value=True),
         patch(PATCH_INGEST, return_value=mock_ingestion_result()),
-        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage())) as mock_ext,
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)) as mock_ext,
     ):
         mock_session_cls.return_value = mock_session
         mock_session_cls.configure = MagicMock()
@@ -259,7 +259,7 @@ def test_cost_tracking(tmp_path):
         patch(PATCH_HASH, return_value="abc123"),
         patch(PATCH_IS_EXTRACTED, return_value=False),
         patch(PATCH_INGEST, return_value=mock_ingestion_result()),
-        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage())),
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)),
     ):
         mock_session_cls.return_value = mock_session
         mock_session_cls.configure = MagicMock()
@@ -284,7 +284,7 @@ def test_batch_failure_continues(tmp_path):
     # extract_policy fails on first call, succeeds on second
     extract_results = [
         Exception("API error"),
-        (mock_policy_extraction(), mock_usage()),
+        (mock_policy_extraction(), mock_usage(), 0),
     ]
 
     def extract_side_effect(*args, **kwargs):
@@ -331,7 +331,7 @@ def test_idempotency_skip(tmp_path):
         patch(PATCH_HASH, return_value="abc123"),
         patch(PATCH_IS_EXTRACTED, return_value=True),
         patch(PATCH_INGEST, return_value=mock_ingestion_result()),
-        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage())) as mock_ext,
+        patch(PATCH_EXTRACT, return_value=(mock_policy_extraction(), mock_usage(), 0)) as mock_ext,
     ):
         mock_session_cls.return_value = mock_session
         mock_session_cls.configure = MagicMock()

@@ -100,7 +100,7 @@ def extract(
         ingestion_result = ingest_pdf(file, session=session, force_reprocess=force)
 
         # Extraction
-        policy, usage = extract_policy(ingestion_result, model=model)
+        policy, usage, _retries = extract_policy(ingestion_result, model=model)
 
         if policy is None:
             console.print(f"[red]ERROR[/red] Extraction failed for {file.name}", style="bold")
@@ -204,7 +204,7 @@ def batch(
                     ingestion_result = ingest_pdf(pdf, session=session, force_reprocess=force)
 
                     # Extraction
-                    policy, usage = extract_policy(ingestion_result, model=model)
+                    policy, usage, _retries = extract_policy(ingestion_result, model=model)
 
                     if policy is None:
                         raise RuntimeError(f"extract_policy returned None for {pdf.name}")

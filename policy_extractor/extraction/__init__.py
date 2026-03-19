@@ -18,13 +18,13 @@ __all__ = ["extract_policy", "PROMPT_VERSION_V1", "TOOL_NAME"]
 
 def extract_policy(
     ingestion_result: IngestionResult, model: str | None = None
-) -> tuple[PolicyExtraction | None, anthropic.types.Usage | None]:
+) -> tuple[PolicyExtraction | None, anthropic.types.Usage | None, int]:
     """Extract structured policy data from an IngestionResult using Claude.
 
     Assembles text from all PDF pages, calls the Anthropic API with forced
     tool_use, validates the response against PolicyExtraction, runs post-hoc
     hallucination verification, and returns the final PolicyExtraction along
-    with the API usage data.
+    with the API usage data and the number of rate limit retries used.
 
     The raw API response dict is stored in
     ``result.campos_adicionales["_raw_response"]`` for auditing.
@@ -34,7 +34,8 @@ def extract_policy(
         model: Optional Claude model ID override. Defaults to settings.EXTRACTION_MODEL.
 
     Returns:
-        Tuple of (PolicyExtraction, Usage) on success, or (None, None) on failure.
+        3-tuple of (PolicyExtraction, Usage, rl_retries) on success,
+        or (None, None, 0) on failure.
     """
     client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     assembled_text = assemble_text(ingestion_result)
@@ -53,9 +54,9 @@ def extract_policy(
             f"Extraction failed for {ingestion_result.file_path} "
             f"(hash={ingestion_result.file_hash})"
         )
-        return (None, None)
+        return (None, None, 0)
 
-    policy, raw_response, usage = outcome
+    policy, raw_response, usage, rl_retries = outcome
 
     # Run post-hoc hallucination verification
     verified_policy = verify_no_hallucination(policy, assembled_text)
@@ -65,4 +66,4 @@ def extract_policy(
     campos["_raw_response"] = raw_response
     verified_policy = verified_policy.model_copy(update={"campos_adicionales": campos})
 
-    return (verified_policy, usage)
+    return (verified_policy, usage, rl_retries)

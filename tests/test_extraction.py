@@ -167,7 +167,7 @@ def test_extract_all_fields(sample_ingestion_result, valid_extraction_data):
 
         from policy_extractor.extraction import extract_policy
 
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     assert result.numero_poliza == "POL-2024-001234"
     assert result.aseguradora == "GNP Seguros"
@@ -191,7 +191,7 @@ def test_output_is_valid_schema(sample_ingestion_result, valid_extraction_data):
 
         from policy_extractor.extraction import extract_policy
 
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     from policy_extractor.schemas.poliza import PolicyExtraction
     assert isinstance(result, PolicyExtraction)
@@ -218,7 +218,7 @@ def test_insurer_classification(sample_ingestion_result, valid_extraction_data):
 
         from policy_extractor.extraction import extract_policy
 
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     # Populated from Claude response, not hard-coded
     assert result.aseguradora == "GNP Seguros"
@@ -239,7 +239,7 @@ def test_confianza_populated(sample_ingestion_result, valid_extraction_data):
 
         from policy_extractor.extraction import extract_policy
 
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     assert isinstance(result.confianza, dict)
     assert len(result.confianza) > 0
@@ -287,7 +287,7 @@ def test_spanish_and_english(lang, page_text, expected_aseguradora, valid_extrac
         from policy_extractor.extraction import extract_policy
 
         from policy_extractor.schemas.poliza import PolicyExtraction
-        result, usage = extract_policy(ingestion)
+        result, usage, _rl_retries = extract_policy(ingestion)
 
     assert isinstance(result, PolicyExtraction)
     assert result.aseguradora == expected_aseguradora
@@ -313,7 +313,7 @@ def test_retry_on_validation_error(sample_ingestion_result, valid_extraction_dat
 
         from policy_extractor.extraction import extract_policy
 
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     # Retry worked — result is valid
     assert result.numero_poliza == "POL-2024-001234"
@@ -341,7 +341,7 @@ def test_hallucination_verification(sample_ingestion_result, valid_extraction_da
 
         from policy_extractor.extraction import extract_policy
 
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     # Post-hoc verification should downgrade confidence for fields not found in source
     assert result.confianza.get("numero_poliza") == "low"
@@ -361,7 +361,7 @@ def test_provenance_fields_set(sample_ingestion_result, valid_extraction_data):
 
         from policy_extractor.extraction import extract_policy
 
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     assert result.source_file_hash == sample_ingestion_result.file_hash
     assert result.model_id is not None
@@ -383,9 +383,9 @@ def test_raw_response_stored(sample_ingestion_result, valid_extraction_data):
 
         from policy_extractor.extraction import extract_policy
 
-        # extract_policy now returns a tuple: (PolicyExtraction, Usage)
+        # extract_policy now returns a 3-tuple: (PolicyExtraction, Usage, rl_retries)
         # Raw response is stored in campos_adicionales["_raw_response"]
-        result, usage = extract_policy(sample_ingestion_result)
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
 
     from policy_extractor.schemas.poliza import PolicyExtraction
 
