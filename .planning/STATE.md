@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-19T21:56:17.406Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-19T22:17:21.784Z"
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 10 — quality-evaluator
+**Current focus:** Phase 11 — regression-suite
 
 ## Current Position
 
-Phase: 10 (quality-evaluator) — EXECUTING
-Plan: 1 of 2
+Phase: 11 (regression-suite) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Plan: 1 of 2
 | Phase 09-async-batch P02 | 3m | 2 tasks | 2 files |
 | Phase 10-quality-evaluator P01 | 4min | 1 tasks | 3 files |
 | Phase 10 P02 | 4m 22s | 2 tasks | 4 files |
+| Phase 11 P01 | 196s | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,9 @@ Recent decisions affecting current work:
 - [Phase 10-quality-evaluator]: evaluation_json stored as TEXT string via json.dumps (not JSON column); score = (completeness + accuracy + (1-hallucination_risk)) / 3
 - [Phase 10]: evaluate_policy lazy-imported inside if evaluate: branch in all three entry points — zero Sonnet overhead unless opt-in
 - [Phase 10]: evaluation_score/evaluation_json always present in API result dict (None when not evaluated) — consistent shape for API callers
+- [Phase 11-01]: PII_FIELDS as frozenset — explicit hardcoded list preferred over pattern matching; auditable and zero false positives on domain field names
+- [Phase 11-01]: FieldDiffer operates on plain dicts (model_dump output) — decoupled from Pydantic models, testable with simple fixtures
+- [Phase 11-01]: addopts = "-m 'not regression'" with inner single quotes — required for correct marker expression parsing on Windows/shlex
 
 ### Pending Todos
 
@@ -107,7 +111,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T21:56:17.402Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-regression-suite/11-CONTEXT.md
+Last session: 2026-03-19T22:17:21.780Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None
 Next action: `/gsd:execute-phase` for next phase (08+)

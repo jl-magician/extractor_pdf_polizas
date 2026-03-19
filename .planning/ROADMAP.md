@@ -115,7 +115,7 @@ Plans:
   2. Running `pytest` (default, no marker) does NOT run regression tests (they are excluded from the default suite)
   3. When an extraction result differs from the fixture, the test output identifies exactly which fields drifted and by how much
   4. The fixture set covers at least one real policy PDF per insurer type represented in pdfs-to-test/ with no PII committed to the repository
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 11-01-PLAN.md — Regression package (PiiRedactor, FieldDiffer, DriftReport), pytest marker config, gitignore, unit tests
 - [ ] 11-02-PLAN.md — create-fixture CLI subcommand, parametrized regression test module
@@ -137,4 +137,4 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 8. PDF Upload API | 2/2 | Complete   | 2026-03-19 |
 | 9. Async Batch | 2/2 | Complete   | 2026-03-19 |
 | 10. Quality Evaluator | 2/2 | Complete    | 2026-03-19 |
-| 11. Regression Suite | 0/2 | Not started | - |
+| 11. Regression Suite | 1/2 | In Progress|  |
