@@ -73,8 +73,8 @@ Plans:
   5. After extraction completes, no temporary PDF files remain on disk
 **Plans:** 2 plans
 Plans:
-- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
-- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
+- [ ] 08-01-PLAN.md — Upload module (upload.py) with job store, routes, validation, python-multipart dep, unit tests
+- [ ] 08-02-PLAN.md — Pipeline integration tests for background extraction, cleanup, idempotency
 
 ### Phase 9: Async Batch
 **Goal**: Users can process large PDF batches significantly faster by running extractions concurrently without hitting SQLite lock errors or API rate limits
@@ -88,8 +88,8 @@ Plans:
   5. Running the same batch twice (idempotency) still skips already-processed files and produces no duplicate records
 **Plans:** 2 plans
 Plans:
-- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
-- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
+- [ ] 09-01-PLAN.md — [to be planned]
+- [ ] 09-02-PLAN.md — [to be planned]
 
 ### Phase 10: Quality Evaluator
 **Goal**: Users can optionally invoke a Sonnet-powered scoring pass on any extraction to assess completeness, accuracy, and hallucination risk
@@ -103,8 +103,8 @@ Plans:
   5. The CLI output clearly separates Haiku extraction cost from Sonnet evaluation cost
 **Plans:** 2 plans
 Plans:
-- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
-- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
+- [ ] 10-01-PLAN.md — [to be planned]
+- [ ] 10-02-PLAN.md — [to be planned]
 
 ### Phase 11: Regression Suite
 **Goal**: A repeatable, automated test suite catches extraction quality regressions by comparing field-by-field output against known-good fixtures
@@ -117,8 +117,8 @@ Plans:
   4. The fixture set covers at least one real policy PDF per insurer type represented in pdfs-to-test/ with no PII committed to the repository
 **Plans:** 2 plans
 Plans:
-- [ ] 07-01-PLAN.md — Export module (export.py) with xlsx multi-sheet and csv writers, unit tests
-- [ ] 07-02-PLAN.md — CLI integration (--format flag, Spanish filter flags, openpyxl dep, integration tests)
+- [ ] 11-01-PLAN.md — [to be planned]
+- [ ] 11-02-PLAN.md — [to be planned]
 
 ## Progress
 
@@ -134,7 +134,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 5. Storage & API | 2/2 | Complete | 2026-03-18 |
 | 6. Migrations | 2/2 | Complete   | 2026-03-19 |
 | 7. Export | 2/2 | Complete   | 2026-03-19 |
-| 8. PDF Upload API | 0/? | Not started | - |
+| 8. PDF Upload API | 0/2 | Not started | - |
 | 9. Async Batch | 0/? | Not started | - |
 | 10. Quality Evaluator | 0/? | Not started | - |
 | 11. Regression Suite | 0/? | Not started | - |
