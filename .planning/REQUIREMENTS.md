@@ -25,10 +25,10 @@ Requirements for v1.1 API & Quality release. Each maps to roadmap phases.
 
 - [x] **API-01**: User can POST a PDF file to `/polizas/upload` and receive extraction results
 - [x] **API-02**: Upload endpoint accepts multipart/form-data with PDF file
-- [ ] **API-03**: Upload triggers the full pipeline: ingest → extract → persist → return structured result
+- [x] **API-03**: Upload triggers the full pipeline: ingest → extract → persist → return structured result
 - [x] **API-04**: Long-running uploads return 202 Accepted with a job ID
 - [x] **API-05**: User can poll `GET /jobs/{id}` for job status and results
-- [ ] **API-06**: Uploaded PDF temp files are cleaned up after extraction completes
+- [x] **API-06**: Uploaded PDF temp files are cleaned up after extraction completes
 
 ### Async Batch Processing
 
@@ -97,10 +97,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXP-05 | Phase 7 | Complete |
 | API-01 | Phase 8 | Complete |
 | API-02 | Phase 8 | Complete |
-| API-03 | Phase 8 | Pending |
+| API-03 | Phase 8 | Complete |
 | API-04 | Phase 8 | Complete |
 | API-05 | Phase 8 | Complete |
-| API-06 | Phase 8 | Pending |
+| API-06 | Phase 8 | Complete |
 | ASYNC-01 | Phase 9 | Pending |
 | ASYNC-02 | Phase 9 | Pending |
 | ASYNC-03 | Phase 9 | Pending |
