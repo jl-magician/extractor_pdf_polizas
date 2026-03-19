@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-19T22:17:21.784Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-03-19T22:23:08.257Z"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -45,6 +45,7 @@ Plan: 2 of 2
 | Phase 10-quality-evaluator P01 | 4min | 1 tasks | 3 files |
 | Phase 10 P02 | 4m 22s | 2 tasks | 4 files |
 | Phase 11 P01 | 196s | 2 tasks | 7 files |
+| Phase 11-regression-suite P02 | 3m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 11-01]: PII_FIELDS as frozenset — explicit hardcoded list preferred over pattern matching; auditable and zero false positives on domain field names
 - [Phase 11-01]: FieldDiffer operates on plain dicts (model_dump output) — decoupled from Pydantic models, testable with simple fixtures
 - [Phase 11-01]: addopts = "-m 'not regression'" with inner single quotes — required for correct marker expression parsing on Windows/shlex
+- [Phase 11-regression-suite]: create-fixture uses lazy import of PiiRedactor — consistent with all other CLI subcommand patterns
+- [Phase 11-regression-suite]: _discover_fixtures() returns [] when golden dir missing — empty parametrize skips gracefully in pytest 8.4.2
+- [Phase 11-regression-suite]: _source_pdf stored as file.name (not full path) so fixture is portable across machines
 
 ### Pending Todos
 
@@ -111,7 +115,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T22:17:21.780Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-03-19T22:23:08.253Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
 Next action: `/gsd:execute-phase` for next phase (08+)
