@@ -51,6 +51,7 @@ patterns-established:
   - "TDD: RED commit (failing tests) then GREEN commit (implementation) — both atomically committed"
 
 requirements-completed: [QAL-02, QAL-03]
+requirements_completed: [QAL-01, QAL-02, QAL-03]
 
 # Metrics
 duration: 4min
