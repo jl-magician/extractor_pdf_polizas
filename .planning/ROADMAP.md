@@ -41,7 +41,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Running `alembic upgrade head` on the existing production database stamps it without altering any table or losing any data
   3. After migration 002 runs, the polizas table has evaluation_score and evaluation_json columns
   4. `alembic current` shows the correct head revision on any database (new or existing)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 06-01-PLAN.md — Alembic infrastructure, migration files (001+002), ORM model updates, migration chain tests
+- [ ] 06-02-PLAN.md — database.py guard logic (init_db + auto-migrate + WAL), integration tests
 
 ### Phase 7: Export
 **Goal**: Users can export their stored polizas to Excel or CSV for use in spreadsheet tools, with correct numeric and date formatting
@@ -62,7 +65,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Success Criteria** (what must be TRUE):
   1. User sends `POST /polizas/upload` with a PDF file as multipart/form-data and receives a 202 response with a job ID
   2. User polls `GET /jobs/{id}` and eventually sees status "complete" with the full extracted poliza in the response body
-  3. The uploaded PDF triggers the complete pipeline (ingest → extract → persist) and the result is queryable via existing CRUD endpoints
+  3. The uploaded PDF triggers the complete pipeline (ingest -> extract -> persist) and the result is queryable via existing CRUD endpoints
   4. If the server is restarted, uploading the same PDF again succeeds and produces a result (job_store loss on restart is documented, not a crash)
   5. After extraction completes, no temporary PDF files remain on disk
 **Plans**: TBD
@@ -114,7 +117,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 3. Extraction | 2/2 | Complete | 2026-03-18 |
 | 4. CLI & Batch | 2/2 | Complete | 2026-03-18 |
 | 5. Storage & API | 2/2 | Complete | 2026-03-18 |
-| 6. Migrations | 0/? | Not started | - |
+| 6. Migrations | 0/2 | Not started | - |
 | 7. Export | 0/? | Not started | - |
 | 8. PDF Upload API | 0/? | Not started | - |
 | 9. Async Batch | 0/? | Not started | - |
