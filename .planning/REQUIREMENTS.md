@@ -1,81 +1,85 @@
-# Requirements: Extractor PDF Pólizas
+# Requirements: Extractor PDF Polizas
 
 **Defined:** 2026-03-18
-**Core Value:** Extraer automáticamente toda la información posible de cualquier póliza de seguro en PDF y almacenarla de forma estructurada.
+**Core Value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
 
-## v1 Requirements
+## v1.1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for v1.1 API & Quality release. Each maps to roadmap phases.
 
-### Ingestion
+### Migrations & Infrastructure
 
-- [x] **ING-01**: System detects whether a PDF contains selectable text or is a scanned image
-- [x] **ING-02**: System extracts text from scanned PDFs using OCR with Spanish and English support
-- [x] **ING-03**: User can process a single PDF file via CLI
-- [x] **ING-04**: User can process a directory of PDFs in batch via CLI
-- [x] **ING-05**: System caches OCR results to avoid reprocessing the same PDF
+- [ ] **MIG-01**: Alembic initialized with `render_as_batch=True` for SQLite compatibility
+- [ ] **MIG-02**: Baseline migration stamps existing schema without altering tables
+- [ ] **MIG-03**: Evaluation columns migration adds Sonnet evaluator fields to polizas table
 
-### Extraction
+### Export
 
-- [x] **EXT-01**: System extracts all available fields from a policy PDF using Claude API (contratante, asegurado(s), costo, coberturas, sumas aseguradas, compañía, vigencia, agente, forma de pago, deducibles, and any additional fields)
-- [x] **EXT-02**: Extraction output is structured JSON validated against Pydantic schemas
-- [x] **EXT-03**: System automatically classifies the insurer and insurance type from the PDF content
-- [x] **EXT-04**: Each extracted field includes a confidence score indicating extraction certainty
-- [x] **EXT-05**: System handles PDFs in both Spanish and English
+- [ ] **EXP-01**: User can export polizas to Excel (.xlsx) with multi-sheet workbook (polizas, asegurados, coberturas)
+- [ ] **EXP-02**: User can export polizas to CSV format
+- [ ] **EXP-03**: CLI `export` command supports `--format xlsx` and `--format csv` flags
+- [ ] **EXP-04**: Excel/CSV exports use the same filter options as existing JSON export (aseguradora, date range, etc.)
+- [ ] **EXP-05**: Excel export produces correct numeric and date cell types (not text)
 
-### Data Model
+### PDF Upload API
 
-- [x] **DATA-01**: Database schema supports multiple insured parties (people or assets) per policy via relational table
-- [x] **DATA-02**: Schema supports dynamic/variable fields per insurer type via JSON overflow column
-- [x] **DATA-03**: All dates are stored in canonical ISO format regardless of source format
-- [x] **DATA-04**: All monetary amounts are stored with explicit currency code
-- [x] **DATA-05**: System stores the raw Claude API response for each extraction (provenance logging)
+- [ ] **API-01**: User can POST a PDF file to `/polizas/upload` and receive extraction results
+- [ ] **API-02**: Upload endpoint accepts multipart/form-data with PDF file
+- [ ] **API-03**: Upload triggers the full pipeline: ingest → extract → persist → return structured result
+- [ ] **API-04**: Long-running uploads return 202 Accepted with a job ID
+- [ ] **API-05**: User can poll `GET /jobs/{id}` for job status and results
+- [ ] **API-06**: Uploaded PDF temp files are cleaned up after extraction completes
 
-### Storage & Output
+### Async Batch Processing
 
-- [x] **STOR-01**: All extracted data is persisted in a local SQLite database
-- [x] **STOR-02**: User can export extracted policy data as JSON
-- [x] **STOR-03**: System exposes a REST API (FastAPI) for querying stored policies
-- [x] **STOR-04**: API supports filtering by insurer, date range, agent, and policy type
+- [ ] **ASYNC-01**: Batch processing runs extractions concurrently with configurable concurrency limit
+- [ ] **ASYNC-02**: SQLite WAL mode enabled for concurrent write safety
+- [ ] **ASYNC-03**: Each concurrent worker uses its own database session
+- [ ] **ASYNC-04**: Rate limit errors from Anthropic API trigger automatic retry with exponential backoff
+- [ ] **ASYNC-05**: CLI `batch` command accepts `--concurrency N` flag
 
-### CLI & Operations
+### Quality Evaluation
 
-- [x] **CLI-01**: User can invoke single-file extraction from command line
-- [x] **CLI-02**: User can invoke batch extraction from command line
-- [x] **CLI-03**: Batch processing displays progress (current file, total, percentage)
-- [x] **CLI-04**: System skips PDFs that have already been extracted (idempotent reprocessing)
-- [x] **CLI-05**: System tracks and reports token usage and estimated API cost per execution
+- [ ] **QAL-01**: User can run Sonnet evaluation on an extraction via `--evaluate` CLI flag
+- [ ] **QAL-02**: Sonnet evaluator scores extraction completeness, accuracy, and hallucination risk
+- [ ] **QAL-03**: Evaluation results are stored in dedicated database columns
+- [ ] **QAL-04**: Evaluation is opt-in only — never runs in the default extraction path
+- [ ] **QAL-05**: API upload endpoint accepts optional `evaluate=true` query parameter
 
-## v2 Requirements
+### Regression Testing
 
-### Reporting
+- [ ] **REG-01**: Golden dataset fixtures exist with known-good extraction results
+- [ ] **REG-02**: Regression tests compare extractions field-by-field with tolerance (not exact match)
+- [ ] **REG-03**: Regression tests are marked with `@pytest.mark.regression` and excluded from default test runs
+- [ ] **REG-04**: Regression test failures identify which specific fields drifted
 
-- **RPT-01**: User can export policy data to Excel with filters by insurer/agent/date
-- **RPT-02**: User can generate PDF summary reports of issued policies
-- **RPT-03**: Dashboard with statistics (policies per insurer, per agent, per month)
+## v2.0 Requirements
 
-### Quality
+Deferred to next milestone. Tracked but not in current roadmap.
 
-- **QAL-01**: Golden dataset regression suite to detect model drift
-- **QAL-02**: Image preprocessing (deskew, denoise) for low-quality scans
-- **QAL-03**: Human-in-the-loop review for low-confidence extractions
+### Web UI
 
-### Web Interface
+- **UI-01**: Browser interface for uploading PDFs and viewing extraction results
+- **UI-02**: Manual data editing/correction of extracted fields
+- **UI-03**: Dashboard with extraction statistics and quality metrics
 
-- **WEB-01**: Web UI for uploading and viewing extracted policies
-- **WEB-02**: Manual correction of extracted data in web UI
-- **WEB-03**: Multi-user access with authentication
+### Reports
+
+- **RPT-01**: PDF report generation from extracted poliza data
+- **RPT-02**: Customizable report templates per insurer
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Per-insurer templates | LLM approach eliminates need for fixed templates; maintaining 50-70 templates is unsustainable |
-| Direct insurer API integration | Outside project scope; PDFs are the input interface |
-| Real-time webhooks | No external consumers in v1; API polling is sufficient |
-| ML fine-tuning | Claude API is sufficient; fine-tuning adds complexity without proven benefit |
-| Mobile app | Web-first after desktop; mobile deferred indefinitely |
-| Password-protected PDF handling | Edge case; user can decrypt before processing |
+| Full async SQLAlchemy | Sync sessions with local SQLite gain nothing from async I/O; adds complexity |
+| Celery + Redis job queue | Overkill for local Windows app processing 200 PDFs/month |
+| Permanent storage of uploaded PDFs | Disk management complexity; re-upload is idempotent via hash cache |
+| Real-time SSE progress stream | Premature for CLI-first tool; poll-based status is sufficient |
+| Sonnet evaluator as microservice | Network hop + deployment complexity for a local tool |
+| Auto-running evaluator on every extraction | Sonnet costs ~20x Haiku; opt-in only |
+| Mobile app | Out of scope for foreseeable future |
+| Direct insurer system integrations | Out of scope |
 
 ## Traceability
 
@@ -83,36 +87,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ING-01 | Phase 2 | Complete |
-| ING-02 | Phase 2 | Complete |
-| ING-03 | Phase 4 | Complete |
-| ING-04 | Phase 4 | Complete |
-| ING-05 | Phase 2 | Complete |
-| EXT-01 | Phase 3 | Complete |
-| EXT-02 | Phase 3 | Complete |
-| EXT-03 | Phase 3 | Complete |
-| EXT-04 | Phase 3 | Complete |
-| EXT-05 | Phase 3 | Complete |
-| DATA-01 | Phase 1 | Complete |
-| DATA-02 | Phase 1 | Complete |
-| DATA-03 | Phase 1 | Complete |
-| DATA-04 | Phase 1 | Complete |
-| DATA-05 | Phase 1 | Complete |
-| STOR-01 | Phase 5 | Complete |
-| STOR-02 | Phase 5 | Complete |
-| STOR-03 | Phase 5 | Complete |
-| STOR-04 | Phase 5 | Complete |
-| CLI-01 | Phase 4 | Complete |
-| CLI-02 | Phase 4 | Complete |
-| CLI-03 | Phase 4 | Complete |
-| CLI-04 | Phase 4 | Complete |
-| CLI-05 | Phase 4 | Complete |
+| MIG-01 | — | Pending |
+| MIG-02 | — | Pending |
+| MIG-03 | — | Pending |
+| EXP-01 | — | Pending |
+| EXP-02 | — | Pending |
+| EXP-03 | — | Pending |
+| EXP-04 | — | Pending |
+| EXP-05 | — | Pending |
+| API-01 | — | Pending |
+| API-02 | — | Pending |
+| API-03 | — | Pending |
+| API-04 | — | Pending |
+| API-05 | — | Pending |
+| API-06 | — | Pending |
+| ASYNC-01 | — | Pending |
+| ASYNC-02 | — | Pending |
+| ASYNC-03 | — | Pending |
+| ASYNC-04 | — | Pending |
+| ASYNC-05 | — | Pending |
+| QAL-01 | — | Pending |
+| QAL-02 | — | Pending |
+| QAL-03 | — | Pending |
+| QAL-04 | — | Pending |
+| QAL-05 | — | Pending |
+| REG-01 | — | Pending |
+| REG-02 | — | Pending |
+| REG-03 | — | Pending |
+| REG-04 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 24
-- Unmapped: 0
+- v1.1 requirements: 28 total
+- Mapped to phases: 0
+- Unmapped: 28
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after roadmap creation*
+*Last updated: 2026-03-18 after initial definition*
