@@ -73,6 +73,10 @@ def sample_ingestion_result():
         pages=pages,
         file_hash="abc123",
         file_path="test.pdf",
+        total_pages=1,
+        file_size_bytes=1024,
+        created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        ocr_applied=False,
     )
 
 

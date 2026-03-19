@@ -3,6 +3,7 @@
 Exports:
     upsert_policy(session, extraction) -> Poliza
     orm_to_schema(poliza) -> PolicyExtraction
+    update_evaluation_columns(session, numero_poliza, aseguradora, score, evaluation_json, evaluated_at, model_id) -> None
 """
 from __future__ import annotations
 
@@ -120,6 +121,49 @@ def upsert_policy(session: Session, extraction: PolicyExtraction) -> Poliza:
 
     session.commit()
     return poliza
+
+
+def update_evaluation_columns(
+    session: Session,
+    numero_poliza: str,
+    aseguradora: str,
+    score: float,
+    evaluation_json: str,
+    evaluated_at: datetime,
+    model_id: str,
+) -> None:
+    """Write evaluation results to an existing Poliza row.
+
+    Sets evaluation_score, evaluation_json, evaluated_at, and evaluated_model_id
+    on the Poliza identified by (numero_poliza, aseguradora).
+
+    Args:
+        session: Active SQLAlchemy session (caller owns the lifecycle).
+        numero_poliza: Policy number to update.
+        aseguradora: Insurer name to update.
+        score: Overall evaluation score (average of completeness, accuracy, 1-hallucination_risk).
+        evaluation_json: JSON string from EvaluationResult.evaluation_json.
+        evaluated_at: UTC datetime when evaluation was performed.
+        model_id: Model ID used for evaluation (e.g., EVAL_MODEL_ID).
+
+    Raises:
+        ValueError: If no Poliza row matches (numero_poliza, aseguradora).
+    """
+    poliza = (
+        session.query(Poliza)
+        .filter_by(numero_poliza=numero_poliza, aseguradora=aseguradora)
+        .first()
+    )
+
+    if poliza is None:
+        raise ValueError(f"Poliza not found: {numero_poliza} / {aseguradora}")
+
+    poliza.evaluation_score = score
+    poliza.evaluation_json = evaluation_json
+    poliza.evaluated_at = evaluated_at
+    poliza.evaluated_model_id = model_id
+
+    session.commit()
 
 
 def orm_to_schema(poliza: Poliza) -> PolicyExtraction:
