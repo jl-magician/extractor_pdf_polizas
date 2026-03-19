@@ -86,7 +86,7 @@ Plans:
   3. When the Anthropic API returns a rate limit error, the CLI automatically retries with backoff and eventually succeeds (no silent None results)
   4. The Rich progress bar and final summary table still display correctly during concurrent runs
   5. Running the same batch twice (idempotency) still skips already-processed files and produces no duplicate records
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 09-01-PLAN.md — Rate limit retry with exponential backoff in extraction client
 - [ ] 09-02-PLAN.md — Concurrent batch processing with ThreadPoolExecutor and --concurrency flag
@@ -135,6 +135,6 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 6. Migrations | 2/2 | Complete   | 2026-03-19 |
 | 7. Export | 2/2 | Complete   | 2026-03-19 |
 | 8. PDF Upload API | 2/2 | Complete   | 2026-03-19 |
-| 9. Async Batch | 0/2 | Not started | - |
+| 9. Async Batch | 1/2 | In Progress|  |
 | 10. Quality Evaluator | 0/? | Not started | - |
 | 11. Regression Suite | 0/? | Not started | - |

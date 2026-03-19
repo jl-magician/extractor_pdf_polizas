@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 9 context gathered
-last_updated: "2026-03-19T18:47:41.951Z"
+stopped_at: Completed 09-async-batch/09-01-PLAN.md
+last_updated: "2026-03-19T19:25:25.872Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 08 — pdf-upload-api (COMPLETE)
+**Current focus:** Phase 09 — async-batch
 
 ## Current Position
 
-Phase: 08 (pdf-upload-api) — COMPLETE
-Plan: 2 of 2 (all plans complete)
+Phase: 09 (async-batch) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Plan: 2 of 2 (all plans complete)
 | Phase 07-export P02 | 18m | 2 tasks | 2 files |
 | Phase 08-pdf-upload-api P01 | 4m | 2 tasks | 4 files |
 | Phase 08-pdf-upload-api P02 | 3min | 1 tasks | 2 files |
+| Phase 09-async-batch P01 | 10m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 08-pdf-upload-api]: Lazy expiry purge on read (_get_job/_list_jobs) avoids background cleanup thread complexity for single-user local tool
 - [Phase 08-pdf-upload-api]: Patch targets for lazy-import _run_extraction must be source module paths (e.g. policy_extractor.storage.database.SessionLocal), not upload module paths
 - [Phase 08-pdf-upload-api]: Tests call _run_extraction directly and synchronously -- no thread spawning needed, isolates pipeline logic from HTTP layer
+- [Phase 09-01]: Rate limit retry placed INSIDE extract_with_retry wrapping call_extraction_api to prevent broad except Exception swallowing transient errors before retry
+- [Phase 09-01]: extract_with_retry returns 4-tuple (policy, raw_response, usage, rl_retries); extract_policy returns 3-tuple threading count to CLI callers
 
 ### Pending Todos
 
@@ -93,7 +96,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T18:47:41.948Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-async-batch/09-CONTEXT.md
+Last session: 2026-03-19T19:25:25.869Z
+Stopped at: Completed 09-async-batch/09-01-PLAN.md
+Resume file: None
 Next action: `/gsd:execute-phase` for next phase (08+)
