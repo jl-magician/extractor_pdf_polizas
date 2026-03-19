@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-03-19T22:26:42.158Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-03-19T23:30:27.685Z"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 12
-  completed_plans: 12
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 14
+  completed_plans: 14
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 11 — regression-suite
+**Current focus:** Phase 12 — milestone-polish
 
 ## Current Position
 
-Phase: 11 (regression-suite) — EXECUTING
+Phase: 12 (milestone-polish) — COMPLETE
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -46,6 +46,9 @@ Plan: 2 of 2
 | Phase 10 P02 | 4m 22s | 2 tasks | 4 files |
 | Phase 11 P01 | 196s | 2 tasks | 7 files |
 | Phase 11-regression-suite P02 | 3m | 2 tasks | 2 files |
+| Phase 12-milestone-polish P01 | — | planning only | 10 files |
+| Phase 12-milestone-polish P02 | 2m | 2 tasks | 10 files |
+| Phase 12-milestone-polish P01 | 8m | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -100,6 +103,7 @@ Recent decisions affecting current work:
 - [Phase 11-regression-suite]: create-fixture uses lazy import of PiiRedactor — consistent with all other CLI subcommand patterns
 - [Phase 11-regression-suite]: _discover_fixtures() returns [] when golden dir missing — empty parametrize skips gracefully in pytest 8.4.2
 - [Phase 11-regression-suite]: _source_pdf stored as file.name (not full path) so fixture is portable across machines
+- [Phase 12]: nyquist_compliant frontmatter flip is metadata-only; requirements_completed uses underscore key convention in new SUMMARY files
 
 ### Pending Todos
 
@@ -115,7 +119,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-19T22:23:08.253Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-03-19T23:32:00.000Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
-Next action: `/gsd:execute-phase` for next phase (08+)
+Next action: Phase 12 complete — v1.1 milestone-polish done

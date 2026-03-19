@@ -129,7 +129,7 @@ Plans:
   1. FieldDiffer handles Decimal/float monetary values without spurious failures from serialization roundtrip
   2. All 6 VALIDATION.md files have `nyquist_compliant: true` in frontmatter
   3. SUMMARY frontmatter for phases 9 and 10 include all requirement IDs
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 12-01-PLAN.md — FieldDiffer Decimal/float safe comparison with _values_equal helper and tests
 - [ ] 12-02-PLAN.md — Cosmetic frontmatter updates (VALIDATION.md nyquist + SUMMARY requirements_completed)
@@ -152,4 +152,4 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 | 9. Async Batch | 2/2 | Complete   | 2026-03-19 |
 | 10. Quality Evaluator | 2/2 | Complete    | 2026-03-19 |
 | 11. Regression Suite | 2/2 | Complete    | 2026-03-19 |
-| 12. Milestone Polish | 0/2 | Not started | - |
+| 12. Milestone Polish | 2/2 | Complete   | 2026-03-19 |
