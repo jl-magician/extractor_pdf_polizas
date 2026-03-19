@@ -1,11 +1,12 @@
-"""Typer CLI app for poliza-extractor — Phase 4 + Phase 5.
+"""Typer CLI app for poliza-extractor — Phase 4 + Phase 5 + Phase 11.
 
 Subcommands:
-  extract  — process a single PDF and print JSON to stdout
-  batch    — process all PDFs in a directory with progress bar and summary
-  export   — export stored policies to JSON, Excel, or CSV (stdout or file)
-  import   — load JSON policies into DB
-  serve    — start uvicorn with the FastAPI app
+  extract        — process a single PDF and print JSON to stdout
+  batch          — process all PDFs in a directory with progress bar and summary
+  export         — export stored policies to JSON, Excel, or CSV (stdout or file)
+  import         — load JSON policies into DB
+  serve          — start uvicorn with the FastAPI app
+  create-fixture — extract a real PDF, redact PII, write golden JSON fixture
 """
 
 from __future__ import annotations
@@ -575,3 +576,54 @@ def serve(
     """Start the FastAPI server with uvicorn."""
     import uvicorn
     uvicorn.run("policy_extractor.api:app", host=host, port=port, reload=reload)
+
+
+# ---------------------------------------------------------------------------
+# create-fixture subcommand
+# ---------------------------------------------------------------------------
+
+
+@app.command(name="create-fixture")
+def create_fixture(
+    file: Path = typer.Argument(..., help="Path to real PDF", exists=True),
+    output: Path = typer.Option(
+        Path("tests/fixtures/golden"), "--output", "-o", help="Output directory for fixture JSON"
+    ),
+    insurer: str = typer.Option(..., "--insurer", help="Insurer slug (e.g. axa, gnp, qualitas)"),
+    policy_type: str = typer.Option(..., "--type", help="Policy type slug (e.g. auto, vida, gmm)"),
+    model: Optional[str] = typer.Option(None, "--model", help="Override extraction model"),
+) -> None:
+    """Extract a real PDF, redact PII, and write a golden JSON fixture.
+
+    The fixture is saved to the output directory as golden_{insurer}_{type}.json.
+    PII fields (nombre_contratante, rfc, etc.) are replaced with '[REDACTED]'.
+    Use this fixture with `pytest -m regression` for automated drift detection.
+    """
+    from policy_extractor.regression.pii_redactor import PiiRedactor
+
+    _setup_db()
+    session = SessionLocal()
+    try:
+        ingestion_result = ingest_pdf(file, session=session)
+        policy, usage, _retries = extract_policy(ingestion_result, model=model)
+
+        if policy is None:
+            console.print("[red]Extraction failed[/red]")
+            raise typer.Exit(1)
+
+        raw = policy.model_dump(mode="json")
+        raw["_source_pdf"] = file.name  # stores the PDF filename for test lookup
+        redacted = PiiRedactor().redact(raw)
+
+        output.mkdir(parents=True, exist_ok=True)
+        out_file = output / f"golden_{insurer}_{policy_type}.json"
+        out_file.write_text(
+            json.dumps(redacted, indent=2, ensure_ascii=False, default=str),
+            encoding="utf-8",
+        )
+        console.print(f"[green]Fixture written:[/green] {out_file}")
+
+        if usage:
+            _print_cost(model or settings.EXTRACTION_MODEL, usage.input_tokens, usage.output_tokens)
+    finally:
+        session.close()
