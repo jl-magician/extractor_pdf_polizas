@@ -1,5 +1,15 @@
 # Milestones
 
+## v1.1 API & Quality (Shipped: 2026-03-19)
+
+**Phases completed:** 7 phases, 14 plans, 6 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v1.0 MVP (Shipped: 2026-03-19)
 
 **Phases completed:** 5 phases, 10 plans, 153 tests passing
@@ -9,6 +19,7 @@
 **UAT:** 33/33 tests passed across all 5 phases
 
 **Key accomplishments:**
+
 1. Pydantic v2 extraction contract with Spanish domain terms, date normalization, Decimal precision
 2. Per-page PDF classifier using image coverage ratio with OCR fallback (Spanish + English)
 3. Claude API extraction pipeline with tool_use structured output, hallucination verification, confidence scoring
@@ -18,4 +29,3 @@
 **Delivered:** Complete pipeline for extracting structured data from any insurance policy PDF — ingest, classify, OCR, extract via Claude API, persist to SQLite, query via CLI or REST API.
 
 ---
-
