@@ -88,8 +88,8 @@ Plans:
   5. Running the same batch twice (idempotency) still skips already-processed files and produces no duplicate records
 **Plans:** 2 plans
 Plans:
-- [ ] 09-01-PLAN.md — [to be planned]
-- [ ] 09-02-PLAN.md — [to be planned]
+- [ ] 09-01-PLAN.md — Rate limit retry with exponential backoff in extraction client
+- [ ] 09-02-PLAN.md — Concurrent batch processing with ThreadPoolExecutor and --concurrency flag
 
 ### Phase 10: Quality Evaluator
 **Goal**: Users can optionally invoke a Sonnet-powered scoring pass on any extraction to assess completeness, accuracy, and hallucination risk
@@ -135,6 +135,6 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 6. Migrations | 2/2 | Complete   | 2026-03-19 |
 | 7. Export | 2/2 | Complete   | 2026-03-19 |
 | 8. PDF Upload API | 2/2 | Complete   | 2026-03-19 |
-| 9. Async Batch | 0/? | Not started | - |
+| 9. Async Batch | 0/2 | Not started | - |
 | 10. Quality Evaluator | 0/? | Not started | - |
 | 11. Regression Suite | 0/? | Not started | - |
