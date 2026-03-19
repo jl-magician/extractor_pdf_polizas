@@ -12,8 +12,13 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override URL from application settings
-config.set_main_option("sqlalchemy.url", f"sqlite:///{settings.DB_PATH}")
+# Set URL from application settings only if not already explicitly overridden by caller
+# (e.g., tests and _auto_migrate pass their own URL via set_main_option before running env.py)
+_url_in_ini = config.get_main_option("sqlalchemy.url", default=None)
+_settings_url = f"sqlite:///{settings.DB_PATH}"
+if _url_in_ini is None or _url_in_ini == "sqlite:///data/polizas.db":
+    # Use settings URL: either no URL set or the placeholder from alembic.ini
+    config.set_main_option("sqlalchemy.url", _settings_url)
 
 
 def run_migrations_offline() -> None:
@@ -37,6 +42,7 @@ def run_migrations_online() -> None:
     )
     with connectable.connect() as connection:
         connection.execute(text("PRAGMA journal_mode=WAL"))
+        connection.commit()  # commit PRAGMA before starting migration transaction
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

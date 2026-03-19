@@ -23,9 +23,17 @@ def upgrade() -> None:
     existing_tables = inspector.get_table_names()
 
     if "polizas" not in existing_tables:
-        # Fresh database — create all tables via metadata
+        # Fresh database — create all tables via metadata using a separate engine
+        # (Alembic's migration connection wraps DDL in a transaction that needs
+        # an independent connection for create_all to be visible immediately)
         from policy_extractor.storage.models import Base
-        Base.metadata.create_all(bind=bind)
+        from sqlalchemy import create_engine
+        db_url = op.get_context().config.get_main_option("sqlalchemy.url")
+        engine = create_engine(db_url)
+        with engine.connect() as conn:
+            Base.metadata.create_all(conn)
+            conn.commit()
+        engine.dispose()
     # If polizas exists: schema already correct, no DDL needed.
     # Alembic stamps this revision after upgrade() returns.
 
