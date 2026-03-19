@@ -4,6 +4,7 @@ These are regular unit tests — NOT marked with @pytest.mark.regression.
 They run in the default suite: pytest tests/test_regression_helpers.py
 """
 import pytest
+from decimal import Decimal
 
 # ---------------------------------------------------------------------------
 # PiiRedactor tests
@@ -319,3 +320,70 @@ class TestFieldDiffer:
         fail_rows = [r for r in drift.rows if r[3] == "FAIL"]
         missing_names = [r for r in fail_rows if "Cobertura B" in str(r) or "Cobertura C" in str(r)]
         assert len(missing_names) >= 2, f"Expected FAILs for Cobertura B and C, rows: {drift.rows}"
+
+    # ------------------------------------------------------------------
+    # Tests 16-20: Decimal/float serialization roundtrip safety
+    # ------------------------------------------------------------------
+
+    def test_16_float_prima_total_equal_produces_no_fail(self):
+        """FieldDiffer with expected prima_total=1500.0 (float) and actual=1500.0 produces no FAIL."""
+        expected = self._base_policy()
+        expected["prima_total"] = 1500.0  # float from JSON roundtrip
+        actual = self._base_policy()
+        actual["prima_total"] = 1500.0
+
+        drift = FieldDiffer(expected, actual).compare()
+
+        assert drift.has_failures is False, f"Expected no failures, got: {drift.rows}"
+
+    def test_17_string_vs_float_prima_total_produces_fail(self):
+        """FieldDiffer with expected prima_total='1500.00' (string) and actual=1500.0 (float) produces FAIL."""
+        expected = self._base_policy()
+        expected["prima_total"] = "1500.00"  # string — not a Decimal roundtrip, different type
+        actual = self._base_policy()
+        actual["prima_total"] = 1500.0  # float
+
+        drift = FieldDiffer(expected, actual).compare()
+
+        assert drift.has_failures is True, f"Expected FAIL for string vs float mismatch, rows: {drift.rows}"
+        fail_rows = [r for r in drift.rows if r[3] == "FAIL"]
+        assert any("prima_total" in r[0] for r in fail_rows), f"Expected prima_total FAIL, rows: {drift.rows}"
+
+    def test_18_float_suma_asegurada_in_coberturas_produces_no_fail(self):
+        """FieldDiffer with expected suma_asegurada=500000.0 and actual=500000.0 in coberturas produces no FAIL."""
+        expected = self._base_policy()
+        expected["coberturas"] = [
+            {"nombre_cobertura": "Daños a terceros", "suma_asegurada": 500000.0},
+        ]
+        actual = self._base_policy()
+        actual["coberturas"] = [
+            {"nombre_cobertura": "Daños a terceros", "suma_asegurada": 500000.0},
+        ]
+
+        drift = FieldDiffer(expected, actual).compare()
+
+        assert drift.has_failures is False, f"Expected no failures, got: {drift.rows}"
+
+    def test_19_decimal_vs_float_prima_total_produces_no_fail(self):
+        """FieldDiffer with Decimal('1500.00') vs float 1500.0 produces no spurious FAIL (core roundtrip case)."""
+        expected = self._base_policy()
+        expected["prima_total"] = Decimal("1500.00")  # Decimal — as extracted before model_dump
+        actual = self._base_policy()
+        actual["prima_total"] = 1500.0  # float — result of model_dump(mode='json') roundtrip
+
+        drift = FieldDiffer(expected, actual).compare()
+
+        assert drift.has_failures is False, f"Expected no FAIL for Decimal vs float roundtrip, rows: {drift.rows}"
+
+    def test_20_truly_different_monetary_values_still_fail(self):
+        """FieldDiffer with truly different monetary values (1500.0 vs 1600.0) still produces FAIL."""
+        expected = self._base_policy()
+        expected["prima_total"] = 1500.0
+        actual = self._base_policy()
+        actual["prima_total"] = 1600.0
+
+        drift = FieldDiffer(expected, actual).compare()
+
+        assert drift.has_failures is True, f"Expected FAIL for 1500.0 vs 1600.0, rows: {drift.rows}"
+        fail_rows = [r for r in drift.rows if r[3] == "FAIL"]
+        assert any("prima_total" in r[0] for r in fail_rows), f"Expected prima_total FAIL, rows: {drift.rows}"

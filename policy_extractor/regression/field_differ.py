@@ -11,7 +11,30 @@ Usage::
 ``FieldDiffer`` operates on plain dicts (i.e. ``model_dump(mode='json')`` output).
 It produces a ``DriftReport`` containing (field, expected, actual, status) rows.
 """
+import math
 from dataclasses import dataclass, field
+from decimal import Decimal
+
+def _values_equal(expected, actual) -> bool:
+    """Compare two field values for equality, handling Decimal/float serialization artifacts.
+
+    When a Decimal field (e.g. prima_total, suma_asegurada) passes through
+    ``model_dump(mode='json')``, it becomes a float. Comparing the original
+    Decimal against the float roundtrip result with ``==`` works for simple
+    values (Decimal("1500.00") == 1500.0 is True in Python), but arithmetic
+    results like Decimal("0.3") vs 0.30000000000000004 would cause spurious
+    FAILs. ``math.isclose`` with a very tight tolerance (rel_tol=1e-9) forgives
+    only representation artifacts — truly different values like 1500.0 vs 1600.0
+    still FAIL.
+
+    For non-numeric types, strict equality (``==``) is used, preserving the
+    user's "exact match" intent for all other fields.
+    """
+    _numeric = (int, float, Decimal)
+    if isinstance(expected, _numeric) and isinstance(actual, _numeric):
+        return math.isclose(float(expected), float(actual), rel_tol=1e-9)
+    return expected == actual
+
 
 # Fields skipped entirely — provenance and quality signals that change per run
 SKIP_FIELDS: frozenset[str] = frozenset(
@@ -108,7 +131,7 @@ class FieldDiffer:
                 self._compare_list(key, exp_val, act_list, match_key, report)
             else:
                 act_val = self._actual.get(key)
-                if exp_val != act_val:
+                if not _values_equal(exp_val, act_val):
                     report.rows.append((key, exp_val, act_val, "FAIL"))
 
         return report
@@ -140,7 +163,7 @@ class FieldDiffer:
             field_path = f"campos_adicionales.{k}"
             if k not in actual:
                 report.rows.append((field_path, exp_val, None, "FAIL"))
-            elif exp_val != act_val:
+            elif not _values_equal(exp_val, act_val):
                 report.rows.append((field_path, exp_val, act_val, "FAIL"))
 
     def _compare_list(
@@ -207,7 +230,7 @@ class FieldDiffer:
                     )
                     continue
                 act_sub_val = act_item.get(sub_key)
-                if exp_sub_val != act_sub_val:
+                if not _values_equal(exp_sub_val, act_sub_val):
                     report.rows.append(
                         (f"{prefix}.{sub_key}", exp_sub_val, act_sub_val, "FAIL")
                     )
