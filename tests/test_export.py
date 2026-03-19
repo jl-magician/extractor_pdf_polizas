@@ -1,18 +1,27 @@
-"""Unit tests for policy_extractor.export module (EXP-01, EXP-02, EXP-05)."""
+"""Unit tests for policy_extractor.export module (EXP-01, EXP-02, EXP-05).
+
+Also contains CLI integration tests for EXP-03, EXP-04 (format routing, Spanish filters).
+"""
 from __future__ import annotations
 
 import csv
 import io
+import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, selectinload
+from typer.testing import CliRunner
 
+from policy_extractor.cli import app
 from policy_extractor.export import export_csv, export_xlsx
-from policy_extractor.storage.models import Asegurado, Cobertura, Poliza
+from policy_extractor.storage.models import Asegurado, Base, Cobertura, Poliza
+
+cli_runner = CliRunner()
 
 
 # ---------------------------------------------------------------------------
@@ -362,3 +371,198 @@ def test_csv_comma_in_value(session, tmp_path):
     content = out.read_text(encoding="utf-8-sig")
     # The csv module should quote "Qualitas, S.A." in the output
     assert '"Qualitas, S.A."' in content
+
+
+# ---------------------------------------------------------------------------
+# CLI integration tests — EXP-03 (format flags), EXP-04 (filter parity)
+# ---------------------------------------------------------------------------
+
+
+def _make_cli_engine_and_factory():
+    """Create an in-memory engine and a mock SessionLocal factory for CLI tests."""
+    from sqlalchemy.orm import sessionmaker
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    RealSession = sessionmaker(bind=engine)
+
+    class _FakeSessionCls:
+        def __call__(self):
+            return RealSession()
+
+        def configure(self, **kwargs):
+            pass
+
+    return engine, _FakeSessionCls()
+
+
+def _insert_poliza(engine, **kwargs) -> None:
+    """Insert a Poliza into engine using provided keyword args."""
+    poliza = Poliza(**kwargs)
+    with Session(engine) as s:
+        s.add(poliza)
+        s.commit()
+
+
+def test_cli_export_xlsx(tmp_path):
+    """CLI export --format xlsx -o out.xlsx produces a valid xlsx with 3 sheets."""
+    import openpyxl
+
+    engine, factory = _make_cli_engine_and_factory()
+    _insert_poliza(
+        engine,
+        numero_poliza="POL-001",
+        aseguradora="AXA",
+        tipo_seguro="auto",
+        inicio_vigencia=date(2024, 4, 1),
+        fin_vigencia=date(2025, 4, 1),
+        prima_total=Decimal("1000.00"),
+        moneda="MXN",
+    )
+
+    out = tmp_path / "out.xlsx"
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", factory),
+    ):
+        result = cli_runner.invoke(app, ["export", "--format", "xlsx", "-o", str(out)])
+
+    assert result.exit_code == 0, result.output
+    assert out.exists()
+    wb = openpyxl.load_workbook(out)
+    assert wb.sheetnames == ["polizas", "asegurados", "coberturas"]
+
+
+def test_cli_export_csv(tmp_path):
+    """CLI export --format csv -o out.csv produces a valid UTF-8 BOM CSV with header."""
+    engine, factory = _make_cli_engine_and_factory()
+    _insert_poliza(
+        engine,
+        numero_poliza="POL-001",
+        aseguradora="AXA",
+        moneda="MXN",
+    )
+
+    out = tmp_path / "out.csv"
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", factory),
+    ):
+        result = cli_runner.invoke(app, ["export", "--format", "csv", "-o", str(out)])
+
+    assert result.exit_code == 0, result.output
+    assert out.exists()
+    # Must have UTF-8 BOM
+    raw = out.read_bytes()
+    assert raw[:3] == b"\xef\xbb\xbf", "CSV missing UTF-8 BOM"
+    # Must have header row
+    content = out.read_text(encoding="utf-8-sig")
+    assert "numero_poliza" in content
+
+
+def test_cli_export_json_default(tmp_path):
+    """CLI export with no --format outputs valid JSON array to stdout (backward compat)."""
+    engine, factory = _make_cli_engine_and_factory()
+    _insert_poliza(engine, numero_poliza="POL-001", aseguradora="AXA")
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", factory),
+    ):
+        result = cli_runner.invoke(app, ["export"])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["numero_poliza"] == "POL-001"
+
+
+def test_cli_export_xlsx_requires_output():
+    """CLI export --format xlsx without -o exits 1 with 'required' in output."""
+    engine, factory = _make_cli_engine_and_factory()
+
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", factory),
+    ):
+        result = cli_runner.invoke(app, ["export", "--format", "xlsx"])
+
+    assert result.exit_code == 1
+    assert "required" in result.output.lower()
+
+
+def test_xlsx_filter_aseguradora(tmp_path):
+    """--aseguradora AXA exports only AXA polizas; GNP poliza excluded."""
+    import openpyxl
+
+    engine, factory = _make_cli_engine_and_factory()
+    _insert_poliza(engine, numero_poliza="POL-AXA", aseguradora="AXA", moneda="MXN")
+    _insert_poliza(engine, numero_poliza="POL-GNP", aseguradora="GNP", moneda="MXN")
+
+    out = tmp_path / "out.xlsx"
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", factory),
+    ):
+        result = cli_runner.invoke(
+            app,
+            ["export", "--aseguradora", "AXA", "--format", "xlsx", "-o", str(out)],
+        )
+
+    assert result.exit_code == 0, result.output
+    assert out.exists()
+    wb = openpyxl.load_workbook(out)
+    ws = wb["polizas"]
+    # Row 1 is header; row 2 is the single AXA poliza
+    assert ws.max_row == 2, f"Expected 2 rows (header + 1 data), got {ws.max_row}"
+    # Verify the data row is AXA
+    headers = [cell.value for cell in list(ws.iter_rows(min_row=1, max_row=1))[0]]
+    aseg_col = headers.index("aseguradora") + 1
+    data_row = list(ws.iter_rows(min_row=2, max_row=2))[0]
+    assert data_row[aseg_col - 1].value == "AXA"
+
+
+def test_xlsx_filter_dates(tmp_path):
+    """--desde 2024-06-01 exports only polizas with inicio_vigencia >= 2024-06-01."""
+    import openpyxl
+
+    engine, factory = _make_cli_engine_and_factory()
+    # Before cutoff
+    _insert_poliza(
+        engine,
+        numero_poliza="POL-OLD",
+        aseguradora="AXA",
+        inicio_vigencia=date(2024, 1, 1),
+        moneda="MXN",
+    )
+    # After cutoff
+    _insert_poliza(
+        engine,
+        numero_poliza="POL-NEW",
+        aseguradora="AXA",
+        inicio_vigencia=date(2024, 7, 1),
+        moneda="MXN",
+    )
+
+    out = tmp_path / "out.xlsx"
+    with (
+        patch("policy_extractor.cli.init_db"),
+        patch("policy_extractor.cli.SessionLocal", factory),
+    ):
+        result = cli_runner.invoke(
+            app,
+            ["export", "--desde", "2024-06-01", "--format", "xlsx", "-o", str(out)],
+        )
+
+    assert result.exit_code == 0, result.output
+    assert out.exists()
+    wb = openpyxl.load_workbook(out)
+    ws = wb["polizas"]
+    # Row 1 header + 1 data row (POL-NEW only)
+    assert ws.max_row == 2, f"Expected 2 rows (header + 1 data), got {ws.max_row}"
+    headers = [cell.value for cell in list(ws.iter_rows(min_row=1, max_row=1))[0]]
+    pol_col = headers.index("numero_poliza") + 1
+    data_row = list(ws.iter_rows(min_row=2, max_row=2))[0]
+    assert data_row[pol_col - 1].value == "POL-NEW"

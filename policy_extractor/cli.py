@@ -3,13 +3,14 @@
 Subcommands:
   extract  — process a single PDF and print JSON to stdout
   batch    — process all PDFs in a directory with progress bar and summary
-  export   — export stored policies to JSON (stdout or file)
+  export   — export stored policies to JSON, Excel, or CSV (stdout or file)
   import   — load JSON policies into DB
   serve    — start uvicorn with the FastAPI app
 """
 
 from __future__ import annotations
 
+import enum
 import json
 import time
 from pathlib import Path
@@ -36,6 +37,12 @@ from policy_extractor.storage.database import SessionLocal, init_db
 
 app = typer.Typer(name="poliza-extractor", help="Extract insurance policy data from PDFs.")
 console = Console(stderr=True)  # Rich output to stderr; JSON data goes to stdout
+
+
+class ExportFormat(str, enum.Enum):
+    json = "json"
+    xlsx = "xlsx"
+    csv = "csv"
 
 
 # ---------------------------------------------------------------------------
@@ -280,50 +287,89 @@ def batch(
 
 @app.command(name="export")
 def export_policies(
-    insurer: Optional[str] = typer.Option(None, "--insurer", help="Filter by insurer name"),
-    agent: Optional[str] = typer.Option(None, "--agent", help="Filter by agent name"),
-    from_date: Optional[str] = typer.Option(None, "--from-date", help="Filter start date (YYYY-MM-DD)"),
-    to_date: Optional[str] = typer.Option(None, "--to-date", help="Filter end date (YYYY-MM-DD)"),
-    policy_type: Optional[str] = typer.Option(None, "--type", help="Filter by insurance type"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
+    # Existing JSON-compat English flags (DO NOT REMOVE)
+    insurer: Optional[str] = typer.Option(None, "--insurer", help="Filter by insurer name (JSON compat)"),
+    agent: Optional[str] = typer.Option(None, "--agent", help="Filter by agent name (JSON compat)"),
+    from_date: Optional[str] = typer.Option(None, "--from-date", help="Filter start date YYYY-MM-DD (JSON compat)"),
+    to_date: Optional[str] = typer.Option(None, "--to-date", help="Filter end date YYYY-MM-DD (JSON compat)"),
+    policy_type: Optional[str] = typer.Option(None, "--type", help="Filter by insurance type (JSON compat)"),
+    # New Spanish flags for xlsx/csv
+    aseguradora: Optional[str] = typer.Option(None, "--aseguradora", help="Filtrar por aseguradora"),
+    agente: Optional[str] = typer.Option(None, "--agente", help="Filtrar por agente"),
+    desde: Optional[str] = typer.Option(None, "--desde", help="Fecha inicio YYYY-MM-DD"),
+    hasta: Optional[str] = typer.Option(None, "--hasta", help="Fecha fin YYYY-MM-DD"),
+    tipo: Optional[str] = typer.Option(None, "--tipo", help="Filtrar por tipo de seguro"),
+    # Format + output
+    fmt: ExportFormat = typer.Option(ExportFormat.json, "--format", help="Output format: json, xlsx, csv"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file path (required for xlsx/csv)"),
 ) -> None:
-    """Export stored policies to JSON. Outputs a JSON array to stdout or --output file."""
+    """Export stored policies. Supports JSON (default), Excel (.xlsx), and CSV formats."""
+    from datetime import datetime
+
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
+
     from policy_extractor.storage.models import Poliza as PolizaModel
     from policy_extractor.storage.writer import orm_to_schema
 
     _setup_db()
     session = SessionLocal()
     try:
+        # Merge Spanish and English flags (Spanish takes precedence)
+        eff_insurer = aseguradora or insurer
+        eff_agent = agente or agent
+        eff_type = tipo or policy_type
+        eff_from = desde or from_date
+        eff_to = hasta or to_date
+
+        # Validate --output is provided for non-JSON formats
+        if fmt in (ExportFormat.xlsx, ExportFormat.csv) and output is None:
+            console.print("[red]--output / -o is required for xlsx and csv formats[/red]")
+            raise typer.Exit(1)
+
         stmt = (
             select(PolizaModel)
             .options(selectinload(PolizaModel.asegurados), selectinload(PolizaModel.coberturas))
         )
-        if insurer is not None:
-            stmt = stmt.where(PolizaModel.aseguradora == insurer)
-        if agent is not None:
-            stmt = stmt.where(PolizaModel.nombre_agente == agent)
-        if policy_type is not None:
-            stmt = stmt.where(PolizaModel.tipo_seguro == policy_type)
-        if from_date is not None:
-            from datetime import datetime
-            parsed_from = datetime.strptime(from_date, "%Y-%m-%d").date()
+        if eff_insurer is not None:
+            stmt = stmt.where(PolizaModel.aseguradora == eff_insurer)
+        if eff_agent is not None:
+            stmt = stmt.where(PolizaModel.nombre_agente == eff_agent)
+        if eff_type is not None:
+            stmt = stmt.where(PolizaModel.tipo_seguro == eff_type)
+        if eff_from is not None:
+            parsed_from = datetime.strptime(eff_from, "%Y-%m-%d").date()
             stmt = stmt.where(PolizaModel.inicio_vigencia >= parsed_from)
-        if to_date is not None:
-            from datetime import datetime
-            parsed_to = datetime.strptime(to_date, "%Y-%m-%d").date()
+        if eff_to is not None:
+            parsed_to = datetime.strptime(eff_to, "%Y-%m-%d").date()
             stmt = stmt.where(PolizaModel.fin_vigencia <= parsed_to)
 
         rows = session.execute(stmt).scalars().all()
-        results = [orm_to_schema(p).model_dump(mode="json") for p in rows]
-        json_str = json.dumps(results, indent=2, ensure_ascii=False)
 
-        if output is not None:
-            output.write_text(json_str, encoding="utf-8")
-            console.print(f"Exported {len(results)} policy/policies to {output}")
-        else:
-            print(json_str)
+        if fmt == ExportFormat.json:
+            results = [orm_to_schema(p).model_dump(mode="json") for p in rows]
+            json_str = json.dumps(results, indent=2, ensure_ascii=False)
+            if output is not None:
+                output.write_text(json_str, encoding="utf-8")
+                console.print(f"Exported {len(results)} policy/policies to {output}")
+            else:
+                print(json_str)
+        elif fmt == ExportFormat.xlsx:
+            from policy_extractor.export import ExportError, export_xlsx
+            try:
+                count = export_xlsx(rows, output)
+                console.print(f"Exported {count} policy/policies to {output}")
+            except ExportError as e:
+                console.print(f"[red]{e}[/red]")
+                raise typer.Exit(1)
+        elif fmt == ExportFormat.csv:
+            from policy_extractor.export import ExportError, export_csv
+            try:
+                count = export_csv(rows, output)
+                console.print(f"Exported {count} policy/policies to {output}")
+            except ExportError as e:
+                console.print(f"[red]{e}[/red]")
+                raise typer.Exit(1)
     finally:
         session.close()
 
