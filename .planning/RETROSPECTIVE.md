@@ -46,6 +46,50 @@
 
 ---
 
+## Milestone: v1.1 — API & Quality
+
+**Shipped:** 2026-03-19
+**Phases:** 7 | **Plans:** 14 | **Commits:** 80
+
+### What Was Built
+- Alembic schema versioning with auto-migrate on startup and backup
+- Excel/CSV export with multi-sheet workbooks, correct date/number types, Spanish filter flags
+- PDF Upload API with async job system (POST → 202 → poll → result)
+- Concurrent batch processing (ThreadPoolExecutor, --concurrency flag, rate limit retry)
+- Sonnet quality evaluator (opt-in --evaluate, 3-dimension scoring, DB persistence)
+- Golden regression suite (PII-safe fixtures, field-by-field drift reporting, @pytest.mark.regression)
+- Milestone polish (FieldDiffer Decimal/float safety, VALIDATION/SUMMARY frontmatter fixes)
+
+### What Worked
+- **TDD in execution agents** — tests written before implementation caught integration issues early
+- **Wave-based parallel execution** — Phase 12 ran both plans simultaneously, saving wall-clock time
+- **Plan checker revision loop** — Phase 9's checker caught a real blocker (retry count always 0) before execution, saving a full re-execution
+- **Per-phase discuss → plan → execute cycle** — each phase got exactly the right context
+- **Existing test infrastructure reuse** — conftest.py, TestClient, mock patterns from v1.0 reused extensively
+
+### What Was Inefficient
+- **VALIDATION.md nyquist_compliant never auto-flipped** — all 6 phases needed manual fix in Phase 12. Executor workflow should update this.
+- **SUMMARY frontmatter requirements_completed inconsistently populated** — some executors filled it, some didn't. Should be enforced.
+- **Audit flagged REG-02 for an intentional decision** — user chose "Exact match" but audit called it a gap. Audit should check CONTEXT.md decisions.
+
+### Patterns Established
+- Lazy imports inside CLI commands (prevents heavy deps from slowing startup)
+- Per-thread SessionLocal() for SQLite thread safety
+- 3-tuple return from extract_policy() (policy, usage, rl_retries)
+- PII redaction in fixtures with `[REDACTED]` sentinel
+
+### Key Lessons
+1. Plan checker saves execution cost — catching bugs in planning is cheaper than re-executing phases
+2. Cosmetic tracking gaps compound — small frontmatter issues across 6 phases needed a dedicated cleanup phase
+3. User decisions should override audit heuristics — explicit choices shouldn't be flagged as gaps
+
+### Cost Observations
+- Model mix: opus for planning, sonnet for research/execution/verification
+- 7 phases completed in one extended session
+- Notable: parallel execution in Phase 12 cut execution time in half
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -53,14 +97,18 @@
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1.0 | 2 days | 5 | Initial process — discuss → research → plan → execute → verify |
+| v1.1 | 2 days | 7 | Added plan checker revision loop, parallel wave execution, milestone audit |
 
 ### Cumulative Quality
 
-| Milestone | Tests | UAT | Verification |
-|-----------|-------|-----|-------------|
-| v1.0 | 153 | 33/33 pass | 5/5 phases passed |
+| Milestone | Tests | Verification | Gap Closure |
+|-----------|-------|-------------|-------------|
+| v1.0 | 153 | 5/5 phases passed | 0 cycles |
+| v1.1 | 263 (+110) | 7/7 phases passed | 1 cycle (Phase 12 polish) |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Non-retrofittable contracts first — data model decisions cascade through every subsequent phase
 2. TDD with mocked external APIs gives full coverage without runtime costs
+3. Plan checker catches real bugs before execution — saves full re-execution cost
+4. Cosmetic tracking gaps compound — enforce frontmatter updates in executor workflow
