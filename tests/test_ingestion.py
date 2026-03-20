@@ -380,3 +380,252 @@ class TestIngestPdfCache:
                 "language"
             ) or mock_run_ocr.call_args_list[1][0][1]
             assert second_lang == ["spa", "eng"]
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Auto-OCR reclassification tests (Plan 13-01)
+# ────────────────────────────────────────────────────────────────────────────
+
+
+class TestAutoOcrReclassification:
+    """Tests for digital page auto-reclassification when char count is below threshold."""
+
+    def _make_mock_doc(self, page_text: str):
+        """Return a mock fitz document whose page 0 returns page_text via get_text()."""
+        mock_page = io.StringIO()  # placeholder — we'll use MagicMock below
+        from unittest.mock import MagicMock
+
+        mock_fitz_page = MagicMock()
+        mock_fitz_page.get_text.return_value = page_text
+
+        mock_doc = MagicMock()
+        mock_doc.__getitem__ = MagicMock(return_value=mock_fitz_page)
+        mock_doc.is_pdf = True
+        mock_doc.close = MagicMock()
+        return mock_doc
+
+    @patch("policy_extractor.ingestion.classify_all_pages")
+    @patch("policy_extractor.ingestion.ocr_with_fallback")
+    @patch("policy_extractor.ingestion.extract_text_by_page")
+    @patch("policy_extractor.ingestion.compute_file_hash")
+    @patch("fitz.open")
+    def test_auto_reclassify_low_char_digital_page(
+        self,
+        mock_fitz_open,
+        mock_hash,
+        mock_extract_text,
+        mock_ocr,
+        mock_classify,
+        tmp_path,
+    ):
+        """Digital page with < OCR_MIN_CHARS_THRESHOLD chars is auto-reclassified."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"fake pdf content for hashing purposes only")
+
+        mock_hash.return_value = "a" * 64
+        mock_classify.return_value = [(1, "digital")]
+        mock_fitz_open.return_value = self._make_mock_doc("abc")  # 3 chars < 10 threshold
+        ocr_pdf_path = tmp_path / "ocr_output.pdf"
+        ocr_pdf_path.write_bytes(b"ocr output")
+        mock_ocr.return_value = (ocr_pdf_path, "spa")
+        mock_extract_text.return_value = [(1, "OCR extracted text")]
+
+        result = ingest_pdf(pdf_path)
+
+        assert result.pages[0].classification == "scanned (auto-reclassified)"
+        assert result.pages[0].text == "OCR extracted text"
+
+    @patch("policy_extractor.ingestion.classify_all_pages")
+    @patch("policy_extractor.ingestion.ocr_with_fallback")
+    @patch("policy_extractor.ingestion.compute_file_hash")
+    @patch("fitz.open")
+    def test_digital_page_above_threshold_stays_digital(
+        self,
+        mock_fitz_open,
+        mock_hash,
+        mock_ocr,
+        mock_classify,
+        tmp_path,
+    ):
+        """Digital page with >= OCR_MIN_CHARS_THRESHOLD chars keeps digital classification."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"fake pdf content for hashing purposes only")
+
+        mock_hash.return_value = "b" * 64
+        mock_classify.return_value = [(1, "digital")]
+        long_text = "x" * 500  # well above threshold
+        mock_fitz_open.return_value = self._make_mock_doc(long_text)
+
+        result = ingest_pdf(pdf_path)
+
+        assert result.pages[0].classification == "digital"
+        mock_ocr.assert_not_called()
+
+    @patch("policy_extractor.ingestion.classify_all_pages")
+    @patch("policy_extractor.ingestion.ocr_with_fallback")
+    @patch("policy_extractor.ingestion.compute_file_hash")
+    @patch("fitz.open")
+    def test_auto_ocr_failure_does_not_crash(
+        self,
+        mock_fitz_open,
+        mock_hash,
+        mock_ocr,
+        mock_classify,
+        tmp_path,
+    ):
+        """When ocr_with_fallback raises, ingest_pdf keeps original text and does not raise."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"fake pdf content for hashing purposes only")
+
+        mock_hash.return_value = "c" * 64
+        mock_classify.return_value = [(1, "digital")]
+        short_text = "ab"  # 2 chars < threshold 10
+        mock_fitz_open.return_value = self._make_mock_doc(short_text)
+        mock_ocr.side_effect = RuntimeError("OCR engine not available")
+
+        # Should NOT raise
+        result = ingest_pdf(pdf_path)
+
+        assert result.pages[0].classification == "scanned (auto-reclassified)"
+        # Original short text is preserved because OCR failed
+        assert result.pages[0].text == short_text
+
+    def test_page_result_accepts_auto_reclassified(self):
+        """PageResult schema accepts 'scanned (auto-reclassified)' classification."""
+        from policy_extractor.schemas.ingestion import PageResult
+
+        page = PageResult(page_num=1, text="test", classification="scanned (auto-reclassified)")
+        assert page.classification == "scanned (auto-reclassified)"
+
+    def test_ocr_min_chars_threshold_default(self):
+        """OCR_MIN_CHARS_THRESHOLD=10 is the default in Settings."""
+        from policy_extractor.config import settings
+
+        assert settings.OCR_MIN_CHARS_THRESHOLD == 10
+
+    @patch("policy_extractor.ingestion.classify_all_pages")
+    @patch("policy_extractor.ingestion.ocr_with_fallback")
+    @patch("policy_extractor.ingestion.extract_text_by_page")
+    @patch("policy_extractor.ingestion.compute_file_hash")
+    @patch("fitz.open")
+    def test_whole_pdf_retry_on_empty_reclassified_texts(
+        self,
+        mock_fitz_open,
+        mock_hash,
+        mock_extract_text,
+        mock_ocr,
+        mock_classify,
+        tmp_path,
+    ):
+        """D-16: When reclassified pages yield all-empty OCR text, whole-PDF OCR retry fires."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"fake pdf content for hashing purposes only")
+
+        ocr_pdf_path = tmp_path / "ocr_output.pdf"
+        ocr_pdf_path.write_bytes(b"ocr output")
+
+        mock_hash.return_value = "d" * 64
+        mock_classify.return_value = [(1, "digital")]
+        mock_fitz_open.return_value = self._make_mock_doc("ab")  # 2 chars < threshold
+
+        # First OCR call: per-page OCR returns empty text for reclassified page
+        # Second OCR call (whole-PDF retry): returns real text
+        mock_ocr.side_effect = [
+            (ocr_pdf_path, "spa"),
+            (ocr_pdf_path, "spa"),
+        ]
+        mock_extract_text.side_effect = [
+            [(1, "")],          # first call: empty — triggers retry
+            [(1, "Full text extracted by retry")],  # second call: real text
+        ]
+
+        result = ingest_pdf(pdf_path)
+
+        assert mock_ocr.call_count == 2, "Should have called OCR twice (initial + retry)"
+        assert result.pages[0].text == "Full text extracted by retry"
+
+    @patch("policy_extractor.ingestion.classify_all_pages")
+    @patch("policy_extractor.ingestion.ocr_with_fallback")
+    @patch("policy_extractor.ingestion.extract_text_by_page")
+    @patch("policy_extractor.ingestion.compute_file_hash")
+    @patch("fitz.open")
+    def test_whole_pdf_retry_skipped_when_ocr_text_present(
+        self,
+        mock_fitz_open,
+        mock_hash,
+        mock_extract_text,
+        mock_ocr,
+        mock_classify,
+        tmp_path,
+    ):
+        """D-16: Whole-PDF retry does NOT trigger when reclassified pages have non-empty OCR text."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"fake pdf content for hashing purposes only")
+
+        ocr_pdf_path = tmp_path / "ocr_output.pdf"
+        ocr_pdf_path.write_bytes(b"ocr output")
+
+        mock_hash.return_value = "e" * 64
+        mock_classify.return_value = [(1, "digital")]
+        mock_fitz_open.return_value = self._make_mock_doc("ab")  # 2 chars < threshold
+
+        # First OCR call returns real text — no retry should happen
+        mock_ocr.return_value = (ocr_pdf_path, "spa")
+        mock_extract_text.return_value = [(1, "Good OCR text from first pass")]
+
+        result = ingest_pdf(pdf_path)
+
+        assert mock_ocr.call_count == 1, "Should have called OCR only once (no retry needed)"
+        assert result.pages[0].text == "Good OCR text from first pass"
+
+    @patch("policy_extractor.ingestion.classify_all_pages")
+    @patch("policy_extractor.ingestion.ocr_with_fallback")
+    @patch("policy_extractor.ingestion.extract_text_by_page")
+    @patch("policy_extractor.ingestion.compute_file_hash")
+    @patch("fitz.open")
+    def test_whole_pdf_retry_failure_does_not_crash(
+        self,
+        mock_fitz_open,
+        mock_hash,
+        mock_extract_text,
+        mock_ocr,
+        mock_classify,
+        tmp_path,
+    ):
+        """D-16: If whole-PDF retry raises, ingest_pdf catches and continues."""
+        from policy_extractor.ingestion import ingest_pdf
+
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"fake pdf content for hashing purposes only")
+
+        ocr_pdf_path = tmp_path / "ocr_output.pdf"
+        ocr_pdf_path.write_bytes(b"ocr output")
+
+        mock_hash.return_value = "f" * 64
+        mock_classify.return_value = [(1, "digital")]
+        mock_fitz_open.return_value = self._make_mock_doc("ab")  # 2 chars < threshold
+
+        # First OCR call succeeds but returns empty text (triggers retry)
+        # Second OCR call (retry) raises RuntimeError
+        mock_ocr.side_effect = [
+            (ocr_pdf_path, "spa"),
+            RuntimeError("Retry OCR engine failed"),
+        ]
+        mock_extract_text.return_value = [(1, "")]  # empty — triggers retry
+
+        # Should NOT raise — retry failure is swallowed
+        result = ingest_pdf(pdf_path)
+
+        assert mock_ocr.call_count == 2
+        # Page should exist (even if text is empty due to retry failure)
+        assert len(result.pages) == 1
