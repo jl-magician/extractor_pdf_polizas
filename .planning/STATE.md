@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: "Web UI & Extraction Quality"
-status: defining_requirements
+status: roadmap_complete
 stopped_at: null
 last_updated: "2026-03-20T00:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,41 +16,26 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-18)
+See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 12 — milestone-polish
+**Current focus:** Phase 13 — extraction-pipeline-fixes (next to start)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-20 — Milestone v2.0 started
+Phase: 13 — Extraction Pipeline Fixes
+Plan: — (not started)
+Status: Roadmap complete, ready to plan Phase 13
+Last activity: 2026-03-20 — v2.0 roadmap created (5 phases, 15 requirements mapped)
 
 ## Performance Metrics
 
-| Metric | v1.0 | v1.1 Current |
-|--------|------|--------------|
-| Python LOC | 5,161 | 5,161 (start) |
-| Test count | 153 passing | 153 passing (start) |
-| Requirements shipped | 24/24 | 0/28 |
-| Phases complete | 5/5 | 0/6 |
-| Phase 06-migrations P01 | — | 2 tasks | 8 files |
-| Phase 06-migrations P02 | 2m | 2 tasks | 2 files |
-| Phase 07-export P01 | 12m | 1 task (TDD) | 3 files |
-| Phase 07-export P02 | 18m | 2 tasks | 2 files |
-| Phase 08-pdf-upload-api P01 | 4m | 2 tasks | 4 files |
-| Phase 08-pdf-upload-api P02 | 3min | 1 tasks | 2 files |
-| Phase 09-async-batch P01 | 10m | 2 tasks | 5 files |
-| Phase 09-async-batch P02 | 3m | 2 tasks | 2 files |
-| Phase 10-quality-evaluator P01 | 4min | 1 tasks | 3 files |
-| Phase 10 P02 | 4m 22s | 2 tasks | 4 files |
-| Phase 11 P01 | 196s | 2 tasks | 7 files |
-| Phase 11-regression-suite P02 | 3m | 2 tasks | 2 files |
-| Phase 12-milestone-polish P01 | — | planning only | 10 files |
-| Phase 12-milestone-polish P02 | 2m | 2 tasks | 10 files |
-| Phase 12-milestone-polish P01 | 8m | 1 tasks | 2 files |
+| Metric | v1.0 | v1.1 | v2.0 Start |
+|--------|------|------|------------|
+| Python LOC | 5,161 | 9,385 | 9,385 |
+| Test count | 153 passing | 263 passing | 263 passing |
+| Requirements shipped | 24/24 | 14/14 | 0/15 |
+| Phases complete | 5/5 | 7/7 | 0/5 |
 
 ## Accumulated Context
 
@@ -107,22 +92,33 @@ Recent decisions affecting current work:
 - [Phase 11-regression-suite]: _source_pdf stored as file.name (not full path) so fixture is portable across machines
 - [Phase 12]: nyquist_compliant frontmatter flip is metadata-only; requirements_completed uses underscore key convention in new SUMMARY files
 - [Phase 12-01]: _values_equal uses math.isclose(rel_tol=1e-9) for Decimal/float numeric comparison — tight tolerance forgives only float representation artifacts, not truly different values; strings and other types use strict equality
+- [v2.0 roadmap]: WeasyPrint excluded — GTK/Tesseract DLL conflict on Windows 11; use fpdf2 (pure Python, pip-only)
+- [v2.0 roadmap]: HTMX + Jinja2 on existing FastAPI — server-rendered HTML eliminates CORS entirely; no Node.js build step
+- [v2.0 roadmap]: Corrections stored in separate corrections table (never overwrite polizas LLM values) — schema must exist before any correction endpoint is written
+- [v2.0 roadmap]: PDF retention: convert upload.py line 164 deletion to retention at data/pdfs/{poliza_id}.pdf
+- [v2.0 roadmap]: Native browser PDF viewer via <iframe> + FileResponse — avoids PDF.js canvas memory crash on large scanned PDFs
+- [v2.0 roadmap]: fpdf2 calls must be wrapped in run_in_executor — synchronous generator blocks FastAPI event loop if called directly in async def
+- [v2.0 roadmap]: Auto-OCR fallback must use conditional gate (< 10 chars AND classified digital) — without gate, OCR runs on every page, multiplying batch time by 10x
 
 ### Pending Todos
 
-- Before Phase 6: Run `alembic stamp head` on existing polizas.db immediately after Alembic install
-- Before Phase 11: Audit pdfs-to-test/ directory for PII before committing any fixture PDFs
+- Before Phase 13: Run smoke test on known-bad Zurich/AXA/MAPFRE fixture to confirm financial value swap is reproducible
+- Before Phase 14: Confirm jinja2 and fpdf2 are added to requirements.txt / pyproject.toml
+- Before Phase 15: Design corrections.field_path dot-notation schema for nested campos_adicionales JSON fields — must be explicit before any correction endpoint is coded
+- Before Phase 15: Spike hx-trigger="blur" auto-save pattern to confirm HTMX partial response replaces only the target field row
+- Before Phase 16: Run fpdf2 Windows smoke test before any template HTML is written: python -c "from fpdf import FPDF; pdf = FPDF(); pdf.add_page(); pdf.output('test.pdf')"
+- Before Phase 16: Decide chart rendering strategy for dashboard (server-rendered SVG vs CDN Chart.js)
 - Validate Anthropic account rate limits before raising default concurrency above 3
 
 ### Blockers/Concerns
 
 - [v1.0 carry-over]: Tesseract + Spanish language pack must be installed on Windows for OCR tests
-- Async batch design needs empirical testing of Claude API rate limits at account tier
-- WAL mode migration on existing polizas.db: RESOLVED — get_engine() now sets WAL on every connection
+- [v2.0]: Async batch design needs empirical testing of Claude API rate limits at account tier
+- [v2.0]: Confidence-based field flagging (self-reported confidence from prompt) has MEDIUM confidence — treat as optional in Phase 15; validate against correction log ground truth before relying on it
 
 ## Session Continuity
 
-Last session: 2026-03-19T23:30:38.558Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-03-20
+Stopped at: v2.0 roadmap creation complete
 Resume file: None
-Next action: Phase 12 complete — v1.1 milestone-polish done
+Next action: /gsd:plan-phase 13
