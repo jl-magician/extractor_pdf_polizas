@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class PageResult(BaseModel):
     page_num: int
     text: str
-    classification: Literal["digital", "scanned"]
+    classification: Literal["digital", "scanned", "scanned (auto-reclassified)"]
 
 
 class IngestionResult(BaseModel):

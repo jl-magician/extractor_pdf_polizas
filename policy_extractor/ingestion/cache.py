@@ -44,7 +44,7 @@ def lookup_cache(session: Session, file_hash: str) -> IngestionResult | None:
         pages=pages,
         file_size_bytes=row.file_size_bytes,
         created_at=row.created_at,
-        ocr_applied=any(p.classification == "scanned" for p in pages),
+        ocr_applied=any(p.classification in ("scanned", "scanned (auto-reclassified)") for p in pages),
         ocr_language=row.ocr_language,
         from_cache=True,
     )

@@ -17,6 +17,7 @@ class Settings:
     OCR_CONFIDENCE_THRESHOLD: int = int(os.getenv("OCR_CONFIDENCE_THRESHOLD", "60"))
     PAGE_SCAN_THRESHOLD: float = float(os.getenv("PAGE_SCAN_THRESHOLD", "0.80"))
     DECORATIVE_IMAGE_MIN: float = float(os.getenv("DECORATIVE_IMAGE_MIN", "0.10"))
+    OCR_MIN_CHARS_THRESHOLD: int = int(os.getenv("OCR_MIN_CHARS_THRESHOLD", "10"))
 
     # Extraction settings
     EXTRACTION_MODEL: str = os.getenv("EXTRACTION_MODEL", "claude-haiku-4-5-20251001")

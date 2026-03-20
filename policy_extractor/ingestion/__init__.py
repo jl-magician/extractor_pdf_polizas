@@ -93,34 +93,103 @@ def ingest_pdf(
 
     if has_scanned:
         # Run OCR on full file (ocrmypdf handles skip_text for digital pages)
-        ocr_output_path, ocr_language = ocr_with_fallback(pdf_path)
-        ocr_texts = extract_text_by_page(ocr_output_path)
-        ocr_text_map = {pn: txt for pn, txt in ocr_texts}
+        try:
+            ocr_output_path, ocr_language = ocr_with_fallback(pdf_path)
+            ocr_texts = extract_text_by_page(ocr_output_path)
+            ocr_text_map = {pn: txt for pn, txt in ocr_texts}
 
-        # Also get direct text for digital pages
-        for page_num, classification in classifications:
-            if classification == "digital":
+            # Also get direct text for digital pages
+            for page_num, classification in classifications:
+                if classification == "digital":
+                    text = doc[page_num - 1].get_text()
+                else:
+                    text = ocr_text_map.get(page_num, "")
+                pages.append(PageResult(
+                    page_num=page_num, text=text, classification=classification
+                ))
+
+            # Clean up temp file if different from input
+            if ocr_output_path != pdf_path:
+                ocr_output_path.unlink(missing_ok=True)
+        except Exception as e:
+            logger.warning(
+                f"OCR failed for {pdf_path.name}, extracting text directly: {e}"
+            )
+            for page_num, classification in classifications:
                 text = doc[page_num - 1].get_text()
-            else:
-                text = ocr_text_map.get(page_num, "")
-            pages.append(PageResult(
-                page_num=page_num, text=text, classification=classification
-            ))
-
-        # Clean up temp file if different from input
-        if ocr_output_path != pdf_path:
-            ocr_output_path.unlink(missing_ok=True)
+                pages.append(PageResult(
+                    page_num=page_num, text=text, classification=classification
+                ))
     else:
-        # All digital — extract text directly
+        # All digital — check char count and auto-reclassify low-text pages
+        from policy_extractor.config import settings
+
+        pages_needing_ocr: list[int] = []
         for page_num, classification in classifications:
             text = doc[page_num - 1].get_text()
+            if classification == "digital" and len(text.strip()) < settings.OCR_MIN_CHARS_THRESHOLD:
+                classification = "scanned (auto-reclassified)"
+                pages_needing_ocr.append(page_num)
+                logger.info(
+                    f"Auto-reclassify page {page_num}: "
+                    f"{len(text.strip())} chars < threshold {settings.OCR_MIN_CHARS_THRESHOLD}"
+                )
             pages.append(PageResult(
                 page_num=page_num, text=text, classification=classification
             ))
+
+        if pages_needing_ocr:
+            # Run OCR on full PDF, replace text for reclassified pages
+            try:
+                ocr_output_path, ocr_language = ocr_with_fallback(pdf_path)
+                ocr_texts = extract_text_by_page(ocr_output_path)
+                ocr_text_map = {pn: txt for pn, txt in ocr_texts}
+                for i, page in enumerate(pages):
+                    if page.page_num in pages_needing_ocr:
+                        new_text = ocr_text_map.get(page.page_num, "")
+                        pages[i] = page.model_copy(update={"text": new_text})
+                if ocr_output_path != pdf_path:
+                    ocr_output_path.unlink(missing_ok=True)
+            except Exception as e:
+                logger.warning(
+                    f"Auto-OCR failed for {pdf_path.name}, keeping original text: {e}"
+                )
+
+            # D-16: Whole-PDF retry — if reclassified pages still have all-empty text,
+            # re-run the entire PDF through OCR regardless of page classification.
+            reclassified_texts = [
+                pages[i].text for i in range(len(pages))
+                if pages[i].page_num in pages_needing_ocr
+            ]
+            if all(t.strip() == "" for t in reclassified_texts):
+                logger.info(
+                    f"All {len(pages_needing_ocr)} reclassified pages have empty text — "
+                    f"triggering whole-PDF OCR retry per D-16"
+                )
+                try:
+                    ocr_output_path, ocr_language = ocr_with_fallback(pdf_path)
+                    ocr_texts = extract_text_by_page(ocr_output_path)
+                    ocr_text_map = {pn: txt for pn, txt in ocr_texts}
+                    for i, page in enumerate(pages):
+                        new_text = ocr_text_map.get(page.page_num, "")
+                        if new_text.strip():
+                            pages[i] = page.model_copy(update={
+                                "text": new_text,
+                                "classification": "scanned (auto-reclassified)",
+                            })
+                    if ocr_output_path != pdf_path:
+                        ocr_output_path.unlink(missing_ok=True)
+                except Exception as e:
+                    logger.warning(
+                        f"Whole-PDF OCR retry failed for {pdf_path.name}: {e}"
+                    )
 
     doc.close()
 
     # Step 6: Build result
+    any_ocr = has_scanned or any(
+        p.classification == "scanned (auto-reclassified)" for p in pages
+    )
     result = IngestionResult(
         file_hash=file_hash,
         file_path=str(pdf_path.resolve()),
@@ -128,7 +197,7 @@ def ingest_pdf(
         pages=pages,
         file_size_bytes=pdf_path.stat().st_size,
         created_at=datetime.utcnow(),
-        ocr_applied=has_scanned,
+        ocr_applied=any_ocr,
         ocr_language=ocr_language,
         from_cache=False,
     )
@@ -139,6 +208,6 @@ def ingest_pdf(
 
     logger.info(
         f"Ingested {pdf_path.name}: {result.total_pages} pages, "
-        f"ocr={'yes' if has_scanned else 'no'}, lang={ocr_language}"
+        f"ocr={'yes' if any_ocr else 'no'}, lang={ocr_language}"
     )
     return result
