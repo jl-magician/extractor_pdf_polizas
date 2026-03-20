@@ -45,10 +45,10 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 - [ ] Dashboard with extraction statistics and quality metrics
 - [ ] PDF report generation from extracted poliza data
 - [ ] Customizable report templates per insurer
-- [ ] Extraction prompt improvements for financial table handling
-- [ ] Post-extraction validation (cross-check financial fields)
-- [ ] Configurable field exclusion list
-- [ ] Auto-OCR fallback for digital pages with <10 chars
+- [x] Extraction prompt improvements for financial table handling — Phase 13
+- [x] Post-extraction validation (cross-check financial fields) — Phase 13
+- [x] Configurable field exclusion list — Phase 13
+- [x] Auto-OCR fallback for digital pages with <10 chars — Phase 13
 - [ ] Sonnet review pass for campos_adicionales field swaps
 - [ ] Human-in-the-loop review UI (side-by-side PDF + extraction)
 - [ ] Expanded golden dataset (20+ fixtures, all 10 insurers)
@@ -132,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-20 after v2.0 milestone start*
+*Last updated: 2026-03-20 after Phase 13 completion*
