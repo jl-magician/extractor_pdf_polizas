@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
 status: unknown
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-03-20T20:23:51.768Z"
+stopped_at: Completed 13-03-PLAN.md
+last_updated: "2026-03-20T20:32:16.118Z"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -36,6 +36,7 @@ Plan: 3 of 3
 | Phases complete | 5/5 | 7/7 | 0/5 |
 | Phase 13 P02 | 156 | 2 tasks | 6 files |
 | Phase 13-extraction-pipeline-fixes P01 | 18 | 2 tasks | 5 files |
+| Phase 13 P03 | 5 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,10 @@ Recent decisions affecting current work:
 - [Phase 13-01]: Auto-reclassification gate uses < threshold so exactly-threshold-char pages are NOT reclassified, avoiding over-triggering OCR on borderline pages
 - [Phase 13-01]: D-16 whole-PDF retry fires only when ALL reclassified pages have empty text — prevents redundant OCR when first pass partially succeeded
 - [Phase 13-01]: any_ocr local variable covers both scanned and auto-reclassified branches in ocr_applied field of IngestionResult
+- [Phase 13-03]: PROMPT_VERSION_V2 = v2.0.0 is a major version bump — clear break from v1.x prompts per D-06
+- [Phase 13-03]: detect_insurer() uses case-insensitive substring match — extensible via _INSURER_OVERLAYS dict
+- [Phase 13-03]: _load_exclusion_config uses lru_cache(maxsize=1) — zero file I/O overhead after first call; tests patch rather than cache_clear
+- [Phase 13-03]: validation_warnings written as None (not []) when empty — avoids storing empty JSON arrays in DB
 
 ### Pending Todos
 
@@ -124,7 +129,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-20T20:23:51.764Z
-Stopped at: Completed 13-01-PLAN.md
+Last session: 2026-03-20T20:32:16.114Z
+Stopped at: Completed 13-03-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13

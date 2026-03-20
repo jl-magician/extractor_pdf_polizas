@@ -9,10 +9,10 @@ Requirements for v2.0 Web UI & Extraction Quality milestone. Each maps to roadma
 
 ### Extraction Quality
 
-- [ ] **EXT-01**: System improves extraction prompts to prevent financial value swaps in breakdown tables
+- [x] **EXT-01**: System improves extraction prompts to prevent financial value swaps in breakdown tables
 - [x] **EXT-02**: System validates extracted financial fields cross-referentially (primer_pago + subsecuentes ~ prima_total) and flags mismatches as warnings
 - [x] **EXT-03**: System auto-reclassifies "digital" PDF pages with <10 extractable characters as scanned and applies OCR
-- [ ] **EXT-04**: User can configure a field exclusion list to prevent extraction of irrelevant campos_adicionales
+- [x] **EXT-04**: User can configure a field exclusion list to prevent extraction of irrelevant campos_adicionales
 
 ### Web UI
 
@@ -71,10 +71,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXT-01 | Phase 13 | Pending |
+| EXT-01 | Phase 13 | Complete |
 | EXT-02 | Phase 13 | Complete |
 | EXT-03 | Phase 13 | Complete |
-| EXT-04 | Phase 13 | Pending |
+| EXT-04 | Phase 13 | Complete |
 | UI-01 | Phase 14 | Pending |
 | UI-02 | Phase 14 | Pending |
 | UI-05 | Phase 14 | Pending |

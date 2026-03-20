@@ -34,7 +34,7 @@
 
 ### v2.0 Web UI & Extraction Quality (Phases 13-17)
 
-- [ ] **Phase 13: Extraction Pipeline Fixes** - Fix auto-OCR fallback, financial cross-validation, and field exclusion
+- [x] **Phase 13: Extraction Pipeline Fixes** - Fix auto-OCR fallback, financial cross-validation, and field exclusion (completed 2026-03-20)
 - [ ] **Phase 14: Web UI Foundation** - Read-only browser interface: upload, list, detail, dashboard, PDF retention
 - [ ] **Phase 15: HITL Review Workflow** - Side-by-side PDF editor with corrections audit trail
 - [ ] **Phase 16: PDF Reports & Auto-Evaluation** - Per-insurer PDF reports and auto-triggered Sonnet evaluation
@@ -51,11 +51,11 @@
   2. After extracting any poliza, the system checks whether primer_pago + subsecuentes approximates prima_total and writes a human-readable warning to validation_warnings when the invariant is violated
   3. A configurable exclusion list prevents specified field names from ever appearing in campos_adicionales output — the excluded fields are silently dropped before the record is saved
   4. The extraction prompt for financial breakdown tables produces correct column-to-field mapping on a known-bad Zurich/AXA fixture where values were previously swapped
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 13-01-PLAN.md — Auto-OCR fallback for zero-text digital pages (EXT-03)
 - [x] 13-02-PLAN.md — Validation infrastructure: migration, validator registry, financial and date checks (EXT-02)
-- [ ] 13-03-PLAN.md — Prompt v2.0.0 with Zurich overlay, field exclusion, and pipeline wiring (EXT-01, EXT-04)
+- [x] 13-03-PLAN.md — Prompt v2.0.0 with Zurich overlay, field exclusion, and pipeline wiring (EXT-01, EXT-04)
 
 ### Phase 14: Web UI Foundation
 **Goal**: The agency team can upload PDFs, monitor job progress, browse polizas, and export data from a browser without using the CLI
@@ -120,7 +120,7 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 10. Quality Evaluator | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 11. Regression Suite | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 12. Milestone Polish | v1.1 | 2/2 | Complete | 2026-03-19 |
-| 13. Extraction Pipeline Fixes | v2.0 | 2/3 | In Progress|  |
+| 13. Extraction Pipeline Fixes | v2.0 | 3/3 | Complete   | 2026-03-20 |
 | 14. Web UI Foundation | v2.0 | 0/? | Not started | - |
 | 15. HITL Review Workflow | v2.0 | 0/? | Not started | - |
 | 16. PDF Reports & Auto-Evaluation | v2.0 | 0/? | Not started | - |
