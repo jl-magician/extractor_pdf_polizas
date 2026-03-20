@@ -40,15 +40,27 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 
 ### Active
 
-(No active requirements — next milestone needs `/gsd:new-milestone`)
+- [ ] Web UI for uploading PDFs and viewing extraction results
+- [ ] Manual data editing/correction of extracted fields in browser
+- [ ] Dashboard with extraction statistics and quality metrics
+- [ ] PDF report generation from extracted poliza data
+- [ ] Customizable report templates per insurer
+- [ ] Extraction prompt improvements for financial table handling
+- [ ] Post-extraction validation (cross-check financial fields)
+- [ ] Configurable field exclusion list
+- [ ] Auto-OCR fallback for digital pages with <10 chars
+- [ ] Sonnet review pass for campos_adicionales field swaps
+- [ ] Human-in-the-loop review UI (side-by-side PDF + extraction)
+- [ ] Expanded golden dataset (20+ fixtures, all 10 insurers)
+- [ ] Evaluator auto-triggered on batch samples
 
 ### Out of Scope
 
-- Generacion de reportes PDF — v2.0, requiere web UI
-- Interfaz web — v2.0, primero se solidifica el backend
 - Aplicacion movil — fuera de alcance por ahora
-- Edicion manual de datos extraidos en UI — v2.0, requiere web UI
 - Integracion directa con sistemas de aseguradoras — fuera de alcance
+- Celery/Redis distributed job queue — not needed at current scale (<10k PDFs/month)
+- Automated golden dataset expansion from production — needs human review workflow first
+- Policy comparison and analytics (coverage gap analysis) — requires stable schema and UI first
 
 ## Context
 
@@ -91,5 +103,33 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 | Sonnet evaluation opt-in only | 20x cost of Haiku; never in default extraction path | ✓ Good — --evaluate flag on CLI, evaluate=true on API |
 | PII-redacted golden fixtures | Real PDFs gitignored, JSON fixtures with [REDACTED] committed | ✓ Good — regression tests work locally, CI-safe |
 
+## Current Milestone: v2.0 Web UI & Extraction Quality
+
+**Goal:** Add browser-based interface for PDF upload, extraction review/editing, reporting, and improve extraction quality with validation, prompt improvements, and expanded test coverage.
+
+**Target features:**
+- Web UI (upload, view, edit, dashboard)
+- PDF report generation with per-insurer templates
+- Extraction quality improvements (prompt, validation, auto-OCR fallback)
+- Human-in-the-loop review workflow
+- Expanded golden dataset and auto-evaluation
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-19 after v1.1 milestone completion*
+*Last updated: 2026-03-20 after v2.0 milestone start*
