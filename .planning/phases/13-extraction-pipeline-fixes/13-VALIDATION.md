@@ -2,8 +2,8 @@
 phase: 13
 slug: extraction-pipeline-fixes
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-20
 ---
 
@@ -38,21 +38,23 @@ created: 2026-03-20
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 13-01-01 | 01 | 1 | EXT-01 | unit | `pytest tests/test_prompt.py -q` | ❌ W0 | ⬜ pending |
-| 13-01-02 | 01 | 1 | EXT-03 | unit | `pytest tests/test_ingestion.py -q` | ✅ | ⬜ pending |
-| 13-02-01 | 02 | 1 | EXT-02 | unit | `pytest tests/test_validation.py -q` | ❌ W0 | ⬜ pending |
-| 13-02-02 | 02 | 1 | EXT-04 | unit | `pytest tests/test_extraction.py -q` | ✅ | ⬜ pending |
+| 13-01-01 | 01 | 1 | EXT-03 | unit | `pytest tests/test_ingestion.py -x -q -m "not regression"` | yes | pending |
+| 13-01-02 | 01 | 1 | EXT-03 | unit+tdd | `pytest tests/test_ingestion.py -x -q -m "not regression"` | yes | pending |
+| 13-02-01 | 02 | 1 | EXT-02 | unit | `pytest tests/test_migrations.py -x -q -m "not regression"` | yes | pending |
+| 13-02-02 | 02 | 1 | EXT-02 | unit+tdd | `pytest tests/test_validation.py -x -q` | no (W0) | pending |
+| 13-03-01 | 03 | 2 | EXT-01 | unit+tdd | `pytest tests/test_prompt.py tests/test_extraction.py -x -q -m "not regression"` | no (W0) | pending |
+| 13-03-02 | 03 | 2 | EXT-04 | unit+tdd | `pytest tests/test_storage_writer.py tests/test_extraction.py -x -q -m "not regression"` | yes | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_prompt.py` — stubs for EXT-01 prompt structure and overlay tests
-- [ ] `tests/test_validation.py` — stubs for EXT-02 financial validator and registry tests
+- [ ] `tests/test_validation.py` — stubs for EXT-02 financial validator and registry tests (created by Plan 02 Task 2)
+- [ ] `tests/test_prompt.py` — stubs for EXT-01 prompt structure and overlay tests (created by Plan 03 Task 1)
 
-*Existing test files cover ingestion (test_ingestion.py) and extraction (test_extraction.py).*
+*Existing test files cover ingestion (test_ingestion.py), extraction (test_extraction.py), migrations (test_migrations.py), and storage writer (test_storage_writer.py).*
 
 ---
 
@@ -67,11 +69,11 @@ created: 2026-03-20
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
