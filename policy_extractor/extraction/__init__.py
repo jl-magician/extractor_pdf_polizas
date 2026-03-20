@@ -6,14 +6,14 @@ import anthropic
 from loguru import logger
 
 from policy_extractor.config import settings
-from policy_extractor.extraction.prompt import assemble_text, PROMPT_VERSION_V1
+from policy_extractor.extraction.prompt import assemble_text_v2, PROMPT_VERSION_V2
 from policy_extractor.extraction.schema_builder import TOOL_NAME
 from policy_extractor.extraction.client import extract_with_retry
 from policy_extractor.extraction.verification import verify_no_hallucination
 from policy_extractor.schemas.ingestion import IngestionResult
 from policy_extractor.schemas.poliza import PolicyExtraction
 
-__all__ = ["extract_policy", "PROMPT_VERSION_V1", "TOOL_NAME"]
+__all__ = ["extract_policy", "PROMPT_VERSION_V2", "TOOL_NAME"]
 
 
 def extract_policy(
@@ -38,7 +38,7 @@ def extract_policy(
         or (None, None, 0) on failure.
     """
     client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-    assembled_text = assemble_text(ingestion_result)
+    assembled_text = assemble_text_v2(ingestion_result)
     effective_model = model or settings.EXTRACTION_MODEL
 
     outcome = extract_with_retry(

@@ -9,7 +9,7 @@ from loguru import logger
 from pydantic import ValidationError
 
 from policy_extractor.schemas.poliza import PolicyExtraction
-from policy_extractor.extraction.prompt import SYSTEM_PROMPT_V1, PROMPT_VERSION_V1
+from policy_extractor.extraction.prompt import PROMPT_VERSION_V2, get_system_prompt
 from policy_extractor.extraction.schema_builder import build_extraction_tool, TOOL_NAME
 
 _RATE_LIMIT_MAX_RETRIES = 3
@@ -36,7 +36,7 @@ def call_extraction_api(
     return client.messages.create(
         model=model,
         max_tokens=max_tokens,
-        system=SYSTEM_PROMPT_V1,
+        system=get_system_prompt(assembled_text),
         messages=[{"role": "user", "content": assembled_text}],
         tools=[build_extraction_tool()],
         tool_choice={"type": "tool", "name": TOOL_NAME},
@@ -74,7 +74,7 @@ def parse_and_validate(
     # Inject provenance fields programmatically — Claude must not set these
     raw_input["source_file_hash"] = ingestion_file_hash
     raw_input["model_id"] = message.model
-    raw_input["prompt_version"] = PROMPT_VERSION_V1
+    raw_input["prompt_version"] = PROMPT_VERSION_V2
     raw_input["extracted_at"] = datetime.now(timezone.utc)
 
     policy = PolicyExtraction(**raw_input)
