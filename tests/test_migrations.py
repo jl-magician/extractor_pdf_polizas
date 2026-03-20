@@ -202,3 +202,62 @@ def test_get_engine_enables_wal(tmp_path):
     with engine.connect() as conn:
         result = conn.execute(text("PRAGMA journal_mode")).scalar()
         assert result == "wal"
+
+
+# --- Tests for migration 003 (validation_warnings column) ---
+
+
+def test_validation_warnings_column_present_after_003(tmp_path):
+    """After upgrade to head (003), polizas table has validation_warnings column."""
+    db_file = str(tmp_path / "test_003.db")
+    cfg = make_alembic_cfg(db_file)
+    command.upgrade(cfg, "head")
+
+    engine = create_engine(f"sqlite:///{db_file}")
+    insp = inspect(engine)
+    col_names = [c["name"] for c in insp.get_columns("polizas")]
+
+    assert "validation_warnings" in col_names
+
+
+def test_downgrade_003_removes_validation_warnings_column(tmp_path):
+    """Downgrade from 003 back to 002 removes validation_warnings column."""
+    db_file = str(tmp_path / "downgrade_003.db")
+    cfg = make_alembic_cfg(db_file)
+    command.upgrade(cfg, "head")
+
+    # Downgrade to 002
+    command.downgrade(cfg, "002")
+
+    engine = create_engine(f"sqlite:///{db_file}")
+    insp = inspect(engine)
+    col_names = [c["name"] for c in insp.get_columns("polizas")]
+
+    assert "validation_warnings" not in col_names
+    # evaluation columns from 002 should still be present
+    assert "evaluation_score" in col_names
+
+
+def test_upgrade_003_idempotent_inspector_guard(tmp_path):
+    """Running upgrade 003 twice (inspector guard) does not raise an error."""
+    db_file = str(tmp_path / "idempotent_003.db")
+    engine = create_engine(f"sqlite:///{db_file}")
+    Base.metadata.create_all(engine)
+    engine.dispose()
+
+    # Stamp at 002 so 003 is pending
+    cfg = make_alembic_cfg(db_file)
+    command.stamp(cfg, "002")
+
+    # First upgrade to 003 — should work normally
+    command.upgrade(cfg, "003")
+
+    # Run again — inspector guard prevents duplicate column error
+    # Stamp back to 002 and upgrade again to test the guard
+    command.downgrade(cfg, "002")
+    command.upgrade(cfg, "003")
+
+    engine2 = create_engine(f"sqlite:///{db_file}")
+    insp = inspect(engine2)
+    col_names = [c["name"] for c in insp.get_columns("polizas")]
+    assert "validation_warnings" in col_names

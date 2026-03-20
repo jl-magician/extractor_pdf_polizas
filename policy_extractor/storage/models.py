@@ -52,6 +52,9 @@ class Poliza(Base):
     evaluated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     evaluated_model_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
+    # Validation warnings (EXT-02 — Phase 13)
+    validation_warnings: Mapped[Optional[list]] = mapped_column(sa.JSON, nullable=True)
+
     # Relationships (DATA-01)
     asegurados: Mapped[list["Asegurado"]] = relationship(
         "Asegurado", back_populates="poliza", cascade="all, delete-orphan"

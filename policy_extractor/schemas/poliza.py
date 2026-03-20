@@ -53,6 +53,9 @@ class PolicyExtraction(BaseModel):
     # Confidence per field (EXT-04)
     confianza: dict = Field(default_factory=dict)
 
+    # Post-extraction validation warnings (EXT-02)
+    validation_warnings: list[dict] = Field(default_factory=list)
+
     @field_validator("fecha_emision", "inicio_vigencia", "fin_vigencia", mode="before")
     @classmethod
     def normalize_date(cls, v):
