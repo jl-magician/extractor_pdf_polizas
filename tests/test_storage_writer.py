@@ -1,5 +1,6 @@
 """Unit tests for policy_extractor/storage/writer.py — upsert_policy and orm_to_schema."""
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine
@@ -301,3 +302,206 @@ def test_round_trip_decimal_fidelity(session):
     assert result.coberturas[0].suma_asegurada == Decimal("9999999.99")
     assert result.coberturas[0].deducible == Decimal("123.45")
     assert result.coberturas[0].moneda == "USD"
+
+
+# ---------------------------------------------------------------------------
+# Tests: _load_exclusion_config and _apply_exclusions (D-11 through D-14)
+# ---------------------------------------------------------------------------
+
+
+def test_load_exclusion_config_returns_empty_dict_for_default_only():
+    """_load_exclusion_config returns empty dict when config has only 'default' key."""
+    from policy_extractor.storage.writer import _load_exclusion_config
+    _load_exclusion_config.cache_clear()
+
+    fake_config = {"default": [], "_comment": "test"}
+    with patch("builtins.open", create=True) as mock_open:
+        import json
+        from io import StringIO
+        mock_open.return_value.__enter__ = lambda s: StringIO(json.dumps(fake_config))
+        mock_open.return_value.__exit__ = lambda s, *a: False
+        # Patch pathlib Path.exists to return True
+        with patch("pathlib.Path.exists", return_value=True):
+            _load_exclusion_config.cache_clear()
+            with patch("policy_extractor.storage.writer._load_exclusion_config",
+                       return_value={}):
+                from policy_extractor.storage.writer import _apply_exclusions
+                # No exclusions — nothing is dropped
+                result = _apply_exclusions({"field_a": 1, "field_b": 2}, "zurich")
+                assert result == {"field_a": 1, "field_b": 2}
+
+
+def test_apply_exclusions_drops_configured_fields():
+    """_apply_exclusions drops fields listed in config for matching insurer."""
+    from policy_extractor.storage.writer import _apply_exclusions
+    fake_config = {"zurich": ["agencia_responsable", "campo_inutil"]}
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value=fake_config):
+        campos = {"agencia_responsable": "Unidad X", "campo_inutil": "foo", "prima_neta": 1000}
+        result = _apply_exclusions(campos, "Zurich")
+        assert "agencia_responsable" not in result
+        assert "campo_inutil" not in result
+        assert "prima_neta" in result
+
+
+def test_apply_exclusions_does_not_drop_unconfigured_fields():
+    """_apply_exclusions does NOT drop fields not in the exclusion list."""
+    from policy_extractor.storage.writer import _apply_exclusions
+    fake_config = {"zurich": ["excluded_field"]}
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value=fake_config):
+        campos = {"excluded_field": "x", "keep_me": "value", "also_keep": 42}
+        result = _apply_exclusions(campos, "zurich")
+        assert "keep_me" in result
+        assert "also_keep" in result
+        assert result["keep_me"] == "value"
+        assert result["also_keep"] == 42
+
+
+def test_apply_exclusions_global_star_applies_to_all_insurers():
+    """_apply_exclusions applies '*' global exclusions to all insurers."""
+    from policy_extractor.storage.writer import _apply_exclusions
+    fake_config = {"*": ["always_excluded"]}
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value=fake_config):
+        # Test with "axa" insurer — no specific config, but "*" applies
+        campos = {"always_excluded": "drop_me", "keep_me": "value"}
+        result = _apply_exclusions(campos, "axa")
+        assert "always_excluded" not in result
+        assert "keep_me" in result
+
+        # Test with "mapfre" insurer — same result
+        result2 = _apply_exclusions(campos, "mapfre")
+        assert "always_excluded" not in result2
+
+
+def test_apply_exclusions_is_case_insensitive_on_insurer():
+    """_apply_exclusions is case-insensitive on insurer name."""
+    from policy_extractor.storage.writer import _apply_exclusions
+    fake_config = {"zurich": ["campo_secreto"]}
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value=fake_config):
+        campos = {"campo_secreto": "hidden", "visible": "ok"}
+        # Test with "ZURICH" uppercase
+        result = _apply_exclusions(campos, "ZURICH")
+        assert "campo_secreto" not in result
+        assert "visible" in result
+        # Test with "Zurich" title case
+        result2 = _apply_exclusions(campos, "Zurich")
+        assert "campo_secreto" not in result2
+
+
+def test_apply_exclusions_returns_none_for_none_campos():
+    """_apply_exclusions returns None when campos is None."""
+    from policy_extractor.storage.writer import _apply_exclusions
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value={}):
+        assert _apply_exclusions(None, "zurich") is None
+
+
+def test_apply_exclusions_returns_empty_dict_unchanged():
+    """_apply_exclusions returns empty dict unchanged."""
+    from policy_extractor.storage.writer import _apply_exclusions
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value={}):
+        result = _apply_exclusions({}, "zurich")
+        assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Tests: upsert_policy writes validation_warnings (EXT-02)
+# ---------------------------------------------------------------------------
+
+
+def test_upsert_writes_validation_warnings_when_present(session):
+    """upsert_policy writes validation_warnings to poliza.validation_warnings column."""
+    extraction = PolicyExtraction(
+        numero_poliza="POL-WARN-001",
+        aseguradora="Zurich",
+        prima_total=Decimal("10000.00"),
+        validation_warnings=[
+            {"field": "prima_total", "message": "Invariant violation", "severity": "warning"}
+        ],
+    )
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value={}):
+        poliza = upsert_policy(session, extraction)
+
+    assert poliza.validation_warnings is not None
+    assert len(poliza.validation_warnings) == 1
+    assert poliza.validation_warnings[0]["field"] == "prima_total"
+    assert poliza.validation_warnings[0]["severity"] == "warning"
+
+
+def test_upsert_writes_validation_warnings_as_none_when_empty(session):
+    """upsert_policy writes None to validation_warnings when no warnings are present."""
+    extraction = PolicyExtraction(
+        numero_poliza="POL-NOWARN-001",
+        aseguradora="GNP",
+        prima_total=Decimal("5000.00"),
+        validation_warnings=[],  # empty
+    )
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value={}):
+        poliza = upsert_policy(session, extraction)
+
+    assert poliza.validation_warnings is None
+
+
+# ---------------------------------------------------------------------------
+# Tests: upsert_policy applies field exclusion at all three levels
+# ---------------------------------------------------------------------------
+
+
+def test_upsert_applies_exclusion_to_poliza_campos(session):
+    """upsert_policy applies field exclusion to poliza-level campos_adicionales."""
+    extraction = PolicyExtraction(
+        numero_poliza="POL-EXCL-001",
+        aseguradora="Zurich",
+        campos_adicionales={"keep_me": "value", "drop_me": "unwanted"},
+    )
+    fake_config = {"zurich": ["drop_me"]}
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value=fake_config):
+        poliza = upsert_policy(session, extraction)
+
+    assert "keep_me" in poliza.campos_adicionales
+    assert "drop_me" not in poliza.campos_adicionales
+
+
+def test_upsert_applies_exclusion_to_asegurado_campos(session):
+    """upsert_policy applies field exclusion to asegurado-level campos_adicionales."""
+    extraction = PolicyExtraction(
+        numero_poliza="POL-EXCL-002",
+        aseguradora="Zurich",
+        asegurados=[
+            AseguradoExtraction(
+                tipo="persona",
+                nombre_descripcion="Test Person",
+                campos_adicionales={"keep_field": "ok", "drop_field": "unwanted"},
+            )
+        ],
+    )
+    fake_config = {"zurich": ["drop_field"]}
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value=fake_config):
+        poliza = upsert_policy(session, extraction)
+
+    session.refresh(poliza)
+    aseg_campos = poliza.asegurados[0].campos_adicionales
+    assert aseg_campos is not None
+    assert "keep_field" in aseg_campos
+    assert "drop_field" not in aseg_campos
+
+
+def test_upsert_applies_exclusion_to_cobertura_campos(session):
+    """upsert_policy applies field exclusion to cobertura-level campos_adicionales."""
+    extraction = PolicyExtraction(
+        numero_poliza="POL-EXCL-003",
+        aseguradora="Zurich",
+        coberturas=[
+            CoberturaExtraction(
+                nombre_cobertura="Test Coverage",
+                campos_adicionales={"keep_cob": "yes", "drop_cob": "no"},
+            )
+        ],
+    )
+    fake_config = {"zurich": ["drop_cob"]}
+    with patch("policy_extractor.storage.writer._load_exclusion_config", return_value=fake_config):
+        poliza = upsert_policy(session, extraction)
+
+    session.refresh(poliza)
+    cob_campos = poliza.coberturas[0].campos_adicionales
+    assert cob_campos is not None
+    assert "keep_cob" in cob_campos
+    assert "drop_cob" not in cob_campos

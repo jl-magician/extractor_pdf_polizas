@@ -398,3 +398,63 @@ def test_raw_response_stored(sample_ingestion_result, valid_extraction_data):
     assert has_raw, "Raw API response not stored on result"
     # Usage is returned alongside the policy
     assert usage is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — validate_extraction wired into extract_policy (EXT-02)
+# ---------------------------------------------------------------------------
+
+def test_extract_policy_populates_validation_warnings(sample_ingestion_result, valid_extraction_data):
+    """extract_policy populates validation_warnings on the returned PolicyExtraction.
+
+    Provides campos_adicionales with mismatched financial values to trigger
+    the financial invariant validator — confirms warnings flow through the pipeline.
+    """
+    # Set up data where primer_pago + subsecuentes does NOT equal prima_total
+    # prima_total = 10000, primer_pago = 5000, subsecuentes = 3000 → diff = 20% → warning
+    data = dict(valid_extraction_data)
+    data["prima_total"] = 10000.0
+    data["campos_adicionales"] = {
+        "primer_pago": 5000.0,
+        "subsecuentes": 3000.0,  # 5000 + 3000 = 8000 != 10000 (20% diff)
+    }
+    mock_response = MockMessage(data)
+
+    with patch("anthropic.Anthropic") as MockClient:
+        instance = MockClient.return_value
+        instance.messages.create.return_value = mock_response
+
+        from policy_extractor.extraction import extract_policy
+
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
+
+    assert result is not None
+    # validation_warnings must be a list (possibly non-empty due to financial invariant)
+    assert isinstance(result.validation_warnings, list)
+    # The financial invariant should have fired: 5000+3000=8000 vs prima_total=10000 (20% diff)
+    assert len(result.validation_warnings) > 0
+    warning = result.validation_warnings[0]
+    assert "field" in warning
+    assert "message" in warning
+    assert "severity" in warning
+
+
+def test_extract_policy_validation_warnings_empty_when_no_violations(sample_ingestion_result, valid_extraction_data):
+    """extract_policy returns empty validation_warnings when no violations detected."""
+    # Use valid data with matching financial fields
+    data = dict(valid_extraction_data)
+    data["prima_total"] = 12500.0
+    # No primer_pago / subsecuentes in campos_adicionales — validator skips silently
+    data["campos_adicionales"] = {}
+    mock_response = MockMessage(data)
+
+    with patch("anthropic.Anthropic") as MockClient:
+        instance = MockClient.return_value
+        instance.messages.create.return_value = mock_response
+
+        from policy_extractor.extraction import extract_policy
+
+        result, usage, _rl_retries = extract_policy(sample_ingestion_result)
+
+    assert result is not None
+    assert isinstance(result.validation_warnings, list)
