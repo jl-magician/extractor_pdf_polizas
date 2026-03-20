@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: "Web UI & Extraction Quality"
-status: roadmap_complete
-stopped_at: null
-last_updated: "2026-03-20T00:00:00.000Z"
+milestone_name: Web UI & Extraction Quality
+status: unknown
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-20T20:23:51.768Z"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 2
 ---
 
 # Project State
@@ -19,14 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 13 — extraction-pipeline-fixes (next to start)
+**Current focus:** Phase 13 — extraction-pipeline-fixes
 
 ## Current Position
 
-Phase: 13 — Extraction Pipeline Fixes
-Plan: — (not started)
-Status: Roadmap complete, ready to plan Phase 13
-Last activity: 2026-03-20 — v2.0 roadmap created (5 phases, 15 requirements mapped)
+Phase: 13 (extraction-pipeline-fixes) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -36,6 +34,8 @@ Last activity: 2026-03-20 — v2.0 roadmap created (5 phases, 15 requirements ma
 | Test count | 153 passing | 263 passing | 263 passing |
 | Requirements shipped | 24/24 | 14/14 | 0/15 |
 | Phases complete | 5/5 | 7/7 | 0/5 |
+| Phase 13 P02 | 156 | 2 tasks | 6 files |
+| Phase 13-extraction-pipeline-fixes P01 | 18 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -99,6 +99,12 @@ Recent decisions affecting current work:
 - [v2.0 roadmap]: Native browser PDF viewer via <iframe> + FileResponse — avoids PDF.js canvas memory crash on large scanned PDFs
 - [v2.0 roadmap]: fpdf2 calls must be wrapped in run_in_executor — synchronous generator blocks FastAPI event loop if called directly in async def
 - [v2.0 roadmap]: Auto-OCR fallback must use conditional gate (< 10 chars AND classified digital) — without gate, OCR runs on every page, multiplying batch time by 10x
+- [Phase 13]: Validator registry uses module-level list with @register decorator — extensible, discoverable, zero framework overhead
+- [Phase 13]: [Phase 13-02]: primer_pago and subsecuentes read from campos_adicionales.get() not top-level fields — per research pitfall D-09
+- [Phase 13]: [Phase 13-02]: 1% tolerance uses Decimal('0.01') with strict > comparison — exactly 1% is safe, only >1% triggers warning (D-09)
+- [Phase 13-01]: Auto-reclassification gate uses < threshold so exactly-threshold-char pages are NOT reclassified, avoiding over-triggering OCR on borderline pages
+- [Phase 13-01]: D-16 whole-PDF retry fires only when ALL reclassified pages have empty text — prevents redundant OCR when first pass partially succeeded
+- [Phase 13-01]: any_ocr local variable covers both scanned and auto-reclassified branches in ocr_applied field of IngestionResult
 
 ### Pending Todos
 
@@ -118,7 +124,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-20
-Stopped at: v2.0 roadmap creation complete
+Last session: 2026-03-20T20:23:51.764Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13

@@ -51,10 +51,10 @@
   2. After extracting any poliza, the system checks whether primer_pago + subsecuentes approximates prima_total and writes a human-readable warning to validation_warnings when the invariant is violated
   3. A configurable exclusion list prevents specified field names from ever appearing in campos_adicionales output — the excluded fields are silently dropped before the record is saved
   4. The extraction prompt for financial breakdown tables produces correct column-to-field mapping on a known-bad Zurich/AXA fixture where values were previously swapped
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 Plans:
-- [ ] 13-01-PLAN.md — Auto-OCR fallback for zero-text digital pages (EXT-03)
-- [ ] 13-02-PLAN.md — Validation infrastructure: migration, validator registry, financial and date checks (EXT-02)
+- [x] 13-01-PLAN.md — Auto-OCR fallback for zero-text digital pages (EXT-03)
+- [x] 13-02-PLAN.md — Validation infrastructure: migration, validator registry, financial and date checks (EXT-02)
 - [ ] 13-03-PLAN.md — Prompt v2.0.0 with Zurich overlay, field exclusion, and pipeline wiring (EXT-01, EXT-04)
 
 ### Phase 14: Web UI Foundation
@@ -120,7 +120,7 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 10. Quality Evaluator | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 11. Regression Suite | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 12. Milestone Polish | v1.1 | 2/2 | Complete | 2026-03-19 |
-| 13. Extraction Pipeline Fixes | v2.0 | 0/3 | Not started | - |
+| 13. Extraction Pipeline Fixes | v2.0 | 2/3 | In Progress|  |
 | 14. Web UI Foundation | v2.0 | 0/? | Not started | - |
 | 15. HITL Review Workflow | v2.0 | 0/? | Not started | - |
 | 16. PDF Reports & Auto-Evaluation | v2.0 | 0/? | Not started | - |
