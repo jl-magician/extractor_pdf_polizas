@@ -120,7 +120,7 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 10. Quality Evaluator | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 11. Regression Suite | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 12. Milestone Polish | v1.1 | 2/2 | Complete | 2026-03-19 |
-| 13. Extraction Pipeline Fixes | v2.0 | 3/3 | Complete   | 2026-03-20 |
+| 13. Extraction Pipeline Fixes | v2.0 | 3/3 | Complete    | 2026-03-20 |
 | 14. Web UI Foundation | v2.0 | 0/? | Not started | - |
 | 15. HITL Review Workflow | v2.0 | 0/? | Not started | - |
 | 16. PDF Reports & Auto-Evaluation | v2.0 | 0/? | Not started | - |
