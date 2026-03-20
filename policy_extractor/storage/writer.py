@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 from datetime import date, datetime
 from decimal import Decimal
+from functools import lru_cache
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
@@ -31,6 +33,44 @@ from policy_extractor.schemas.asegurado import AseguradoExtraction
 from policy_extractor.schemas.cobertura import CoberturaExtraction
 from policy_extractor.schemas.poliza import PolicyExtraction
 from policy_extractor.storage.models import Asegurado, Cobertura, Poliza
+
+@lru_cache(maxsize=1)
+def _load_exclusion_config() -> dict[str, list[str]]:
+    """Load insurer_config.json — returns dict of insurer -> [excluded_fields].
+
+    Cached for performance. In tests, patch this function or call
+    _load_exclusion_config.cache_clear() between tests.
+    """
+    config_path = Path(__file__).parent.parent / "insurer_config.json"
+    if not config_path.exists():
+        return {}
+    with config_path.open() as f:
+        data = json.load(f)
+    # Remove non-insurer keys (comments, default placeholder)
+    return {k: v for k, v in data.items() if not k.startswith("_") and k != "default"}
+
+
+def _apply_exclusions(campos: dict | None, insurer: str) -> dict | None:
+    """Drop excluded field names from campos dict. Silent drop per D-14.
+
+    Applies both insurer-specific exclusions and global '*' exclusions.
+    Case-insensitive on insurer name.
+
+    Args:
+        campos: campos_adicionales dict to filter (may be None or empty).
+        insurer: Insurer name (e.g. "Zurich", "AXA") — compared case-insensitively.
+
+    Returns:
+        Filtered dict with excluded fields removed, or original value if None/empty.
+    """
+    if not campos:
+        return campos
+    config = _load_exclusion_config()
+    excluded = set(config.get(insurer.lower(), []) + config.get("*", []))
+    if not excluded:
+        return campos
+    return {k: v for k, v in campos.items() if k not in excluded}
+
 
 # Scalar fields to copy directly between PolicyExtraction and Poliza (same names).
 _SCALAR_FIELDS = [
@@ -88,10 +128,15 @@ def upsert_policy(session: Session, extraction: PolicyExtraction) -> Poliza:
         setattr(poliza, field, getattr(extraction, field))
 
     # Store campos_adicionales merged with confianza (STOR-01: confianza stored in DB)
+    # Apply field exclusion per D-11, D-12, D-14 before merging confianza
     # Convert to JSON-safe types (datetime, Decimal in _raw_response)
     merged = dict(extraction.campos_adicionales)
+    merged = _apply_exclusions(merged, extraction.aseguradora) or merged
     merged["confianza"] = extraction.confianza
     poliza.campos_adicionales = _json_safe(merged)
+
+    # Write validation warnings (EXT-02)
+    poliza.validation_warnings = extraction.validation_warnings or None
 
     # Append new children
     for aseg_ext in extraction.asegurados:
@@ -104,7 +149,7 @@ def upsert_policy(session: Session, extraction: PolicyExtraction) -> Poliza:
                 curp=aseg_ext.curp,
                 direccion=aseg_ext.direccion,
                 parentesco=aseg_ext.parentesco,
-                campos_adicionales=aseg_ext.campos_adicionales or None,
+                campos_adicionales=_apply_exclusions(aseg_ext.campos_adicionales, extraction.aseguradora) or None,
             )
         )
 
@@ -115,7 +160,7 @@ def upsert_policy(session: Session, extraction: PolicyExtraction) -> Poliza:
                 suma_asegurada=cob_ext.suma_asegurada,
                 deducible=cob_ext.deducible,
                 moneda=cob_ext.moneda,
-                campos_adicionales=cob_ext.campos_adicionales or None,
+                campos_adicionales=_apply_exclusions(cob_ext.campos_adicionales, extraction.aseguradora) or None,
             )
         )
 

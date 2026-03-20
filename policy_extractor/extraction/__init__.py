@@ -61,6 +61,15 @@ def extract_policy(
     # Run post-hoc hallucination verification
     verified_policy = verify_no_hallucination(policy, assembled_text)
 
+    # Run post-extraction validation (EXT-02) — annotate-only, never blocks (D-08)
+    from policy_extractor.extraction.validation import validate_extraction
+    warnings = validate_extraction(verified_policy)
+    if warnings:
+        logger.info(
+            f"Validation produced {len(warnings)} warning(s) for {ingestion_result.file_path}"
+        )
+    verified_policy = verified_policy.model_copy(update={"validation_warnings": warnings})
+
     # Store raw API response for auditing
     campos = dict(verified_policy.campos_adicionales)
     campos["_raw_response"] = raw_response

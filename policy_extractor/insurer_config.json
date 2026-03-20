@@ -1,0 +1,5 @@
+{
+  "_comment": "Per-insurer field exclusion list. Keys are lowercase insurer names or '*' for all. Values are arrays of field names to exclude from campos_adicionales at all levels (poliza, asegurado, cobertura). Start empty per D-13.",
+  "_example_usage": "To exclude 'agencia_responsable' from all Zurich policies: {\"zurich\": [\"agencia_responsable\"]}",
+  "default": []
+}
