@@ -8,11 +8,14 @@ Exports:
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Generator, Optional
 from datetime import date
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.requests import Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -22,11 +25,26 @@ from policy_extractor.storage.database import SessionLocal, init_db
 from policy_extractor.storage.models import Asegurado, Cobertura, Poliza
 from policy_extractor.storage.writer import orm_to_schema, upsert_policy
 
+# ---------------------------------------------------------------------------
+# Static and templates directories
+# ---------------------------------------------------------------------------
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
+
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
 app = FastAPI(
     title="Poliza Extractor API",
     version="1.0.0",
     description="REST API for querying and managing extracted insurance policy data.",
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Shared templates instance
+from policy_extractor.api.ui import templates  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +58,21 @@ def on_startup() -> None:
     engine = init_db(settings.DB_PATH)
     SessionLocal.configure(bind=engine)
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# UI routes
+# ---------------------------------------------------------------------------
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard(request: Request) -> HTMLResponse:
+    """Render the dashboard landing page."""
+    return templates.TemplateResponse(
+        request,
+        "dashboard.html",
+        {"active_page": "dashboard"},
+    )
 
 
 # ---------------------------------------------------------------------------
