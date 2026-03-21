@@ -265,5 +265,7 @@ from policy_extractor.api.upload import router as upload_router, UPLOADS_DIR  # 
 app.include_router(upload_router)
 
 from policy_extractor.api.ui.poliza_views import poliza_ui_router  # noqa: E402
+from policy_extractor.api.ui.upload_views import upload_ui_router  # noqa: E402
 
 app.include_router(poliza_ui_router)
+app.include_router(upload_ui_router)
