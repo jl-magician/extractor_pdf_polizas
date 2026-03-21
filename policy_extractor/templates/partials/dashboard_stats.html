@@ -1,0 +1,88 @@
+<!-- Dashboard stats partial — NO extends (rendered by HTMX into #dashboard-stats div) -->
+
+<!-- 3-column stat card row -->
+<div class="grid grid-cols-3 gap-6 mb-8">
+  <!-- Total Polizas -->
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Polizas</p>
+    <p class="text-3xl font-semibold text-gray-900 mt-2">{{ stats.total }}</p>
+    <p class="text-sm text-gray-500 mt-1">polizas procesadas</p>
+  </div>
+
+  <!-- Advertencias -->
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Advertencias</p>
+    <p class="text-3xl font-semibold {% if stats.total_warnings > 0 %}text-yellow-600{% else %}text-gray-900{% endif %} mt-2">{{ stats.total_warnings }}</p>
+    <p class="text-sm text-gray-500 mt-1">con advertencias de validacion</p>
+  </div>
+
+  <!-- Score Promedio -->
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Score Promedio</p>
+    <p class="text-3xl font-semibold {% if stats.avg_score < 0.70 and stats.total > 0 %}text-red-600{% else %}text-gray-900{% endif %} mt-2">
+      {% if stats.total > 0 %}{{ "%.0f"|format(stats.avg_score * 100) }}%{% else %}—{% endif %}
+    </p>
+    <p class="text-sm text-gray-500 mt-1">calidad de extraccion</p>
+  </div>
+</div>
+
+<!-- Requieren revision table -->
+<div class="bg-white rounded-lg shadow-sm">
+  <div class="px-6 py-4 border-b border-gray-100">
+    <h2 class="text-sm font-semibold text-gray-900">Requieren revision</h2>
+    <p class="text-xs text-gray-500 mt-0.5">Polizas con score &lt; 70% o advertencias de validacion</p>
+  </div>
+
+  {% if needs_review %}
+  <table class="w-full text-sm">
+    <thead class="bg-gray-100">
+      <tr>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Poliza</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Aseguradora</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Contratante</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Score</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Advertencias</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Fecha</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for poliza in needs_review %}
+      <tr class="bg-white border-b border-gray-100 hover:bg-gray-50">
+        <td class="px-4 py-3 text-gray-700">
+          <a href="/ui/polizas/{{ poliza.id }}" class="text-blue-600 hover:underline font-semibold">{{ poliza.numero_poliza }}</a>
+        </td>
+        <td class="px-4 py-3 text-gray-700">{{ poliza.aseguradora }}</td>
+        <td class="px-4 py-3 text-gray-700">{{ poliza.nombre_contratante or "—" }}</td>
+        <td class="px-4 py-3">
+          {% if poliza.evaluation_score is not none %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+            {% if poliza.evaluation_score < 0.70 %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            <span class="sr-only">Score:</span>{{ "%.0f"|format(poliza.evaluation_score * 100) }}%
+          </span>
+          {% else %}
+          <span class="text-gray-400 text-xs">Sin evaluar</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-gray-700">
+          {% if poliza.validation_warnings %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+            <span class="sr-only">Advertencias:</span>{{ poliza.validation_warnings|length }} advertencia(s)
+          </span>
+          {% else %}
+          <span class="text-gray-400 text-xs">—</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-gray-500 text-xs">
+          {% if poliza.extracted_at %}{{ poliza.extracted_at.strftime("%d/%m/%Y") }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="px-6 py-12 text-center">
+    <p class="text-sm font-semibold text-gray-700">Todo en orden. No hay polizas con advertencias.</p>
+    <p class="text-xs text-gray-500 mt-1">Todas las polizas estan dentro del umbral de calidad.</p>
+  </div>
+  {% endif %}
+</div>

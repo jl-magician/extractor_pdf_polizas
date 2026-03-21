@@ -61,21 +61,6 @@ def on_startup() -> None:
 
 
 # ---------------------------------------------------------------------------
-# UI routes
-# ---------------------------------------------------------------------------
-
-
-@app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request) -> HTMLResponse:
-    """Render the dashboard landing page."""
-    return templates.TemplateResponse(
-        request,
-        "dashboard.html",
-        {"active_page": "dashboard"},
-    )
-
-
-# ---------------------------------------------------------------------------
 # DB dependency
 # ---------------------------------------------------------------------------
 
@@ -266,6 +251,8 @@ app.include_router(upload_router)
 
 from policy_extractor.api.ui.poliza_views import poliza_ui_router  # noqa: E402
 from policy_extractor.api.ui.upload_views import upload_ui_router  # noqa: E402
+from policy_extractor.api.ui.dashboard_views import dashboard_router  # noqa: E402
 
 app.include_router(poliza_ui_router)
 app.include_router(upload_ui_router)
+app.include_router(dashboard_router)
