@@ -1,0 +1,16 @@
+<div id="batch-status"
+     hx-get="/ui/batch/{{ batch.id }}/status"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML">
+  <div class="mt-6">
+    <p class="text-sm text-gray-700 mb-2">
+      Procesando {{ batch.completed_files }} de {{ batch.total_files }} archivos...
+    </p>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+      <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: {{ pct }}%"></div>
+    </div>
+    {% if batch.failed_files > 0 %}
+    <p class="text-xs text-red-600 mt-1">{{ batch.failed_files }} archivo(s) con error</p>
+    {% endif %}
+  </div>
+</div>

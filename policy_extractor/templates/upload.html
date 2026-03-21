@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Subir PDFs — Extractor de Polizas{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-xl font-semibold text-gray-900 mb-6">Subir PDFs</h1>
+
+  <form id="upload-form"
+        hx-post="/ui/batch/upload"
+        hx-encoding="multipart/form-data"
+        hx-target="#batch-status"
+        hx-swap="outerHTML">
+
+    <!-- Drop zone (D-02: drag-and-drop + file picker) -->
+    <div class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors cursor-pointer"
+         id="drop-zone">
+      <label for="file-input" class="cursor-pointer block">
+        <!-- Upload icon SVG -->
+        <svg class="mx-auto mb-4 w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p class="text-sm text-gray-600">Arrastra tus PDFs aqui o haz clic para seleccionar archivos</p>
+        <p class="text-xs text-gray-400 mt-1">Solo archivos PDF — multiples permitidos</p>
+        <input type="file" name="files" multiple accept=".pdf" id="file-input" class="hidden">
+      </label>
+    </div>
+
+    <!-- File list (populated by JS) -->
+    <div id="file-list" class="mt-4 text-sm text-gray-700"></div>
+
+    <!-- Batch name input (D-08) -->
+    <div class="mt-4">
+      <label for="batch-name" class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre del lote</label>
+      <input type="text" name="batch_name" id="batch-name"
+             placeholder="Nombre del lote (ej. Zurich Marzo 2026)"
+             class="block w-full min-h-[44px] px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mt-1">
+    </div>
+
+    <!-- Submit button (disabled until files selected) -->
+    <button type="submit" id="submit-btn"
+            class="mt-4 inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-md transition-colors w-full"
+            disabled>
+      Procesar Lote
+    </button>
+  </form>
+
+  <!-- HTMX target for batch polling partial -->
+  <div id="batch-status"></div>
+</div>
+
+<script>
+  // Auto-fill batch name with current date/time on page load
+  (function() {
+    const batchNameInput = document.getElementById('batch-name');
+    if (batchNameInput && !batchNameInput.value) {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const dateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+      const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes());
+      batchNameInput.placeholder = 'Lote ' + dateStr + ' ' + timeStr;
+    }
+  })();
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const fileList = document.getElementById('file-list');
+  const submitBtn = document.getElementById('submit-btn');
+
+  function updateFileList(files) {
+    const pdfFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    if (pdfFiles.length > 0) {
+      fileList.innerHTML = '<ul class="list-disc list-inside space-y-1">' +
+        pdfFiles.map(f => '<li>' + f.name + ' <span class="text-gray-400">(' + (f.size / 1024).toFixed(0) + ' KB)</span></li>').join('') +
+        '</ul>';
+      submitBtn.disabled = false;
+    } else {
+      fileList.innerHTML = '';
+      submitBtn.disabled = true;
+    }
+  }
+
+  // Drag-and-drop enhancement
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('border-blue-500', 'bg-blue-50');
+  });
+
+  dropZone.addEventListener('dragleave', function(e) {
+    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+  });
+
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    const dt = e.dataTransfer;
+    if (dt && dt.files.length) {
+      // Assign dropped files to the file input
+      fileInput.files = dt.files;
+      updateFileList(dt.files);
+    }
+  });
+
+  // File picker change
+  fileInput.addEventListener('change', function() {
+    updateFileList(this.files);
+  });
+</script>
+{% endblock %}

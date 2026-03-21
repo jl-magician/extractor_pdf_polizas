@@ -1,0 +1,74 @@
+<div id="batch-status">
+  <div class="mt-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">Resultados del lote &mdash; {{ batch.batch_name }}</h2>
+
+    <!-- Export links (D-05) -->
+    <div class="flex gap-2 mb-6">
+      <a href="/ui/batch/{{ batch.id }}/export/xlsx"
+         class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+        Descargar Excel
+      </a>
+      <a href="/ui/batch/{{ batch.id }}/export/csv"
+         class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+        Descargar CSV
+      </a>
+      <a href="/ui/batch/{{ batch.id }}/export/json"
+         class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+        Descargar JSON
+      </a>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="flex gap-4 mb-4 text-sm text-gray-600">
+      <span><strong class="text-gray-900">{{ batch.total_files }}</strong> archivos totales</span>
+      <span><strong class="text-green-700">{{ batch.completed_files }}</strong> exitosos</span>
+      {% if batch.failed_files > 0 %}
+      <span><strong class="text-red-600">{{ batch.failed_files }}</strong> con error</span>
+      {% endif %}
+    </div>
+
+    <!-- Per-file results table (D-04) -->
+    {% if results %}
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Archivo</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Estado</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Poliza</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Aseguradora</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Detalle</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-100">
+          {% for r in results %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900 font-medium">{{ r.filename }}</td>
+            <td class="px-4 py-3">
+              {% if r.status == "complete" %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Exitoso</span>
+              {% else %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Error</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-gray-700">{{ r.numero_poliza or "—" }}</td>
+            <td class="px-4 py-3 text-gray-700">{{ r.aseguradora or "—" }}</td>
+            <td class="px-4 py-3">
+              {% if r.poliza_id %}
+              <a href="/ui/polizas/{{ r.poliza_id }}" class="text-blue-600 hover:underline text-xs">Ver detalle</a>
+              {% elif r.error %}
+              <span class="text-red-600 text-xs" title="{{ r.error }}">{{ r.error[:60] }}{% if r.error|length > 60 %}...{% endif %}</span>
+              {% else %}
+              <span class="text-gray-400 text-xs">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-500">No se procesaron archivos en este lote.</p>
+    {% endif %}
+  </div>
+</div>
