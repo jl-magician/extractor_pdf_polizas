@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
 status: unknown
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-03-21T03:15:08.915Z"
+stopped_at: Completed 14-03-PLAN.md
+last_updated: "2026-03-21T03:22:59.168Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-20)
 ## Current Position
 
 Phase: 14 (web-ui-foundation) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Plan: 2 of 5
 | Phase 13-extraction-pipeline-fixes P01 | 18 | 2 tasks | 5 files |
 | Phase 13 P03 | 5 | 2 tasks | 6 files |
 | Phase 14 P01 | 217 | 2 tasks | 10 files |
+| Phase 14 P03 | 312 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ Recent decisions affecting current work:
 - [Phase 14]: Jinja2Templates shared instance in policy_extractor/api/ui/__init__.py so all UI routers import from one canonical location
 - [Phase 14]: BatchJob uses String(36) primary key UUID not Integer autoincrement — matches async job ID pattern
 - [Phase 14]: Migration 004 uses inspector guard for batch_jobs table to prevent errors on fresh DBs created via create_all
+- [Phase 14]: StaticPool used in test_ui_pages.py for in-memory SQLite so all session factory connections share the same DB — without it, each new connection gets an empty DB
 
 ### Pending Todos
 
@@ -133,7 +135,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-21T03:15:08.910Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-03-21T03:22:59.163Z
+Stopped at: Completed 14-03-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13

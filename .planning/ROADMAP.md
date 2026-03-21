@@ -67,11 +67,11 @@ Plans:
   3. User can view a dashboard page showing total polizas processed, breakdown by aseguradora, and the count of records with validation warnings
   4. User can download a poliza's data as Excel or JSON directly from the detail page without opening a terminal
   5. Uploaded PDFs are retained on disk at data/pdfs/{poliza_id}.pdf and remain accessible after the extraction job expires from memory
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 Plans:
 - [x] 14-01-PLAN.md — Infrastructure: jinja2 dep, BatchJob model, migration, base template, sidebar layout (UI-06)
 - [ ] 14-02-PLAN.md — Upload batch workflow with HTMX polling, progress bar, summary, PDF retention (UI-01, UI-06)
-- [ ] 14-03-PLAN.md — Poliza list with search/filter/pagination and detail page with exports (UI-02)
+- [x] 14-03-PLAN.md — Poliza list with search/filter/pagination and detail page with exports (UI-02)
 - [ ] 14-04-PLAN.md — Dashboard with stat cards, date range filter, needs-review table, job history (UI-05)
 - [ ] 14-05-PLAN.md — Integration tests and visual verification checkpoint (UI-01, UI-02, UI-05, UI-06)
 
@@ -127,7 +127,7 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 11. Regression Suite | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 12. Milestone Polish | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 13. Extraction Pipeline Fixes | v2.0 | 3/3 | Complete    | 2026-03-20 |
-| 14. Web UI Foundation | v2.0 | 1/5 | In Progress|  |
+| 14. Web UI Foundation | v2.0 | 2/5 | In Progress|  |
 | 15. HITL Review Workflow | v2.0 | 0/? | Not started | - |
 | 16. PDF Reports & Auto-Evaluation | v2.0 | 0/? | Not started | - |
 | 17. Golden Dataset Expansion | v2.0 | 0/? | Not started | - |
