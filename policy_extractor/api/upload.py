@@ -139,10 +139,14 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
                 result["evaluation_score"] = None
                 result["evaluation_json"] = None
                 _update_job(job_id, status="complete", result=result)
-                PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
-                dest = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
-                shutil.copy2(str(pdf_path), str(dest))
-                pdf_path.unlink(missing_ok=True)
+                # PDF retention — best-effort; failures do not fail the job
+                try:
+                    PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
+                    dest = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
+                    shutil.copy2(str(pdf_path), str(dest))
+                    pdf_path.unlink(missing_ok=True)
+                except Exception:
+                    pdf_path.unlink(missing_ok=True)
                 return
 
             ingestion_result = ingest_pdf(pdf_path, session=session, force_reprocess=force)
@@ -172,10 +176,14 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
                 result["evaluation_json"] = None
 
             _update_job(job_id, status="complete", result=result)
-            PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
-            dest_path = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
-            shutil.copy2(str(pdf_path), str(dest_path))
-            pdf_path.unlink(missing_ok=True)
+            # PDF retention — best-effort; failures do not fail the job
+            try:
+                PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
+                dest_path = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
+                shutil.copy2(str(pdf_path), str(dest_path))
+                pdf_path.unlink(missing_ok=True)
+            except Exception:
+                pdf_path.unlink(missing_ok=True)
         except Exception as exc:
             _update_job(job_id, status="failed", error=str(exc))
             # PDF kept on failure for debugging
