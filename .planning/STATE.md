@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
 status: unknown
-stopped_at: Completed 14-04-PLAN.md
-last_updated: "2026-03-21T03:31:59.971Z"
+stopped_at: Completed 14-05-PLAN.md
+last_updated: "2026-03-21T05:54:35.383Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -41,6 +41,7 @@ Plan: 5 of 5
 | Phase 14 P03 | 312 | 2 tasks | 6 files |
 | Phase 14 P02 | 385 | 3 tasks | 7 files |
 | Phase 14 P04 | 5 | 2 tasks | 7 files |
+| Phase 14-web-ui-foundation P05 | 5 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,7 @@ Recent decisions affecting current work:
 - [Phase 14]: dashboard_router GET / replaces placeholder route from Plan 01 — real aggregate queries via func.count/func.avg
 - [Phase 14]: HTMX partial check: HX-Request header present returns stats partial (no DOCTYPE); absent returns full dashboard.html
 - [Phase 14]: Date range D-17: periodo preset OR custom desde/hasta query params; needs-review uses OR(score < threshold, warnings IS NOT NULL)
+- [Phase 14-web-ui-foundation]: Integration tests committed in 039dfee bundled with job_ui_router registration; StaticPool pattern established for all UI test modules
 
 ### Pending Todos
 
@@ -142,7 +144,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-21T03:31:59.967Z
-Stopped at: Completed 14-04-PLAN.md
+Last session: 2026-03-21T05:54:35.379Z
+Stopped at: Completed 14-05-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13
