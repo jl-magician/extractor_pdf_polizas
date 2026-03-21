@@ -263,3 +263,7 @@ def delete_poliza(poliza_id: int, db: DbDep) -> JSONResponse:
 from policy_extractor.api.upload import router as upload_router, UPLOADS_DIR  # noqa: E402
 
 app.include_router(upload_router)
+
+from policy_extractor.api.ui.poliza_views import poliza_ui_router  # noqa: E402
+
+app.include_router(poliza_ui_router)
