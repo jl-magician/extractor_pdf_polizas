@@ -65,10 +65,10 @@ All type is rendered in the system UI stack. No external font load. UI language 
 | Body | 14px | `text-sm` | Regular (400) | `font-normal` | 1.5 (`leading-relaxed`) |
 | Label | 12px | `text-xs` | Semibold (600) | `font-semibold` | 1.4 (`leading-snug`) |
 | Heading | 20px | `text-xl` | Semibold (600) | `font-semibold` | 1.2 (`leading-tight`) |
-| Display | 28px | `text-3xl` | Bold (700) — exception for dashboard stat numbers | `font-bold` | 1.1 (`leading-none`) |
+| Display | 28px | `text-3xl` | Semibold (600) | `font-semibold` | 1.1 (`leading-none`) |
 
 **Rules:**
-- Exactly 2 weights in use for prose: Regular (400) and Semibold (600). Bold (700) is reserved exclusively for dashboard KPI numbers (the large stat display).
+- Exactly 2 weights: Regular (400) for body text, Semibold (600) for labels, headings, buttons, and KPI numbers.
 - Do not use font sizes outside this scale. The 4 sizes above cover all UI states.
 - Table column headers: `text-xs font-semibold uppercase tracking-wide` (Label role + uppercase transform).
 
@@ -143,7 +143,7 @@ All components are Tailwind utility classes applied in Jinja2 templates. No exte
 ```
 bg-white rounded-lg shadow-sm p-6
   Label: text-xs font-semibold uppercase tracking-wide text-gray-500
-  Value: text-3xl font-bold text-gray-900
+  Value: text-3xl font-semibold text-gray-900
   Sub-label (optional): text-sm text-gray-500 mt-1
 ```
 
