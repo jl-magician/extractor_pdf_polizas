@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Historial de Lotes — Extractor de Polizas{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold text-gray-900 mb-6">Historial de Lotes</h1>
+
+{% if jobs %}
+<div class="bg-white rounded-lg shadow-sm">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-100">
+      <tr>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Nombre del Lote</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Estado</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Archivos</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Fecha</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr class="bg-white border-b border-gray-100 hover:bg-gray-50">
+        <td class="px-4 py-3 text-gray-700 font-semibold">
+          {{ job.batch_name or ("Lote " + job.id[:8]) }}
+        </td>
+        <td class="px-4 py-3">
+          {% if job.status == "complete" %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+            <span class="sr-only">Estado:</span>Completado
+          </span>
+          {% elif job.status == "processing" %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+            <span class="sr-only">Estado:</span>Procesando
+          </span>
+          {% elif job.status == "failed" %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+            <span class="sr-only">Estado:</span>Fallido
+          </span>
+          {% else %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+            <span class="sr-only">Estado:</span>Pendiente
+          </span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-gray-700">
+          <span class="text-green-700">{{ job.completed_files }}</span>
+          /
+          <span>{{ job.total_files }}</span>
+          {% if job.failed_files > 0 %}
+          <span class="ml-1 text-red-600 text-xs">({{ job.failed_files }} fallidos)</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-gray-500 text-xs">
+          {% if job.created_at %}{{ job.created_at.strftime("%d/%m/%Y %H:%M") }}{% else %}—{% endif %}
+        </td>
+        <td class="px-4 py-3">
+          {% if job.status == "complete" %}
+          <a href="/api/batch/{{ job.id }}/export?format=xlsx"
+             class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+            Descargar Excel
+          </a>
+          {% else %}
+          <span class="text-gray-400 text-xs">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<!-- Empty state (Copywriting Contract) -->
+<div class="bg-white rounded-lg shadow-sm px-6 py-16 text-center">
+  <!-- Heroicon: inbox (inline SVG, 48x48) -->
+  <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.1 13.177a2.25 2.25 0 0 0-.1.661Z"/>
+  </svg>
+  <p class="text-sm font-semibold text-gray-700">Sin lotes anteriores</p>
+  <p class="text-xs text-gray-500 mt-1">Los lotes procesados apareceran aqui con su estado y resultados.</p>
+</div>
+{% endif %}
+{% endblock %}
