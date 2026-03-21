@@ -1,0 +1,28 @@
+{% for p in polizas %}
+<tr class="bg-white border-b border-gray-100 hover:bg-gray-50">
+  <td class="px-4 py-3"><a href="/ui/polizas/{{ p.id }}" class="text-blue-600 hover:underline">{{ p.numero_poliza }}</a></td>
+  <td class="px-4 py-3 text-gray-700">{{ p.aseguradora }}</td>
+  <td class="px-4 py-3 text-gray-700">{{ p.tipo_seguro or '-' }}</td>
+  <td class="px-4 py-3 text-gray-700">{{ p.nombre_contratante or '-' }}</td>
+  <td class="px-4 py-3 text-gray-700">
+    {% if p.evaluation_score is not none %}
+    <span class="{% if p.evaluation_score < 0.70 %}text-red-600 font-semibold{% else %}text-gray-700{% endif %}">
+      {{ "%.2f"|format(p.evaluation_score) }}
+    </span>
+    {% else %}-{% endif %}
+  </td>
+</tr>
+{% endfor %}
+{% if has_more %}
+<tr id="load-more-row">
+  <td colspan="5" class="px-4 py-3 text-center">
+    <button hx-get="/ui/polizas?skip={{ next_skip }}{% if q %}&q={{ q }}{% endif %}{% if aseguradora %}&aseguradora={{ aseguradora }}{% endif %}"
+            hx-target="#poliza-rows"
+            hx-swap="beforeend"
+            hx-on::after-request="this.closest('tr').remove()"
+            class="text-blue-600 hover:underline text-sm font-semibold">
+      Cargar mas polizas
+    </button>
+  </td>
+</tr>
+{% endif %}

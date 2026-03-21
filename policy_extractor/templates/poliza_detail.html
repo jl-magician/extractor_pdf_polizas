@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Poliza {{ poliza.numero_poliza }} — Extractor de Polizas{% endblock %}
+
+{% block content %}
+<!-- Header row -->
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <a href="/ui/polizas" class="text-blue-600 hover:underline text-sm">&larr; Volver a la lista</a>
+    <h1 class="text-xl font-semibold text-gray-900 mt-1">Poliza {{ poliza.numero_poliza }}</h1>
+  </div>
+  <!-- Export buttons (D-05) -->
+  <div class="flex items-center gap-2">
+    <a href="/ui/polizas/{{ poliza.id }}/export/xlsx"
+       class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+      Descargar Excel
+    </a>
+    <a href="/ui/polizas/{{ poliza.id }}/export/csv"
+       class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+      Descargar CSV
+    </a>
+    <a href="/ui/polizas/{{ poliza.id }}/export/json"
+       class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+      Descargar JSON
+    </a>
+  </div>
+</div>
+
+<!-- Validation warnings -->
+{% if warnings %}
+<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+  <h3 class="text-sm font-semibold text-yellow-800 mb-2">
+    <span class="sr-only">Estado:</span>
+    Advertencias de validacion ({{ warnings|length }})
+  </h3>
+  <ul class="list-disc list-inside space-y-1">
+    {% for w in warnings %}
+    <li class="text-sm text-yellow-700">{{ w }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- Field groups as definition lists -->
+<div class="space-y-6">
+
+  <!-- Informacion General -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Informacion General</h2>
+    <dl class="grid grid-cols-2 gap-4">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">No. Poliza</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.numero_poliza or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Aseguradora</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.aseguradora or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo de Seguro</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.tipo_seguro or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Fecha de Emision</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.fecha_emision or '-' }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Vigencia -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Vigencia</h2>
+    <dl class="grid grid-cols-2 gap-4">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Inicio de Vigencia</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.inicio_vigencia or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Fin de Vigencia</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.fin_vigencia or '-' }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Financiero -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Financiero</h2>
+    <dl class="grid grid-cols-2 gap-4">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Prima Total</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.prima_total or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Moneda</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.moneda or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Forma de Pago</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.forma_pago or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Frecuencia de Pago</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.frecuencia_pago or '-' }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Personas -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Personas</h2>
+    <dl class="grid grid-cols-2 gap-4">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre Contratante</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.nombre_contratante or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre Agente</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.nombre_agente or '-' }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Asegurados -->
+  {% if poliza.asegurados %}
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Asegurados ({{ poliza.asegurados|length }})</h2>
+    <div class="space-y-4">
+      {% for aseg in poliza.asegurados %}
+      <div class="border-t border-gray-100 pt-4 {% if not loop.first %}mt-4{% endif %}">
+        <dl class="grid grid-cols-2 gap-4">
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre / Descripcion</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ aseg.nombre_descripcion or '-' }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ aseg.tipo or '-' }}</dd>
+          </div>
+          {% if aseg.rfc %}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">RFC</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ aseg.rfc }}</dd>
+          </div>
+          {% endif %}
+          {% if aseg.curp %}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">CURP</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ aseg.curp }}</dd>
+          </div>
+          {% endif %}
+          {% if aseg.fecha_nacimiento %}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Fecha de Nacimiento</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ aseg.fecha_nacimiento }}</dd>
+          </div>
+          {% endif %}
+          {% if aseg.parentesco %}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Parentesco</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ aseg.parentesco }}</dd>
+          </div>
+          {% endif %}
+          {% if aseg.direccion %}
+          <div class="col-span-2">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Direccion</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ aseg.direccion }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Coberturas -->
+  {% if poliza.coberturas %}
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Coberturas ({{ poliza.coberturas|length }})</h2>
+    <div class="space-y-4">
+      {% for cob in poliza.coberturas %}
+      <div class="border-t border-gray-100 pt-4 {% if not loop.first %}mt-4{% endif %}">
+        <dl class="grid grid-cols-2 gap-4">
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre Cobertura</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ cob.nombre_cobertura or '-' }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Moneda</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ cob.moneda or '-' }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Suma Asegurada</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ cob.suma_asegurada or '-' }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Deducible</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ cob.deducible or '-' }}</dd>
+          </div>
+          {% if cob.campos_adicionales %}
+          {% for k, v in cob.campos_adicionales.items() %}
+          {% if k != 'confianza' %}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ k }}</dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ v or '-' }}</dd>
+          </div>
+          {% endif %}
+          {% endfor %}
+          {% endif %}
+        </dl>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Campos Adicionales -->
+  {% if poliza.campos_adicionales %}
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Campos Adicionales</h2>
+    <dl class="grid grid-cols-2 gap-4">
+      {% for k, v in poliza.campos_adicionales.items() %}
+      {% if k != 'confianza' %}
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ k }}</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ v or '-' }}</dd>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </dl>
+  </div>
+  {% endif %}
+
+  <!-- Proveniencia -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Proveniencia</h2>
+    <dl class="grid grid-cols-2 gap-4">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Hash del Archivo</dt>
+        <dd class="text-sm text-gray-900 mt-1 font-mono text-xs">{{ poliza.source_file_hash or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Modelo</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.model_id or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Version del Prompt</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.prompt_version or '-' }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Extraido el</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.extracted_at or '-' }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- Evaluacion -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Evaluacion</h2>
+    <dl class="grid grid-cols-2 gap-4">
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Score de Evaluacion</dt>
+        <dd class="text-sm mt-1">
+          {% if poliza.evaluation_score is not none %}
+          <span class="{% if poliza.evaluation_score < 0.70 %}text-red-600 font-semibold{% else %}text-gray-900{% endif %}">
+            {{ "%.4f"|format(poliza.evaluation_score) }}
+          </span>
+          {% else %}
+          <span class="text-gray-500">No evaluado</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Evaluado el</dt>
+        <dd class="text-sm text-gray-900 mt-1">{{ poliza.evaluated_at or '-' }}</dd>
+      </div>
+    </dl>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Polizas — Extractor de Polizas{% endblock %}
+
+{% block content %}
+<!-- Page heading -->
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-semibold text-gray-900">Polizas</h1>
+  <a href="/subir" class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition-colors">
+    Subir PDFs
+  </a>
+</div>
+
+<!-- Summary bar (D-11) -->
+<div class="flex items-center gap-4 mb-4">
+  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+    {{ total_count }} polizas procesadas
+  </span>
+  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+    {{ warning_count }} advertencias
+  </span>
+  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+    {{ review_count }} requieren revision
+  </span>
+</div>
+
+<!-- Filter panel toggle (D-12) -->
+<div class="mb-4">
+  <button onclick="document.getElementById('filter-panel').classList.toggle('hidden')"
+          class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
+    <!-- Heroicon: funnel -->
+    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
+    </svg>
+    Filtros
+  </button>
+</div>
+
+<!-- Filter panel (D-13, hidden by default) -->
+<div id="filter-panel" class="hidden bg-white border border-gray-200 rounded-lg p-4 mt-2 grid grid-cols-3 gap-4 mb-4">
+  <!-- Free-text search -->
+  <div>
+    <label for="search-q" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Buscar</label>
+    <input
+      id="search-q"
+      type="text"
+      name="q"
+      value="{{ q }}"
+      hx-get="/ui/polizas"
+      hx-trigger="keyup changed delay:300ms"
+      hx-target="#poliza-rows"
+      hx-swap="innerHTML"
+      hx-include="[name='aseguradora'],[name='desde'],[name='hasta']"
+      placeholder="Buscar por poliza, contratante o aseguradora..."
+      class="block w-full min-h-[44px] px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    >
+  </div>
+
+  <!-- Aseguradora select -->
+  <div>
+    <label for="filter-aseguradora" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Aseguradora</label>
+    <select
+      id="filter-aseguradora"
+      name="aseguradora"
+      hx-get="/ui/polizas"
+      hx-trigger="change"
+      hx-target="#poliza-rows"
+      hx-swap="innerHTML"
+      hx-include="[name='q'],[name='desde'],[name='hasta']"
+      class="block w-full min-h-[44px] px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    >
+      <option value="">Todas las aseguradoras</option>
+      {% for a in aseguradoras %}
+      <option value="{{ a }}" {% if aseguradora_filter == a %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Date range -->
+  <div class="grid grid-cols-2 gap-2">
+    <div>
+      <label for="filter-desde" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Desde</label>
+      <input
+        id="filter-desde"
+        type="date"
+        name="desde"
+        value="{{ desde or '' }}"
+        hx-get="/ui/polizas"
+        hx-trigger="change"
+        hx-target="#poliza-rows"
+        hx-swap="innerHTML"
+        hx-include="[name='q'],[name='aseguradora'],[name='hasta']"
+        class="block w-full min-h-[44px] px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      >
+    </div>
+    <div>
+      <label for="filter-hasta" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Hasta</label>
+      <input
+        id="filter-hasta"
+        type="date"
+        name="hasta"
+        value="{{ hasta or '' }}"
+        hx-get="/ui/polizas"
+        hx-trigger="change"
+        hx-target="#poliza-rows"
+        hx-swap="innerHTML"
+        hx-include="[name='q'],[name='aseguradora'],[name='desde']"
+        class="block w-full min-h-[44px] px-3 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      >
+    </div>
+  </div>
+</div>
+
+<!-- Poliza table -->
+{% if polizas or q or aseguradora_filter or desde or hasta %}
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-100">
+      <tr>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">No. Poliza</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Aseguradora</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Tipo de Seguro</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Contratante</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Score</th>
+      </tr>
+    </thead>
+    <tbody id="poliza-rows">
+      {% include "partials/poliza_rows.html" %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<!-- Empty state -->
+<div class="bg-white rounded-lg border border-gray-200 p-12 text-center">
+  <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+  </svg>
+  <h2 class="text-xl font-semibold text-gray-900 mb-2">Sin polizas registradas</h2>
+  <p class="text-sm text-gray-500">Aun no hay polizas procesadas. Sube un lote de PDFs para comenzar.</p>
+  <div class="mt-6">
+    <a href="/subir" class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-md transition-colors">
+      Subir PDFs
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
