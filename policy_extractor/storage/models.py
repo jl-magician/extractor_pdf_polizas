@@ -8,6 +8,9 @@ from sqlalchemy import JSON, Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
+
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -121,3 +124,17 @@ class IngestionCache(Base):
     file_size_bytes: Mapped[int] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     ocr_language: Mapped[str] = mapped_column(String, default="spa")
+
+
+class BatchJob(Base):
+    __tablename__ = "batch_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    batch_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="pending")
+    total_files: Mapped[int] = mapped_column(default=0)
+    completed_files: Mapped[int] = mapped_column(default=0)
+    failed_files: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    results_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

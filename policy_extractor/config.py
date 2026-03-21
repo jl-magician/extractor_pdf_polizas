@@ -24,5 +24,8 @@ class Settings:
     EXTRACTION_MAX_RETRIES: int = int(os.getenv("EXTRACTION_MAX_RETRIES", "1"))
     EXTRACTION_PROMPT_VERSION: str = os.getenv("EXTRACTION_PROMPT_VERSION", "v1.0.0")
 
+    # Review threshold
+    REVIEW_SCORE_THRESHOLD: float = float(os.getenv("REVIEW_SCORE_THRESHOLD", "0.70"))
+
 
 settings = Settings()
