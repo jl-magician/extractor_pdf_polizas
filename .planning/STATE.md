@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
 status: unknown
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-03-21T03:24:25.897Z"
+stopped_at: Completed 14-04-PLAN.md
+last_updated: "2026-03-21T03:31:59.971Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-20)
 ## Current Position
 
 Phase: 14 (web-ui-foundation) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Plan: 4 of 5
 | Phase 14 P01 | 217 | 2 tasks | 10 files |
 | Phase 14 P03 | 312 | 2 tasks | 6 files |
 | Phase 14 P02 | 385 | 3 tasks | 7 files |
+| Phase 14 P04 | 5 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ Recent decisions affecting current work:
 - [Phase 14]: StaticPool used in test_ui_pages.py for in-memory SQLite so all session factory connections share the same DB — without it, each new connection gets an empty DB
 - [Phase 14]: PDF retention in _run_extraction is best-effort (non-fatal) — job status set to complete before retention attempt to prevent mock failures in tests breaking job state
 - [Phase 14]: HX-Trigger: batchDone response header signals HTMX to stop polling when batch reaches complete or failed status
+- [Phase 14]: dashboard_router GET / replaces placeholder route from Plan 01 — real aggregate queries via func.count/func.avg
+- [Phase 14]: HTMX partial check: HX-Request header present returns stats partial (no DOCTYPE); absent returns full dashboard.html
+- [Phase 14]: Date range D-17: periodo preset OR custom desde/hasta query params; needs-review uses OR(score < threshold, warnings IS NOT NULL)
 
 ### Pending Todos
 
@@ -138,7 +142,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-21T03:24:25.892Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-03-21T03:31:59.967Z
+Stopped at: Completed 14-04-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13
