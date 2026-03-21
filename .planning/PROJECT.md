@@ -8,14 +8,14 @@ Sistema de extraccion inteligente de informacion de polizas de seguros en format
 
 Extraer automaticamente toda la informacion posible de cualquier poliza de seguro en PDF — sin importar la aseguradora o estructura — y almacenarla de forma estructurada para consulta, reporteo e integracion con otros sistemas.
 
-## Current State (v1.1 shipped 2026-03-19)
+## Current State (v2.0 in progress, Phase 14 complete 2026-03-21)
 
-- **Python LOC:** 3,565 (app) + 5,820 (tests) = 9,385 total
-- **Tech stack:** Python 3.11+, Pydantic v2, SQLAlchemy 2.0, Alembic, PyMuPDF, ocrmypdf, Anthropic SDK, Typer, Rich, FastAPI, openpyxl
-- **Tests:** 263 passing, 3 skipped (2 Tesseract-dependent, 1 regression fixture)
+- **Python LOC:** ~4,500 (app) + ~7,500 (tests) = ~12,000 total
+- **Tech stack:** Python 3.11+, Pydantic v2, SQLAlchemy 2.0, Alembic, PyMuPDF, ocrmypdf, Anthropic SDK, Typer, Rich, FastAPI, openpyxl, Jinja2, HTMX, Tailwind CSS
+- **Tests:** 418 passing, 3 skipped (2 Tesseract-dependent, 1 regression fixture)
 - **CLI:** `poliza-extractor` with extract, batch, export, import-json, serve, create-fixture subcommands
-- **API:** FastAPI CRUD + PDF upload endpoint at localhost:8000 with Swagger docs
-- **Database:** SQLite with WAL mode, Alembic migrations, polizas (with evaluation columns), asegurados, coberturas, ingestion_cache tables
+- **API:** FastAPI CRUD + PDF upload + Web UI at localhost:8000 (5 pages: Dashboard, Upload, Poliza List, Detail, Job History)
+- **Database:** SQLite with WAL mode, Alembic migrations (4 versions), polizas, asegurados, coberturas, ingestion_cache, batch_jobs tables
 - **Milestones shipped:** v1.0 MVP (2026-03-18), v1.1 API & Quality (2026-03-19)
 
 ## Requirements
@@ -40,9 +40,9 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 
 ### Active
 
-- [ ] Web UI for uploading PDFs and viewing extraction results
+- [x] Web UI for uploading PDFs and viewing extraction results — Phase 14
 - [ ] Manual data editing/correction of extracted fields in browser
-- [ ] Dashboard with extraction statistics and quality metrics
+- [x] Dashboard with extraction statistics and quality metrics — Phase 14
 - [ ] PDF report generation from extracted poliza data
 - [ ] Customizable report templates per insurer
 - [x] Extraction prompt improvements for financial table handling — Phase 13
@@ -132,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-20 after Phase 13 completion*
+*Last updated: 2026-03-21 after Phase 14 completion*
