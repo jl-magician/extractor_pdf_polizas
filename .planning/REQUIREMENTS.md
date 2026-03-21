@@ -16,7 +16,7 @@ Requirements for v2.0 Web UI & Extraction Quality milestone. Each maps to roadma
 
 ### Web UI
 
-- [ ] **UI-01**: User can upload PDFs and view extraction results in a browser interface
+- [x] **UI-01**: User can upload PDFs and view extraction results in a browser interface
 - [x] **UI-02**: User can search and filter the policy list by aseguradora, date range, and status
 - [ ] **UI-03**: User can review extractions side-by-side with the source PDF in a split-pane view
 - [ ] **UI-04**: User can edit/correct extracted fields inline with changes saved to a corrections audit trail
@@ -75,7 +75,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXT-02 | Phase 13 | Complete |
 | EXT-03 | Phase 13 | Complete |
 | EXT-04 | Phase 13 | Complete |
-| UI-01 | Phase 14 | Pending |
+| UI-01 | Phase 14 | Complete |
 | UI-02 | Phase 14 | Complete |
 | UI-05 | Phase 14 | Pending |
 | UI-06 | Phase 14 | Complete |
