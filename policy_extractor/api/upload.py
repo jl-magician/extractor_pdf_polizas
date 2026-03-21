@@ -7,9 +7,16 @@ Provides:
 
 Job lifecycle: pending → processing → complete | failed
 Expired jobs (1 h after terminal state) are purged on next read access.
+
+Phase 14-02 additions:
+- _run_batch_extraction: DB-backed batch worker for multi-file batch jobs
+- _run_single_file_extraction: single-file helper with PDF retention
+- PDFS_RETENTION_DIR: data/pdfs/{poliza_id}.pdf retention path
 """
 from __future__ import annotations
 
+import json
+import shutil
 import threading
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -25,6 +32,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+PDFS_RETENTION_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "pdfs"
 JOB_EXPIRY_HOURS = 1
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
@@ -131,6 +139,9 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
                 result["evaluation_score"] = None
                 result["evaluation_json"] = None
                 _update_job(job_id, status="complete", result=result)
+                PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
+                dest = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
+                shutil.copy2(str(pdf_path), str(dest))
                 pdf_path.unlink(missing_ok=True)
                 return
 
@@ -138,7 +149,7 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
             policy, _usage, _retries = extract_policy(ingestion_result, model=model)
             if policy is None:
                 raise RuntimeError("Extraction returned None")
-            upsert_policy(session, policy)
+            poliza = upsert_policy(session, policy)
             result = policy.model_dump(mode="json")
 
             if evaluate:
@@ -161,6 +172,9 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
                 result["evaluation_json"] = None
 
             _update_job(job_id, status="complete", result=result)
+            PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
+            dest_path = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
+            shutil.copy2(str(pdf_path), str(dest_path))
             pdf_path.unlink(missing_ok=True)
         except Exception as exc:
             _update_job(job_id, status="failed", error=str(exc))
@@ -169,6 +183,153 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
             session.close()
     except Exception as exc:
         _update_job(job_id, status="failed", error=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Batch extraction worker (Phase 14-02)
+# ---------------------------------------------------------------------------
+
+
+def _run_single_file_extraction(session, pdf_path: Path, model: str | None, force: bool) -> tuple[str, dict]:
+    """Run the extraction pipeline for a single PDF file.
+
+    Returns (status, summary_dict) where:
+    - status: "complete" or "failed"
+    - summary_dict: {"poliza_id", "numero_poliza", "aseguradora"} on success
+                    {"error": str} on failure
+
+    PDF retention: copies to data/pdfs/{poliza_id}.pdf then removes the temp upload.
+    """
+    try:
+        from policy_extractor.ingestion.cache import compute_file_hash
+        from policy_extractor.cli_helpers import is_already_extracted
+        from policy_extractor.ingestion import ingest_pdf
+        from policy_extractor.extraction import extract_policy
+        from policy_extractor.storage.writer import upsert_policy, orm_to_schema
+        from policy_extractor.storage.models import Poliza
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+
+        file_hash = compute_file_hash(pdf_path)
+        if not force and is_already_extracted(session, file_hash):
+            poliza = session.execute(
+                select(Poliza)
+                .options(selectinload(Poliza.asegurados), selectinload(Poliza.coberturas))
+                .where(Poliza.source_file_hash == file_hash)
+            ).scalar_one()
+            # PDF retention (UI-06, D-25)
+            PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
+            dest = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
+            shutil.copy2(str(pdf_path), str(dest))
+            pdf_path.unlink(missing_ok=True)
+            return ("complete", {
+                "poliza_id": poliza.id,
+                "numero_poliza": poliza.numero_poliza,
+                "aseguradora": poliza.aseguradora,
+            })
+
+        ingestion_result = ingest_pdf(pdf_path, session=session, force_reprocess=force)
+        policy, _usage, _retries = extract_policy(ingestion_result, model=model)
+        if policy is None:
+            raise RuntimeError("Extraction returned None")
+        poliza = upsert_policy(session, policy)
+
+        # PDF retention (UI-06, D-25): copy to permanent location then remove temp
+        PDFS_RETENTION_DIR.mkdir(parents=True, exist_ok=True)
+        dest = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
+        shutil.copy2(str(pdf_path), str(dest))
+        pdf_path.unlink(missing_ok=True)
+
+        return ("complete", {
+            "poliza_id": poliza.id,
+            "numero_poliza": policy.numero_poliza,
+            "aseguradora": policy.aseguradora,
+        })
+    except Exception as exc:
+        return ("failed", {"error": str(exc)})
+
+
+def _run_batch_extraction(batch_id: str, file_entries: list[dict], model: str | None, force: bool) -> None:
+    """Background batch extraction worker with DB-backed progress tracking.
+
+    Per D-06: failed files do NOT stop remaining files from processing.
+    Updates BatchJob.completed_files and failed_files atomically after each file.
+    Stores per-file summaries in results_json on completion.
+
+    Args:
+        batch_id: UUID string matching BatchJob.id
+        file_entries: list of {"filename": str, "pdf_path": str} dicts
+        model: optional model override
+        force: whether to force re-extraction of already-extracted files
+    """
+    from policy_extractor.storage.database import SessionLocal
+    from policy_extractor.storage.models import BatchJob
+    from sqlalchemy import update
+
+    session = SessionLocal()
+    summaries = []
+    try:
+        for entry in file_entries:
+            pdf_path = Path(entry["pdf_path"])
+            filename = entry["filename"]
+
+            status, result = _run_single_file_extraction(session, pdf_path, model, force)
+
+            summary = {
+                "filename": filename,
+                "status": status,
+                "poliza_id": result.get("poliza_id"),
+                "numero_poliza": result.get("numero_poliza"),
+                "aseguradora": result.get("aseguradora"),
+                "error": result.get("error"),
+            }
+            summaries.append(summary)
+
+            # Atomic update per Pitfall 5 — avoids read-modify-write races
+            if status == "complete":
+                session.execute(
+                    update(BatchJob)
+                    .where(BatchJob.id == batch_id)
+                    .values(completed_files=BatchJob.completed_files + 1)
+                )
+            else:
+                session.execute(
+                    update(BatchJob)
+                    .where(BatchJob.id == batch_id)
+                    .values(failed_files=BatchJob.failed_files + 1)
+                )
+            session.commit()
+
+        # Mark batch complete with all results
+        from datetime import datetime, timezone
+        session.execute(
+            update(BatchJob)
+            .where(BatchJob.id == batch_id)
+            .values(
+                status="complete",
+                completed_at=datetime.now(timezone.utc),
+                results_json=json.dumps(summaries),
+            )
+        )
+        session.commit()
+    except Exception:
+        # Batch-level failure — mark as failed but preserve any partial results
+        try:
+            from datetime import datetime, timezone
+            session.execute(
+                update(BatchJob)
+                .where(BatchJob.id == batch_id)
+                .values(
+                    status="failed",
+                    completed_at=datetime.now(timezone.utc),
+                    results_json=json.dumps(summaries) if summaries else None,
+                )
+            )
+            session.commit()
+        except Exception:
+            pass
+    finally:
+        session.close()
 
 
 # ---------------------------------------------------------------------------
