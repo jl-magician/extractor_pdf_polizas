@@ -8,13 +8,13 @@ Sistema de extraccion inteligente de informacion de polizas de seguros en format
 
 Extraer automaticamente toda la informacion posible de cualquier poliza de seguro en PDF — sin importar la aseguradora o estructura — y almacenarla de forma estructurada para consulta, reporteo e integracion con otros sistemas.
 
-## Current State (v2.0 in progress, Phase 15 complete 2026-03-24)
+## Current State (v2.0 in progress, Phase 16 complete 2026-03-24)
 
 - **Python LOC:** ~5,000 (app) + ~8,000 (tests) = ~13,000 total
 - **Tech stack:** Python 3.11+, Pydantic v2, SQLAlchemy 2.0, Alembic, PyMuPDF, ocrmypdf, Anthropic SDK, Typer, Rich, FastAPI, openpyxl, Jinja2, HTMX, Tailwind CSS
-- **Tests:** 433 passing, 3 skipped (2 Tesseract-dependent, 1 regression fixture)
+- **Tests:** 463 passing, 3 skipped (2 Tesseract-dependent, 1 regression fixture)
 - **CLI:** `poliza-extractor` with extract, batch, export, import-json, serve, create-fixture subcommands
-- **API:** FastAPI CRUD + PDF upload + Web UI at localhost:8000 (6 pages: Dashboard, Upload, Poliza List, Detail, Review, Job History)
+- **API:** FastAPI CRUD + PDF upload + Web UI at localhost:8000 (6 pages: Dashboard, Upload, Poliza List, Detail, Review, Job History) + PDF report download
 - **Database:** SQLite with WAL mode, Alembic migrations (5 versions), polizas, asegurados, coberturas, corrections, ingestion_cache, batch_jobs tables
 - **Milestones shipped:** v1.0 MVP (2026-03-18), v1.1 API & Quality (2026-03-19)
 
@@ -43,16 +43,16 @@ Extraer automaticamente toda la informacion posible de cualquier poliza de segur
 - [x] Web UI for uploading PDFs and viewing extraction results — Phase 14
 - [x] Manual data editing/correction of extracted fields in browser — Phase 15
 - [x] Dashboard with extraction statistics and quality metrics — Phase 14
-- [ ] PDF report generation from extracted poliza data
-- [ ] Customizable report templates per insurer
+- [x] PDF report generation from extracted poliza data — Phase 16
+- [x] Customizable report templates per insurer — Phase 16
 - [x] Extraction prompt improvements for financial table handling — Phase 13
 - [x] Post-extraction validation (cross-check financial fields) — Phase 13
 - [x] Configurable field exclusion list — Phase 13
 - [x] Auto-OCR fallback for digital pages with <10 chars — Phase 13
-- [ ] Sonnet review pass for campos_adicionales field swaps
+- [x] Sonnet review pass for campos_adicionales field swaps — Phase 16
 - [x] Human-in-the-loop review UI (side-by-side PDF + extraction) — Phase 15
 - [ ] Expanded golden dataset (20+ fixtures, all 10 insurers)
-- [ ] Evaluator auto-triggered on batch samples
+- [x] Evaluator auto-triggered on batch samples — Phase 16
 
 ### Out of Scope
 
@@ -132,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-21 after Phase 14 completion*
+*Last updated: 2026-03-24 after Phase 16 completion*
