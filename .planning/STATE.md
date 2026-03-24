@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
 status: unknown
-stopped_at: Completed 14-05-PLAN.md
-last_updated: "2026-03-21T06:35:54.812Z"
+stopped_at: Phase 15 context gathered
+last_updated: "2026-03-24T01:06:42.509Z"
 progress:
   total_phases: 5
   completed_phases: 2
@@ -144,7 +144,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-21T05:54:35.379Z
-Stopped at: Completed 14-05-PLAN.md
-Resume file: None
+Last session: 2026-03-24T01:06:42.504Z
+Stopped at: Phase 15 context gathered
+Resume file: .planning/phases/15-hitl-review-workflow/15-CONTEXT.md
 Next action: /gsd:plan-phase 13
