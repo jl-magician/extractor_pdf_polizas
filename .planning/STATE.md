@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
-status: Ready to execute
-stopped_at: Completed 17-golden-dataset-expansion-02-PLAN.md
-last_updated: "2026-03-24T06:25:49.791Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 17-golden-dataset-expansion 17-01-PLAN.md
+last_updated: "2026-03-24T06:27:23.368Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -48,6 +48,7 @@ Plan: 2 of 2
 | Phase 16-pdf-reports-auto-evaluation P01 | 15 | 2 tasks | 12 files |
 | Phase 16-pdf-reports-auto-evaluation P03 | 15 | 2 tasks | 7 files |
 | Phase 17-golden-dataset-expansion P02 | 95 | 1 tasks | 2 files |
+| Phase 17-golden-dataset-expansion P01 | 2 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,8 @@ Recent decisions affecting current work:
 - [Phase 16-03]: dashboard_stats.html expanded from 3-col to 4-col grid for Evaluacion de Calidad card; _get_stats() extended with total_evaluated/eval_pct/avg_score_display
 - [Phase 17-golden-dataset-expansion]: _parse_insurer_from_nodeid uses regex on last [...] bracket then splits on _ for insurer extraction
 - [Phase 17-golden-dataset-expansion]: RegressionCoveragePlugin class-based encapsulation keeps _results state per session; pytest_configure registers globally
+- [Phase 17-golden-dataset-expansion]: _infer_type added alongside _infer_insurer — type must be inferred from filename (test-driven correction of plan spec)
+- [Phase 17-golden-dataset-expansion]: batch-fixtures naming: {insurer}_{type}_{seq:03d}.json; metadata keys: _source_pdf, _insurer, _tipo_seguro, _created_at per D-07/D-08
 
 ### Pending Todos
 
@@ -164,7 +167,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T06:25:49.781Z
-Stopped at: Completed 17-golden-dataset-expansion-02-PLAN.md
+Last session: 2026-03-24T06:27:23.360Z
+Stopped at: Completed 17-golden-dataset-expansion 17-01-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13
