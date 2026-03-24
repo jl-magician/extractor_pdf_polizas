@@ -131,6 +131,6 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 12. Milestone Polish | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 13. Extraction Pipeline Fixes | v2.0 | 3/3 | Complete    | 2026-03-20 |
 | 14. Web UI Foundation | v2.0 | 5/5 | Complete    | 2026-03-21 |
-| 15. HITL Review Workflow | v2.0 | 2/2 | Complete   | 2026-03-24 |
+| 15. HITL Review Workflow | v2.0 | 2/2 | Complete    | 2026-03-24 |
 | 16. PDF Reports & Auto-Evaluation | v2.0 | 0/? | Not started | - |
 | 17. Golden Dataset Expansion | v2.0 | 0/? | Not started | - |
