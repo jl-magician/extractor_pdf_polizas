@@ -1,19 +1,87 @@
 <!DOCTYPE html>
-<html>
-<head><title>Revisar - {{ poliza.numero_poliza }}</title></head>
-<body>
-<p>{{ poliza.numero_poliza }}</p>
-<iframe src="/ui/polizas/{{ poliza.id }}/pdf"></iframe>
-{% for group in field_groups %}
-<section>
-  <h2>{{ group.title }}</h2>
-  {% for field in group.fields %}
-  <div id="field-{{ field.field_path | replace('.', '-') }}">{{ field.value }}</div>
-  {% endfor %}
-</section>
-{% endfor %}
-<details id="correction-history">
-  {% for c in corrections %}{{ c.field_path }}{% endfor %}
-</details>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revisar -- {{ poliza.numero_poliza }}</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+</head>
+<body class="h-screen flex flex-col bg-gray-50">
+  <!-- Header bar: 44px min-height, per UI-SPEC -->
+  <header class="flex items-center gap-4 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0 min-h-[44px]">
+    <a href="/ui/polizas/{{ poliza.id }}" class="text-blue-600 hover:underline text-sm">&larr; Volver</a>
+    <h1 class="text-sm font-semibold text-gray-900">Poliza {{ poliza.numero_poliza }}</h1>
+  </header>
+
+  <!-- Split pane container -->
+  <div id="split-container" class="flex flex-1 overflow-hidden">
+    <!-- PDF pane (left) -->
+    <div id="pdf-pane" class="w-1/2 min-w-[300px] overflow-auto border-r border-gray-200">
+      <iframe src="/ui/polizas/{{ poliza.id }}/pdf"
+              class="w-full h-full border-0"
+              title="PDF de la poliza"></iframe>
+    </div>
+
+    <!-- Draggable divider -->
+    <div id="divider" class="w-1 bg-gray-300 cursor-col-resize flex-shrink-0 hover:bg-blue-400"
+         role="separator" aria-orientation="vertical" aria-label="Redimensionar paneles"></div>
+
+    <!-- Fields pane (right) -->
+    <div id="fields-pane" class="flex-1 overflow-y-auto p-4">
+      <!-- Field groups -->
+      {% for group in field_groups %}
+      <div class="bg-white rounded-lg border border-gray-200 p-6 mb-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">{{ group.title }}</h2>
+        <div class="space-y-1">
+          {% for field in group.fields %}
+          {% set field_path = field.field_path %}
+          {% set label = field.label %}
+          {% set value = field.value %}
+          {% set input_type = field.input_type %}
+          {% set is_corrected = field.is_corrected %}
+          {% set poliza_id = poliza.id %}
+          {% include "partials/field_row.html" %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Correction history panel (D-09) -->
+      <div hx-get="/ui/polizas/{{ poliza.id }}/corrections-partial"
+           hx-trigger="correctionSaved from:body"
+           hx-swap="outerHTML">
+        {% include "partials/correction_history.html" %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Draggable divider JS (~30 lines, per RESEARCH Pattern 2) -->
+  <script>
+    const divider = document.getElementById('divider');
+    const leftPane = document.getElementById('pdf-pane');
+    const container = document.getElementById('split-container');
+    let dragging = false;
+
+    divider.addEventListener('mousedown', (e) => {
+      dragging = true;
+      divider.classList.add('bg-blue-400');
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const rect = container.getBoundingClientRect();
+      const newLeft = Math.max(200, Math.min(e.clientX - rect.left, rect.width - 200));
+      leftPane.style.width = newLeft + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = false;
+        divider.classList.remove('bg-blue-400');
+      }
+    });
+  </script>
 </body>
 </html>

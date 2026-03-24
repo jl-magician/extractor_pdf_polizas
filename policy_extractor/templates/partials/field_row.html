@@ -1,1 +1,30 @@
-<div id="field-{{ field_path | replace('.', '-') }}">{{ value }}</div>
+{# field_row.html -- click-to-edit field with HTMX auto-save #}
+{# Context: poliza_id, field_path, label, value, input_type, is_corrected #}
+<div id="field-{{ field_path | replace('.', '-') }}"
+     class="flex items-center gap-2 py-1 {% if is_corrected %}border-l-2 border-blue-400 pl-2{% endif %}">
+  <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 w-40 flex-shrink-0">
+    {{ label }}
+  </span>
+  <!-- Display value (click to edit) -->
+  <span class="field-display text-sm text-gray-900 cursor-pointer hover:bg-blue-50 rounded px-1"
+        onclick="this.style.display='none';
+                 var inp = this.nextElementSibling;
+                 inp.style.display='';
+                 inp.focus();">
+    {{ value if value is not none and value != '' else '-' }}
+  </span>
+  <!-- Input (hidden until clicked) -->
+  <input
+    class="field-input text-sm border border-blue-400 rounded px-2 py-1 focus:outline-none w-full"
+    style="display:none"
+    type="{{ input_type }}"
+    name="value"
+    value="{{ value if value is not none else '' }}"
+    aria-label="{{ label }}"
+    hx-patch="/ui/polizas/{{ poliza_id }}/review/field"
+    hx-trigger="blur, keyup[key=='Enter']"
+    hx-vals='{"field_path": "{{ field_path }}"}'
+    hx-target="#field-{{ field_path | replace('.', '-') }}"
+    hx-swap="outerHTML"
+  >
+</div>
