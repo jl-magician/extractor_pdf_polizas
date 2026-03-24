@@ -65,6 +65,10 @@ class Poliza(Base):
     coberturas: Mapped[list["Cobertura"]] = relationship(
         "Cobertura", back_populates="poliza", cascade="all, delete-orphan"
     )
+    corrections: Mapped[list["Correction"]] = relationship(
+        "Correction", back_populates="poliza", cascade="all, delete-orphan",
+        order_by="Correction.corrected_at"
+    )
 
 
 class Asegurado(Base):
@@ -124,6 +128,19 @@ class IngestionCache(Base):
     file_size_bytes: Mapped[int] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     ocr_language: Mapped[str] = mapped_column(String, default="spa")
+
+
+class Correction(Base):
+    __tablename__ = "corrections"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    poliza_id: Mapped[int] = mapped_column(ForeignKey("polizas.id", ondelete="CASCADE"), index=True)
+    field_path: Mapped[str] = mapped_column(String, nullable=False)
+    old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    corrected_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    poliza: Mapped["Poliza"] = relationship("Poliza", back_populates="corrections")
 
 
 class BatchJob(Base):
