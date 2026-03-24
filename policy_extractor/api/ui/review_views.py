@@ -260,7 +260,7 @@ def patch_review_field(
     poliza_id: int,
     request: Request,
     field_path: str = Form(...),
-    value: str = Form(...),
+    value: str = Form(default=""),
     db: Session = Depends(get_db),
 ):
     """PATCH a single field — updates ORM row + logs correction in one transaction."""

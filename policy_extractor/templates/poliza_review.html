@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>Revisar - {{ poliza.numero_poliza }}</title></head>
+<body>
+<p>{{ poliza.numero_poliza }}</p>
+<iframe src="/ui/polizas/{{ poliza.id }}/pdf"></iframe>
+{% for group in field_groups %}
+<section>
+  <h2>{{ group.title }}</h2>
+  {% for field in group.fields %}
+  <div id="field-{{ field.field_path | replace('.', '-') }}">{{ field.value }}</div>
+  {% endfor %}
+</section>
+{% endfor %}
+<details id="correction-history">
+  {% for c in corrections %}{{ c.field_path }}{% endfor %}
+</details>
+</body>
+</html>
