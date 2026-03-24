@@ -112,12 +112,15 @@ Plans:
   1. The golden dataset contains at least 20 PII-redacted fixtures, with at least one fixture per each of the 10 insurers the agency works with
   2. Running `pytest -m regression` passes all fixtures without any skipped tests due to missing fixture files
   3. Any new extraction prompt change that causes a field regression on an existing fixture is caught by the test suite before merging
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 17-01-PLAN.md — Batch fixture creation CLI subcommand (QA-01)
+- [ ] 17-02-PLAN.md — Regression coverage matrix pytest plugin (QA-01)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
+Phases execute in numeric order: 13 -> 14 -> 15 -> 16 -> 17
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -137,4 +140,4 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 14. Web UI Foundation | v2.0 | 5/5 | Complete    | 2026-03-21 |
 | 15. HITL Review Workflow | v2.0 | 2/2 | Complete    | 2026-03-24 |
 | 16. PDF Reports & Auto-Evaluation | v2.0 | 2/3 | Complete    | 2026-03-24 |
-| 17. Golden Dataset Expansion | v2.0 | 0/? | Not started | - |
+| 17. Golden Dataset Expansion | v2.0 | 0/2 | Not started | - |
