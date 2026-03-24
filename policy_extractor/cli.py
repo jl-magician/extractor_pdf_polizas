@@ -1,4 +1,4 @@
-"""Typer CLI app for poliza-extractor — Phase 4 + Phase 5 + Phase 11.
+"""Typer CLI app for poliza-extractor — Phase 4 + Phase 5 + Phase 11 + Phase 17.
 
 Subcommands:
   extract        — process a single PDF and print JSON to stdout
@@ -7,6 +7,7 @@ Subcommands:
   import         — load JSON policies into DB
   serve          — start uvicorn with the FastAPI app
   create-fixture — extract a real PDF, redact PII, write golden JSON fixture
+  batch-fixtures — process all PDFs in a directory and write golden JSON fixtures
 """
 
 from __future__ import annotations
@@ -627,3 +628,180 @@ def create_fixture(
             _print_cost(model or settings.EXTRACTION_MODEL, usage.input_tokens, usage.output_tokens)
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# batch-fixtures subcommand helpers
+# ---------------------------------------------------------------------------
+
+_KNOWN_INSURERS = [
+    "zurich",
+    "qualitas",
+    "mapfre",
+    "axa",
+    "gnp",
+    "chubb",
+    "ana",
+    "hdi",
+    "planseguro",
+    "prudential",
+]
+
+
+_KNOWN_TYPES = [
+    "auto",
+    "vida",
+    "gmm",
+    "gastos_medicos",
+    "hogar",
+    "rc",
+    "transporte",
+    "accidentes",
+    "dental",
+    "viaje",
+]
+
+
+def _infer_insurer(filename: str) -> str:
+    """Infer insurer slug from PDF filename. Returns 'unknown' if no match."""
+    lower = filename.lower()
+    for slug in _KNOWN_INSURERS:
+        if slug in lower:
+            return slug
+    return "unknown"
+
+
+def _infer_type(filename: str) -> str:
+    """Infer policy type slug from PDF filename. Returns 'general' if no match."""
+    lower = filename.lower()
+    for slug in _KNOWN_TYPES:
+        if slug in lower:
+            return slug
+    return "general"
+
+
+# ---------------------------------------------------------------------------
+# batch-fixtures subcommand
+# ---------------------------------------------------------------------------
+
+
+@app.command(name="batch-fixtures")
+def batch_fixtures(
+    pdf_dir: Path = typer.Argument(..., help="Directory containing real PDFs", exists=True),
+    output: Path = typer.Option(
+        Path("tests/fixtures/golden"),
+        "--output",
+        "-o",
+        help="Output directory for fixture JSON files",
+    ),
+    insurer_map: Optional[Path] = typer.Option(
+        None,
+        "--insurer-map",
+        help="JSON file mapping PDF filename patterns to {insurer, type} slugs",
+    ),
+    model: Optional[str] = typer.Option(None, "--model", help="Override extraction model"),
+    run_tests: bool = typer.Option(
+        False, "--run-tests", help="Run pytest -m regression after creating fixtures"
+    ),
+) -> None:
+    """Process all PDFs in a directory, redact PII, and write golden JSON fixtures.
+
+    Fixtures are written to the output directory following the naming convention
+    {insurer}_{type}_{seq:03d}.json (e.g. zurich_auto_001.json).
+
+    PII fields are redacted via PiiRedactor before writing.
+    Failed extractions are skipped with a warning, not a crash.
+    """
+    import subprocess
+    from datetime import datetime, timezone
+
+    from policy_extractor.regression.pii_redactor import PiiRedactor
+
+    # Load insurer map if provided
+    mapping: dict[str, dict[str, str]] = {}
+    if insurer_map is not None:
+        mapping = json.loads(Path(insurer_map).read_text(encoding="utf-8"))
+
+    # Discover PDFs
+    pdf_files = sorted(pdf_dir.glob("*.pdf"))
+    if not pdf_files:
+        console.print(f"[yellow]No PDF files found in {pdf_dir}[/yellow]")
+        return
+
+    output.mkdir(parents=True, exist_ok=True)
+    _setup_db()
+    session = SessionLocal()
+
+    total = len(pdf_files)
+    succeeded = 0
+    skipped = 0
+
+    try:
+        for pdf in pdf_files:
+            # Resolve insurer and type slugs
+            insurer_slug = "unknown"
+            type_slug = "general"
+
+            if mapping:
+                lower_name = pdf.name.lower()
+                for pattern, meta in mapping.items():
+                    if pattern.lower() in lower_name:
+                        insurer_slug = meta.get("insurer", "unknown")
+                        type_slug = meta.get("type", "general")
+                        break
+            else:
+                insurer_slug = _infer_insurer(pdf.name)
+                type_slug = _infer_type(pdf.name)
+
+            # Extract
+            try:
+                ingestion_result = ingest_pdf(pdf, session=session)
+                policy, usage, _retries = extract_policy(ingestion_result, model=model)
+            except Exception as exc:  # noqa: BLE001
+                console.print(
+                    f"[yellow]SKIP:[/yellow] {pdf.name} — ingestion/extraction error: {exc}"
+                )
+                skipped += 1
+                continue
+
+            if policy is None:
+                console.print(
+                    f"[yellow]SKIP:[/yellow] {pdf.name} — extraction failed"
+                )
+                skipped += 1
+                continue
+
+            # Build fixture dict
+            raw: dict = policy.model_dump(mode="json")
+            raw["_source_pdf"] = pdf.name
+            raw["_insurer"] = insurer_slug
+            raw["_tipo_seguro"] = type_slug
+            raw["_created_at"] = datetime.now(timezone.utc).isoformat()
+
+            redacted = PiiRedactor().redact(raw)
+
+            # Determine sequence number
+            existing = list(output.glob(f"{insurer_slug}_{type_slug}_*.json"))
+            seq = len(existing) + 1
+            out_file = output / f"{insurer_slug}_{type_slug}_{seq:03d}.json"
+            out_file.write_text(
+                json.dumps(redacted, indent=2, ensure_ascii=False, default=str),
+                encoding="utf-8",
+            )
+            console.print(f"[green]OK:[/green] {pdf.name} -> {out_file.name}")
+            succeeded += 1
+    finally:
+        session.close()
+
+    # Summary table
+    table = Table(title="batch-fixtures summary")
+    table.add_column("Total", justify="right")
+    table.add_column("Succeeded", justify="right", style="green")
+    table.add_column("Skipped", justify="right", style="yellow")
+    table.add_row(str(total), str(succeeded), str(skipped))
+    console.print(table)
+
+    if run_tests:
+        result = subprocess.run(["pytest", "-m", "regression", "-v"], check=False)
+        if result.returncode != 0:
+            console.print("[yellow]Regression tests had failures.[/yellow]")
