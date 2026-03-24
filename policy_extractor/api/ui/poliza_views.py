@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, selectinload
 from policy_extractor.api import get_db
 from policy_extractor.api.ui import templates
 from policy_extractor.config import settings
-from policy_extractor.storage.models import Poliza
+from policy_extractor.storage.models import Correction, Poliza
 
 poliza_ui_router = APIRouter()
 PAGE_SIZE = 25
@@ -103,7 +103,11 @@ def poliza_list(
 def poliza_detail(poliza_id: int, request: Request, db: Session = Depends(get_db)):
     stmt = (
         select(Poliza)
-        .options(selectinload(Poliza.asegurados), selectinload(Poliza.coberturas))
+        .options(
+            selectinload(Poliza.asegurados),
+            selectinload(Poliza.coberturas),
+            selectinload(Poliza.corrections),
+        )
         .where(Poliza.id == poliza_id)
     )
     poliza = db.execute(stmt).scalar_one_or_none()
@@ -124,6 +128,7 @@ def poliza_detail(poliza_id: int, request: Request, db: Session = Depends(get_db
             "poliza": poliza,
             "has_pdf": has_pdf,
             "warnings": warnings,
+            "corrections": poliza.corrections or [],
         }
     )
 

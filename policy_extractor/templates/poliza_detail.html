@@ -11,6 +11,14 @@
   </div>
   <!-- Export buttons (D-05) -->
   <div class="flex items-center gap-2">
+    {% if has_pdf %}
+    <a href="/ui/polizas/{{ poliza.id }}/review"
+       class="inline-flex items-center justify-center min-h-[44px] px-4 py-2
+              bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold
+              rounded-md transition-colors">
+      Revisar
+    </a>
+    {% endif %}
     <a href="/ui/polizas/{{ poliza.id }}/export/xlsx"
        class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold border border-gray-300 rounded-md transition-colors">
       Descargar Excel
@@ -275,6 +283,26 @@
         <dd class="text-sm text-gray-900 mt-1">{{ poliza.evaluated_at or '-' }}</dd>
       </div>
     </dl>
+  </div>
+
+  <!-- Correcciones (D-10) -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Correcciones</h2>
+    {% if corrections %}
+    <div class="space-y-2">
+      {% for c in corrections|reverse %}
+      <div class="flex items-start gap-4 py-2 border-b border-gray-100 text-sm">
+        <span class="text-gray-500 text-xs w-36 flex-shrink-0">{{ c.corrected_at.strftime('%Y-%m-%d %H:%M') }}</span>
+        <span class="text-xs font-semibold uppercase text-gray-500 w-40 flex-shrink-0">{{ c.field_path }}</span>
+        <span class="text-gray-400 line-through">{{ c.old_value or '-' }}</span>
+        <span class="text-gray-900 mx-1">&rarr;</span>
+        <span class="text-gray-900">{{ c.new_value or '-' }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-500">Sin correcciones</p>
+    {% endif %}
   </div>
 
 </div>
