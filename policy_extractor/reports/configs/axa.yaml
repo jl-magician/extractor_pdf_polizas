@@ -1,0 +1,14 @@
+brand_color: [0, 0, 175]
+display_name: "AXA Seguros"
+field_order:
+  - numero_poliza
+  - nombre_contratante
+  - tipo_seguro
+  - fecha_emision
+  - inicio_vigencia
+  - fin_vigencia
+  - nombre_agente
+sections:
+  asegurados: true
+  coberturas: true
+  campos_adicionales: true

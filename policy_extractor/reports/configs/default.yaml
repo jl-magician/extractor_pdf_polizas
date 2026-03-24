@@ -1,0 +1,15 @@
+brand_color: [50, 50, 50]
+display_name: "Aseguradora"
+field_order:
+  - numero_poliza
+  - nombre_contratante
+  - tipo_seguro
+  - aseguradora
+  - fecha_emision
+  - inicio_vigencia
+  - fin_vigencia
+  - nombre_agente
+sections:
+  asegurados: true
+  coberturas: true
+  campos_adicionales: true

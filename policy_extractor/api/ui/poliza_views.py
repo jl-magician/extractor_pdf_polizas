@@ -1,5 +1,6 @@
 """Poliza list and detail UI routes."""
 from __future__ import annotations
+import asyncio
 import json
 import os
 import tempfile
@@ -8,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -130,6 +131,34 @@ def poliza_detail(poliza_id: int, request: Request, db: Session = Depends(get_db
             "warnings": warnings,
             "corrections": poliza.corrections or [],
         }
+    )
+
+
+@poliza_ui_router.get("/ui/polizas/{poliza_id}/report")
+async def poliza_report(poliza_id: int, db: Session = Depends(get_db)):
+    """Generate and download a PDF report for a poliza (per D-02: on-the-fly, no caching)."""
+    poliza = db.execute(
+        select(Poliza)
+        .options(selectinload(Poliza.asegurados), selectinload(Poliza.coberturas))
+        .where(Poliza.id == poliza_id)
+    ).scalar_one_or_none()
+    if poliza is None:
+        raise HTTPException(status_code=404, detail="Poliza not found")
+
+    from policy_extractor.reports import generate_poliza_report
+
+    loop = asyncio.get_event_loop()
+    pdf_bytes = await loop.run_in_executor(None, generate_poliza_report, poliza)
+
+    # Per D-06: filename format poliza_{numero}_{aseguradora}.pdf
+    safe_numero = (poliza.numero_poliza or "sin_numero").replace("/", "_").replace("\\", "_")
+    safe_aseg = (poliza.aseguradora or "desconocida").lower().replace(" ", "_")
+    filename = f"poliza_{safe_numero}_{safe_aseg}.pdf"
+
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

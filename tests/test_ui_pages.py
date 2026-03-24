@@ -163,3 +163,23 @@ def test_poliza_detail_contains_export_link(test_poliza):
     """Detail page contains 'Descargar Excel' export link."""
     response = client.get(f"/ui/polizas/{test_poliza.id}")
     assert "Descargar Excel" in response.text
+
+
+# ---------------------------------------------------------------------------
+# Phase 16 Plan 01 — PDF report download tests
+# ---------------------------------------------------------------------------
+
+
+def test_poliza_report_download(test_poliza):
+    """GET /ui/polizas/{id}/report returns 200 with application/pdf content type."""
+    response = client.get(f"/ui/polizas/{test_poliza.id}/report")
+    assert response.status_code == 200
+    assert "application/pdf" in response.headers.get("content-type", "")
+    assert "attachment" in response.headers.get("content-disposition", "")
+    assert response.content[:5] == b"%PDF-", "Response body must start with PDF header"
+
+
+def test_poliza_report_404(test_poliza):
+    """GET /ui/polizas/99999/report returns 404 for non-existent poliza."""
+    response = client.get("/ui/polizas/99999/report")
+    assert response.status_code == 404
