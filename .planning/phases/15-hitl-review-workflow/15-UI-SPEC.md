@@ -1,7 +1,7 @@
 ---
 phase: 15
 slug: hitl-review-workflow
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-03-23
@@ -47,7 +47,7 @@ Declared values (must be multiples of 4). All values map to established Tailwind
 Exceptions:
 - Draggable divider: `w-1` (4px wide) — not a spacing token, it is a structural element width.
 - Touch targets for nav back-button and "Revisar" button: `min-h-[44px]` — matches established nav item height in base.html.
-- Editable input vertical padding: `py-0.5` (2px) — intentionally compact to match surrounding text rhythm.
+- Editable input vertical padding: `py-1` (4px) — compact but grid-aligned to match surrounding text rhythm.
 
 Source: `base.html` uses `px-8 py-8` for main content; `poliza_detail.html` uses `p-6` for cards, `gap-4` for grid.
 
@@ -93,6 +93,14 @@ Accent (`blue-600` / `blue-400`) reserved for:
 Destructive: No destructive actions exist in Phase 15 (no delete, no reset). `red-600` inherited only for evaluation score threshold display.
 
 Source: `base.html` (nav active state), `poliza_detail.html` (link and warning patterns), `15-CONTEXT.md` D-06.
+
+---
+
+## Visual Hierarchy
+
+**Primary focal point:** The PDF iframe occupying the left half of the viewport — the entire reason the review page exists is to see the source document while editing.
+**Secondary anchor:** The poliza number in the header bar (`text-xl font-semibold`) identifying which record is being reviewed.
+**Tertiary:** Editable field values in the right pane — the user's workspace for corrections.
 
 ---
 
@@ -154,7 +162,7 @@ Two modes: display and input. Toggled by JavaScript `onclick`. Saved by HTMX PAT
 **Input mode (on click):**
 ```
 <input
-  class="field-input text-sm border border-blue-400 rounded px-2 py-0.5 focus:outline-none w-full"
+  class="field-input text-sm border border-blue-400 rounded px-2 py-1 focus:outline-none w-full"
   type="{text|number|date}"
   value="{current_value}"
   hx-patch="/ui/polizas/{id}/fields"
