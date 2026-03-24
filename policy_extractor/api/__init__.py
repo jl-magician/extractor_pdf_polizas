@@ -253,8 +253,10 @@ from policy_extractor.api.ui.poliza_views import poliza_ui_router  # noqa: E402
 from policy_extractor.api.ui.upload_views import upload_ui_router  # noqa: E402
 from policy_extractor.api.ui.dashboard_views import dashboard_router  # noqa: E402
 from policy_extractor.api.ui.job_views import job_ui_router  # noqa: E402
+from policy_extractor.api.ui.review_views import review_router  # noqa: E402
 
 app.include_router(poliza_ui_router)
 app.include_router(upload_ui_router)
 app.include_router(dashboard_router)
 app.include_router(job_ui_router)
+app.include_router(review_router)
