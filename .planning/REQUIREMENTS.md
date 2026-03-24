@@ -31,8 +31,8 @@ Requirements for v2.0 Web UI & Extraction Quality milestone. Each maps to roadma
 ### Testing & Quality
 
 - [ ] **QA-01**: Golden dataset expanded to 20+ fixtures covering all 10 insurers
-- [ ] **QA-02**: Sonnet evaluation auto-triggered on configurable sample percentage of batch extractions
-- [ ] **QA-03**: Targeted Sonnet review pass detects campos_adicionales field swaps
+- [x] **QA-02**: Sonnet evaluation auto-triggered on configurable sample percentage of batch extractions
+- [x] **QA-03**: Targeted Sonnet review pass detects campos_adicionales field swaps
 
 ## Future Requirements
 
@@ -83,8 +83,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-04 | Phase 15 | Complete |
 | RPT-01 | Phase 16 | Pending |
 | RPT-02 | Phase 16 | Pending |
-| QA-02 | Phase 16 | Pending |
-| QA-03 | Phase 16 | Pending |
+| QA-02 | Phase 16 | Complete |
+| QA-03 | Phase 16 | Complete |
 | QA-01 | Phase 17 | Pending |
 
 **Coverage:**

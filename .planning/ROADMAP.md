@@ -98,10 +98,10 @@ Plans:
   2. The report layout differs visibly per aseguradora (e.g. Zurich uses a different field order and header than AXA) — templates are independently configurable without changing shared code
   3. When a batch extraction completes with 10 or more polizas, Sonnet evaluation is automatically triggered on a configurable percentage (default 10%) of the records in the batch — the user sees evaluation scores in the poliza list without running a separate command
   4. A dedicated Sonnet review pass detects campos_adicionales field swaps (where a value belongs to a different field key) and adds a warning to validation_warnings on the affected record
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
 - [ ] 16-01-PLAN.md — PDF report module with fpdf2 renderer, per-insurer YAML configs, download route (RPT-01, RPT-02)
-- [ ] 16-02-PLAN.md — Auto-evaluation hook with swap detection prompt extension, batch wiring (QA-02, QA-03)
+- [x] 16-02-PLAN.md — Auto-evaluation hook with swap detection prompt extension, batch wiring (QA-02, QA-03)
 - [ ] 16-03-PLAN.md — Score badges on poliza list/detail, aggregate eval stats on dashboard (QA-02, QA-03)
 
 ### Phase 17: Golden Dataset Expansion
@@ -136,5 +136,5 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 13. Extraction Pipeline Fixes | v2.0 | 3/3 | Complete    | 2026-03-20 |
 | 14. Web UI Foundation | v2.0 | 5/5 | Complete    | 2026-03-21 |
 | 15. HITL Review Workflow | v2.0 | 2/2 | Complete    | 2026-03-24 |
-| 16. PDF Reports & Auto-Evaluation | v2.0 | 0/3 | Planning complete | - |
+| 16. PDF Reports & Auto-Evaluation | v2.0 | 1/3 | In Progress|  |
 | 17. Golden Dataset Expansion | v2.0 | 0/? | Not started | - |

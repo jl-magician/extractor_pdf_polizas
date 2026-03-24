@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
-status: Ready to plan
-stopped_at: Phase 16 context gathered
-last_updated: "2026-03-24T04:39:40.706Z"
+status: Ready to execute
+stopped_at: Completed 16-pdf-reports-auto-evaluation 16-02-PLAN.md
+last_updated: "2026-03-24T05:13:48.709Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 13
+  completed_plans: 11
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 15 — hitl-review-workflow
+**Current focus:** Phase 16 — pdf-reports-auto-evaluation
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
+Phase: 16 (pdf-reports-auto-evaluation) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Plan: Not started
 | Phase 14-web-ui-foundation P05 | 5 | 2 tasks | 1 files |
 | Phase 15-hitl-review-workflow P01 | 207 | 3 tasks | 8 files |
 | Phase 15-hitl-review-workflow P02 | 147 | 2 tasks | 5 files |
+| Phase 16-pdf-reports-auto-evaluation P02 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ Recent decisions affecting current work:
 - [Phase 15-hitl-review-workflow]: Stub templates for poliza_review.html and partials — satisfy test assertions on Plan 01; Plan 02 replaces with full split-pane implementations
 - [Phase 15-hitl-review-workflow]: poliza_review.html is standalone (no extends base.html) — full viewport without sidebar per D-03
 - [Phase 15-hitl-review-workflow]: selectinload(Poliza.corrections) added to poliza_detail query for eager loading corrections on detail page
+- [Phase 16-02]: EVAL_SAMPLE_PERCENT uses getattr settings fallback for testability
+- [Phase 16-02]: campos_swap_suggestions required in tool schema — Sonnet must always return field (empty array if none)
+- [Phase 16-02]: Swap warnings appended to existing validation_warnings, never overwrite (Pitfall 4)
 
 ### Pending Todos
 
@@ -150,7 +154,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T04:39:40.696Z
-Stopped at: Phase 16 context gathered
-Resume file: .planning/phases/16-pdf-reports-auto-evaluation/16-CONTEXT.md
+Last session: 2026-03-24T05:13:48.700Z
+Stopped at: Completed 16-pdf-reports-auto-evaluation 16-02-PLAN.md
+Resume file: None
 Next action: /gsd:plan-phase 13
