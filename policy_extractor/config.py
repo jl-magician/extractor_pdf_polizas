@@ -27,5 +27,8 @@ class Settings:
     # Review threshold
     REVIEW_SCORE_THRESHOLD: float = float(os.getenv("REVIEW_SCORE_THRESHOLD", "0.70"))
 
+    # Auto-evaluation sampling (Phase 16 — QA-02)
+    EVAL_SAMPLE_PERCENT: int = int(os.getenv("EVAL_SAMPLE_PERCENT", "20"))
+
 
 settings = Settings()

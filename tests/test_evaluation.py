@@ -122,14 +122,27 @@ class TestBuildEvaluationTool:
         from policy_extractor.evaluation import build_evaluation_tool
         tool = build_evaluation_tool()
         props = tool["input_schema"]["properties"]
-        required_keys = {"completeness", "accuracy", "hallucination_risk", "flags", "summary"}
+        required_keys = {"completeness", "accuracy", "hallucination_risk", "flags", "summary", "campos_swap_suggestions"}
         assert required_keys == set(props.keys())
 
-    def test_schema_has_required_list_with_all_5_properties(self):
+    def test_schema_has_required_list_with_all_6_properties(self):
         from policy_extractor.evaluation import build_evaluation_tool
         tool = build_evaluation_tool()
         required = tool["input_schema"]["required"]
-        assert set(required) == {"completeness", "accuracy", "hallucination_risk", "flags", "summary"}
+        assert set(required) == {"completeness", "accuracy", "hallucination_risk", "flags", "summary", "campos_swap_suggestions"}
+
+    def test_schema_has_campos_swap_suggestions_property(self):
+        from policy_extractor.evaluation import build_evaluation_tool
+        tool = build_evaluation_tool()
+        props = tool["input_schema"]["properties"]
+        assert "campos_swap_suggestions" in props
+        assert props["campos_swap_suggestions"]["type"] == "array"
+
+    def test_campos_swap_suggestions_in_required(self):
+        from policy_extractor.evaluation import build_evaluation_tool
+        tool = build_evaluation_tool()
+        required = tool["input_schema"]["required"]
+        assert "campos_swap_suggestions" in required
 
     def test_numeric_scores_have_number_type(self):
         from policy_extractor.evaluation import build_evaluation_tool
@@ -149,6 +162,91 @@ class TestBuildEvaluationTool:
         tool = build_evaluation_tool()
         props = tool["input_schema"]["properties"]
         assert props["summary"]["type"] == "string"
+
+
+# ---------------------------------------------------------------------------
+# Tests: EVAL_SYSTEM_PROMPT
+# ---------------------------------------------------------------------------
+
+class TestEvalSystemPrompt:
+    def test_prompt_contains_swap_detection_section(self):
+        from policy_extractor.evaluation import EVAL_SYSTEM_PROMPT
+        assert "Deteccion de intercambio de campos" in EVAL_SYSTEM_PROMPT
+
+    def test_prompt_contains_source_key(self):
+        from policy_extractor.evaluation import EVAL_SYSTEM_PROMPT
+        assert "source_key" in EVAL_SYSTEM_PROMPT
+
+
+# ---------------------------------------------------------------------------
+# Tests: build_swap_warnings()
+# ---------------------------------------------------------------------------
+
+class TestBuildSwapWarnings:
+    def test_returns_warning_strings_for_swap_suggestions(self):
+        from policy_extractor.evaluation import build_swap_warnings
+        eval_json = json.dumps({
+            "campos_swap_suggestions": [
+                {
+                    "source_key": "prima_neta",
+                    "target_key": "derechos_poliza",
+                    "suspicious_value": "250.00",
+                    "reason": "El monto parece ser derechos, no prima neta",
+                }
+            ]
+        })
+        warnings = build_swap_warnings(eval_json)
+        assert len(warnings) == 1
+        assert "SWAP: campos_adicionales.prima_neta" in warnings[0]
+        assert "250.00" in warnings[0]
+        assert "derechos_poliza" in warnings[0]
+
+    def test_returns_empty_list_for_empty_swap_suggestions(self):
+        from policy_extractor.evaluation import build_swap_warnings
+        eval_json = json.dumps({"campos_swap_suggestions": []})
+        warnings = build_swap_warnings(eval_json)
+        assert warnings == []
+
+    def test_returns_empty_list_for_missing_swap_suggestions_key(self):
+        from policy_extractor.evaluation import build_swap_warnings
+        eval_json = json.dumps({"completeness": 0.9, "accuracy": 0.8})
+        warnings = build_swap_warnings(eval_json)
+        assert warnings == []
+
+    def test_returns_empty_list_for_invalid_json(self):
+        from policy_extractor.evaluation import build_swap_warnings
+        warnings = build_swap_warnings("not valid json {{{")
+        assert warnings == []
+
+    def test_warning_format_matches_swap_pattern(self):
+        from policy_extractor.evaluation import build_swap_warnings
+        eval_json = json.dumps({
+            "campos_swap_suggestions": [
+                {
+                    "source_key": "a",
+                    "target_key": "b",
+                    "suspicious_value": "x",
+                    "reason": "test reason",
+                }
+            ]
+        })
+        warnings = build_swap_warnings(eval_json)
+        assert len(warnings) == 1
+        assert warnings[0].startswith("SWAP: campos_adicionales.a")
+        assert '"x"' in warnings[0]
+        assert '"b"' in warnings[0]
+        assert "test reason" in warnings[0]
+
+    def test_multiple_swap_suggestions_produce_multiple_warnings(self):
+        from policy_extractor.evaluation import build_swap_warnings
+        eval_json = json.dumps({
+            "campos_swap_suggestions": [
+                {"source_key": "k1", "target_key": "k2", "suspicious_value": "v1", "reason": "r1"},
+                {"source_key": "k3", "target_key": "k4", "suspicious_value": "v2", "reason": "r2"},
+            ]
+        })
+        warnings = build_swap_warnings(eval_json)
+        assert len(warnings) == 2
 
 
 # ---------------------------------------------------------------------------

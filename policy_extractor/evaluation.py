@@ -3,6 +3,7 @@
 Exports:
     evaluate_policy(ingestion_result, policy, model) -> EvaluationResult | None
     build_evaluation_tool() -> dict
+    build_swap_warnings(evaluation_json) -> list[str]
     call_evaluation_api(client, assembled_text, extraction_json, model, max_tokens) -> Message
     EvaluationResult
     EVAL_MODEL_ID
@@ -69,6 +70,22 @@ Llama a la herramienta `evaluate_policy` con tus evaluaciones. No produzcas otra
 3. Identifica campos del PDF que no fueron capturados (afecta completeness)
 4. Identifica valores que no corresponden al texto fuente (afecta accuracy y hallucination_risk)
 5. Asigna puntajes objetivos basados en la evidencia
+
+## Deteccion de intercambio de campos (campos_adicionales)
+
+Revisa cada par clave-valor en campos_adicionales y evalua si el valor parece pertenecer a una clave diferente.
+
+Indicadores de intercambio:
+- Un valor numerico (como un monto o porcentaje) asignado a una clave que espera texto descriptivo
+- Un nombre o descripcion asignado a una clave que espera un numero
+- Un valor que coincide semanticamente mejor con otra clave presente en campos_adicionales
+- Valores que parecen estar rotados entre claves adyacentes en una tabla
+
+Para cada intercambio sospechado, reporta:
+- source_key: la clave donde el valor esta actualmente
+- target_key: la clave donde el valor deberia estar
+- suspicious_value: el valor sospechoso
+- reason: explicacion breve en espanol de por que sospechas el intercambio
 """
 
 # ---------------------------------------------------------------------------
@@ -144,8 +161,38 @@ def build_evaluation_tool() -> dict:
                     "type": "string",
                     "description": "Brief summary of overall extraction quality in Spanish.",
                 },
+                "campos_swap_suggestions": {
+                    "type": "array",
+                    "description": (
+                        "Lista de intercambios sospechados en campos_adicionales. "
+                        "Un intercambio es cuando un valor claramente pertenece a una clave diferente. "
+                        "Array vacio si no se detectan intercambios."
+                    ),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source_key": {
+                                "type": "string",
+                                "description": "Clave donde el valor esta actualmente",
+                            },
+                            "target_key": {
+                                "type": "string",
+                                "description": "Clave donde el valor deberia estar",
+                            },
+                            "suspicious_value": {
+                                "type": "string",
+                                "description": "El valor sospechoso de estar intercambiado",
+                            },
+                            "reason": {
+                                "type": "string",
+                                "description": "Explicacion breve del intercambio sospechado",
+                            },
+                        },
+                        "required": ["source_key", "target_key", "suspicious_value", "reason"],
+                    },
+                },
             },
-            "required": ["completeness", "accuracy", "hallucination_risk", "flags", "summary"],
+            "required": ["completeness", "accuracy", "hallucination_risk", "flags", "summary", "campos_swap_suggestions"],
         },
     }
 
@@ -210,6 +257,9 @@ def _parse_evaluation(message: anthropic.types.Message) -> EvaluationResult:
     # Overall score formula: (completeness + accuracy + (1 - hallucination_risk)) / 3
     score = (completeness + accuracy + (1.0 - hallucination_risk)) / 3.0
 
+    # Extract swap suggestions for validation_warnings (D-17)
+    swap_suggestions = raw_input.get("campos_swap_suggestions", [])
+
     # Build evaluation dict with clamped values
     eval_dict = {
         "completeness": completeness,
@@ -217,6 +267,7 @@ def _parse_evaluation(message: anthropic.types.Message) -> EvaluationResult:
         "hallucination_risk": hallucination_risk,
         "flags": raw_input.get("flags", []),
         "summary": raw_input.get("summary", ""),
+        "campos_swap_suggestions": swap_suggestions,
     }
 
     # Serialize to JSON string — use json.dumps so null not None, true not True
@@ -229,6 +280,32 @@ def _parse_evaluation(message: anthropic.types.Message) -> EvaluationResult:
         model_id=message.model,
         usage=message.usage,
     )
+
+
+# ---------------------------------------------------------------------------
+# Swap warning builder
+# ---------------------------------------------------------------------------
+
+
+def build_swap_warnings(evaluation_json: str) -> list[str]:
+    """Build validation warning strings from swap suggestions in evaluation JSON.
+
+    Returns list of warning strings like:
+    'SWAP: campos_adicionales.{source_key} = "{value}" parece pertenecer a "{target_key}". Razon: {reason}'
+    """
+    try:
+        data = json.loads(evaluation_json)
+        suggestions = data.get("campos_swap_suggestions", [])
+        warnings = []
+        for s in suggestions:
+            warnings.append(
+                f"SWAP: campos_adicionales.{s['source_key']} = \"{s['suspicious_value']}\" "
+                f"parece pertenecer a \"{s['target_key']}\". "
+                f"Razon: {s['reason']}"
+            )
+        return warnings
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return []
 
 
 # ---------------------------------------------------------------------------
