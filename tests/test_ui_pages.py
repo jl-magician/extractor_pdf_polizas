@@ -183,3 +183,76 @@ def test_poliza_report_404(test_poliza):
     """GET /ui/polizas/99999/report returns 404 for non-existent poliza."""
     response = client.get("/ui/polizas/99999/report")
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Evaluation score badge and dashboard eval stats tests (Phase 16 Plan 03)
+# ---------------------------------------------------------------------------
+
+
+def test_dashboard_eval_stats_no_evaluations():
+    """GET / with no evaluated polizas shows 'sin evaluaciones' or '--'."""
+    response = client.get("/")
+    assert response.status_code == 200
+    # When no polizas are evaluated, avg_score_display is None → shows 'sin evaluaciones' or '--'
+    assert "sin evaluaciones" in response.text or "--" in response.text
+
+
+def test_dashboard_eval_stats_with_evaluations():
+    """GET / with evaluated polizas shows 'Evaluacion de Calidad' card with counts."""
+    db = TestingSessionLocal()
+    try:
+        db.add(Poliza(
+            numero_poliza="EVAL-001",
+            aseguradora="Zurich",
+            evaluation_score=0.85,
+        ))
+        db.add(Poliza(
+            numero_poliza="EVAL-002",
+            aseguradora="AXA",
+            evaluation_score=0.65,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Evaluacion de Calidad" in response.text
+    assert "2 de" in response.text
+
+
+def test_poliza_list_score_badge():
+    """Poliza with evaluation_score=0.9 shows green badge (bg-green-100) on list."""
+    db = TestingSessionLocal()
+    try:
+        db.add(Poliza(
+            numero_poliza="GREEN-001",
+            aseguradora="Zurich",
+            evaluation_score=0.9,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/ui/polizas")
+    assert response.status_code == 200
+    assert "bg-green-100" in response.text
+
+
+def test_poliza_list_no_score():
+    """Poliza with evaluation_score=None shows '--' on list (no crash)."""
+    db = TestingSessionLocal()
+    try:
+        db.add(Poliza(
+            numero_poliza="NOSCORE-001",
+            aseguradora="Zurich",
+            evaluation_score=None,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/ui/polizas")
+    assert response.status_code == 200
+    assert "--" in response.text

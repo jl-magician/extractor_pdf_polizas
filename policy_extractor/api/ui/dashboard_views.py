@@ -42,10 +42,30 @@ def _get_stats(db: Session, since: date | None = None, until: date | None = None
         )
     total_warnings = db.scalar(warning_stmt) or 0
 
+    # Evaluation stats (Phase 16 — D-15b)
+    eval_stmt = select(func.count(Poliza.id)).where(Poliza.evaluation_score.isnot(None))
+    if since:
+        eval_stmt = eval_stmt.where(
+            Poliza.extracted_at >= datetime.combine(since, datetime.min.time())
+        )
+    if until:
+        eval_stmt = eval_stmt.where(
+            Poliza.extracted_at <= datetime.combine(until, datetime.max.time())
+        )
+    total_evaluated = db.scalar(eval_stmt) or 0
+
+    total_polizas = row.total or 0
+    avg_score_raw = row.avg_score
+    eval_pct = round((total_evaluated / total_polizas * 100), 1) if total_polizas > 0 else 0.0
+    avg_score_display = round(avg_score_raw * 100, 1) if avg_score_raw is not None else None
+
     return {
-        "total": row.total or 0,
-        "avg_score": round(float(row.avg_score or 0), 2),
+        "total": total_polizas,
+        "avg_score": round(float(avg_score_raw or 0), 2),
         "total_warnings": total_warnings,
+        "total_evaluated": total_evaluated,
+        "eval_pct": eval_pct,
+        "avg_score_display": avg_score_display,
     }
 
 

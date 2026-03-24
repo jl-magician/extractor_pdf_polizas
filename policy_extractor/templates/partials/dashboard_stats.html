@@ -1,7 +1,7 @@
 <!-- Dashboard stats partial — NO extends (rendered by HTMX into #dashboard-stats div) -->
 
-<!-- 3-column stat card row -->
-<div class="grid grid-cols-3 gap-6 mb-8">
+<!-- 4-column stat card row -->
+<div class="grid grid-cols-4 gap-6 mb-8">
   <!-- Total Polizas -->
   <div class="bg-white rounded-lg shadow-sm p-6">
     <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Polizas</p>
@@ -23,6 +23,28 @@
       {% if stats.total > 0 %}{{ "%.0f"|format(stats.avg_score * 100) }}%{% else %}—{% endif %}
     </p>
     <p class="text-sm text-gray-500 mt-1">calidad de extraccion</p>
+  </div>
+
+  <!-- Evaluacion de Calidad (D-15b) -->
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Evaluacion de Calidad</p>
+    <div class="mt-2 flex items-baseline gap-3">
+      {% if stats.avg_score_display is not none %}
+        <span class="text-3xl font-bold
+          {% if stats.avg_score_display >= 80 %}text-green-600
+          {% elif stats.avg_score_display >= 60 %}text-yellow-600
+          {% else %}text-red-600{% endif %}">
+          {{ stats.avg_score_display }}%
+        </span>
+        <span class="text-sm text-gray-500">promedio</span>
+      {% else %}
+        <span class="text-3xl font-bold text-gray-400">--</span>
+        <span class="text-sm text-gray-500">sin evaluaciones</span>
+      {% endif %}
+    </div>
+    <p class="mt-2 text-sm text-gray-500">
+      {{ stats.total_evaluated }} de {{ stats.total }} polizas evaluadas ({{ stats.eval_pct }}%)
+    </p>
   </div>
 </div>
 

@@ -7,7 +7,17 @@
 <div class="flex items-center justify-between mb-6">
   <div>
     <a href="/ui/polizas" class="text-blue-600 hover:underline text-sm">&larr; Volver a la lista</a>
-    <h1 class="text-xl font-semibold text-gray-900 mt-1">Poliza {{ poliza.numero_poliza }}</h1>
+    <div class="flex items-center gap-3 mt-1">
+      <h1 class="text-xl font-semibold text-gray-900">Poliza {{ poliza.numero_poliza }}</h1>
+      {% if poliza.evaluation_score is not none %}
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium
+          {% if poliza.evaluation_score >= 0.8 %}bg-green-100 text-green-800
+          {% elif poliza.evaluation_score >= 0.6 %}bg-yellow-100 text-yellow-800
+          {% else %}bg-red-100 text-red-800{% endif %}">
+          Calidad: {{ "%.0f"|format(poliza.evaluation_score * 100) }}%
+        </span>
+      {% endif %}
+    </div>
   </div>
   <!-- Export buttons (D-05) -->
   <div class="flex items-center gap-2">
