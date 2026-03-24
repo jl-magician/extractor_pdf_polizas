@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
-status: Ready to plan
-stopped_at: Phase 17 context gathered
-last_updated: "2026-03-24T06:12:34.826Z"
+status: Ready to execute
+stopped_at: Completed 17-golden-dataset-expansion-02-PLAN.md
+last_updated: "2026-03-24T06:25:49.791Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 15
+  completed_plans: 14
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 16 — pdf-reports-auto-evaluation
+**Current focus:** Phase 17 — golden-dataset-expansion
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
+Phase: 17 (golden-dataset-expansion) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: Not started
 | Phase 16-pdf-reports-auto-evaluation P02 | 15 | 2 tasks | 5 files |
 | Phase 16-pdf-reports-auto-evaluation P01 | 15 | 2 tasks | 12 files |
 | Phase 16-pdf-reports-auto-evaluation P03 | 15 | 2 tasks | 7 files |
+| Phase 17-golden-dataset-expansion P02 | 95 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,8 @@ Recent decisions affecting current work:
 - [Phase 16-pdf-reports-auto-evaluation]: lru_cache on _load_config_by_name(normalized_name) — normalize before caching ensures Zurich/zurich/ZURICH all hit same cache entry
 - [Phase 16-03]: Score badge logic placed in poliza_rows.html partial to preserve HTMX pattern; poliza_list.html has Jinja2 comment with badge CSS references
 - [Phase 16-03]: dashboard_stats.html expanded from 3-col to 4-col grid for Evaluacion de Calidad card; _get_stats() extended with total_evaluated/eval_pct/avg_score_display
+- [Phase 17-golden-dataset-expansion]: _parse_insurer_from_nodeid uses regex on last [...] bracket then splits on _ for insurer extraction
+- [Phase 17-golden-dataset-expansion]: RegressionCoveragePlugin class-based encapsulation keeps _results state per session; pytest_configure registers globally
 
 ### Pending Todos
 
@@ -161,7 +164,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T06:12:34.821Z
-Stopped at: Phase 17 context gathered
-Resume file: .planning/phases/17-golden-dataset-expansion/17-CONTEXT.md
+Last session: 2026-03-24T06:25:49.781Z
+Stopped at: Completed 17-golden-dataset-expansion-02-PLAN.md
+Resume file: None
 Next action: /gsd:plan-phase 13
