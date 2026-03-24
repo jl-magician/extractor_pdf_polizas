@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-24T06:45:51.943Z",
+  "phase": "17",
+  "phase_name": "golden-dataset-expansion",
+  "phase_dir": ".planning/phases/17-golden-dataset-expansion",
+  "plan": null,
+  "task": null,
+  "total_tasks": 2,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "17-01: Batch fixture creation CLI", "status": "done", "commit": "16cce5a"},
+    {"id": 2, "name": "17-02: Coverage matrix plugin", "status": "done", "commit": "6bb5f97"}
+  ],
+  "remaining_tasks": [],
+  "blockers": [
+    {
+      "description": "Golden dataset is empty — tests/fixtures/golden/ has 0 files. Need 20+ real PDF fixtures.",
+      "type": "human_action",
+      "workaround": "User must place real PDFs in pdfs-to-test/ and run batch-fixtures"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Place 20+ real insurance PDFs (2 per insurer) in pdfs-to-test/ directory",
+      "context": "Insurers: Zurich, Qualitas, Mapfre, AXA, GNP, Chubb, Ana, HDI, Plan Seguro, Prudential. Name files by insurer/type for auto-detection.",
+      "blocking": true
+    },
+    {
+      "action": "Run: poliza-extractor batch-fixtures pdfs-to-test/ --run-tests",
+      "context": "Creates golden fixtures from PDFs, redacts PII, validates with regression tests",
+      "blocking": true
+    },
+    {
+      "action": "Review extractions in HITL UI (localhost:8000), correct any errors",
+      "context": "Two-step process per D-02: raw fixtures first, then review/correct before committing",
+      "blocking": false
+    },
+    {
+      "action": "Commit golden fixtures: git add tests/fixtures/golden/ && git commit",
+      "context": "Fixtures must be committed for regression tests to run in CI",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {"decision": "fpdf2 for PDF reports instead of WeasyPrint", "rationale": "GTK/Tesseract DLL conflict on Windows 11", "phase": "16"},
+    {"decision": "Auto-eval triggers after any extraction when batch >= 10, 20% sample", "rationale": "User prefers higher quality coverage over cost savings", "phase": "16"},
+    {"decision": "Batch script creates raw fixtures, user reviews in HITL UI before finalizing", "rationale": "Two-step process is safer than trusting raw extraction output", "phase": "17"}
+  ],
+  "uncommitted_files": [
+    ".planning/phases/17-golden-dataset-expansion/17-VERIFICATION.md"
+  ],
+  "next_action": "Place 20+ real PDFs in pdfs-to-test/, run batch-fixtures, review in HITL UI, commit fixtures, then /gsd:verify-work 17",
+  "context_notes": "Phase 17 tooling is 100% complete (batch-fixtures CLI + coverage matrix plugin, 480 tests pass). The only gap is the actual golden fixture data which requires the user's real insurance PDFs. After fixtures are created and committed, run /gsd:verify-work 17 to confirm phase goal, then /gsd:complete-milestone to finish v2.0."
+}
