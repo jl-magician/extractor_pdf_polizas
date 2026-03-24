@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
-status: Ready to execute
-stopped_at: Completed 15-hitl-review-workflow 15-01-PLAN.md
-last_updated: "2026-03-24T02:00:10.647Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 15-hitl-review-workflow 15-02-PLAN.md
+last_updated: "2026-03-24T02:05:27.709Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -43,6 +43,7 @@ Plan: 2 of 2
 | Phase 14 P04 | 5 | 2 tasks | 7 files |
 | Phase 14-web-ui-foundation P05 | 5 | 2 tasks | 1 files |
 | Phase 15-hitl-review-workflow P01 | 207 | 3 tasks | 8 files |
+| Phase 15-hitl-review-workflow P02 | 147 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,8 @@ Recent decisions affecting current work:
 - [Phase 14-web-ui-foundation]: Integration tests committed in 039dfee bundled with job_ui_router registration; StaticPool pattern established for all UI test modules
 - [Phase 15-hitl-review-workflow]: Form(default='') for nullable PATCH value param — FastAPI Form(...) rejects empty string as missing; default='' allows blank submissions for null-setting
 - [Phase 15-hitl-review-workflow]: Stub templates for poliza_review.html and partials — satisfy test assertions on Plan 01; Plan 02 replaces with full split-pane implementations
+- [Phase 15-hitl-review-workflow]: poliza_review.html is standalone (no extends base.html) — full viewport without sidebar per D-03
+- [Phase 15-hitl-review-workflow]: selectinload(Poliza.corrections) added to poliza_detail query for eager loading corrections on detail page
 
 ### Pending Todos
 
@@ -147,7 +150,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T02:00:10.643Z
-Stopped at: Completed 15-hitl-review-workflow 15-01-PLAN.md
+Last session: 2026-03-24T02:05:27.704Z
+Stopped at: Completed 15-hitl-review-workflow 15-02-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13

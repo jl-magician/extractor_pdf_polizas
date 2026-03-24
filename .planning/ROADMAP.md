@@ -36,7 +36,7 @@
 
 - [x] **Phase 13: Extraction Pipeline Fixes** - Fix auto-OCR fallback, financial cross-validation, and field exclusion (completed 2026-03-20)
 - [x] **Phase 14: Web UI Foundation** - Read-only browser interface: upload, list, detail, dashboard, PDF retention (completed 2026-03-21)
-- [ ] **Phase 15: HITL Review Workflow** - Side-by-side PDF editor with corrections audit trail
+- [x] **Phase 15: HITL Review Workflow** - Side-by-side PDF editor with corrections audit trail (completed 2026-03-24)
 - [ ] **Phase 16: PDF Reports & Auto-Evaluation** - Per-insurer PDF reports and auto-triggered Sonnet evaluation
 - [ ] **Phase 17: Golden Dataset Expansion** - 20+ fixtures covering all 10 insurers
 
@@ -84,10 +84,10 @@ Plans:
   2. User can click any field value, edit it inline, and the change is saved automatically when the user leaves the field — no explicit save button required
   3. Every correction is stored in a separate corrections table with field_path, old_value, new_value, and corrected_at — the original LLM-extracted value in the polizas table is never overwritten
   4. User can view the full correction history for any poliza as a chronological list showing what was changed, from what, to what, and when
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 15-01-PLAN.md — Correction model, migration 005, review backend routes, integration tests (UI-03, UI-04)
-- [ ] 15-02-PLAN.md — Review page template, field row partial, correction history, detail page modifications (UI-03, UI-04)
+- [x] 15-02-PLAN.md — Review page template, field row partial, correction history, detail page modifications (UI-03, UI-04)
 
 ### Phase 16: PDF Reports & Auto-Evaluation
 **Goal**: Users can download a formatted PDF summary for any poliza, and Sonnet quality evaluation runs automatically on a sample of each batch
@@ -131,6 +131,6 @@ Phases execute in numeric order: 13 → 14 → 15 → 16 → 17
 | 12. Milestone Polish | v1.1 | 2/2 | Complete | 2026-03-19 |
 | 13. Extraction Pipeline Fixes | v2.0 | 3/3 | Complete    | 2026-03-20 |
 | 14. Web UI Foundation | v2.0 | 5/5 | Complete    | 2026-03-21 |
-| 15. HITL Review Workflow | v2.0 | 1/2 | In Progress|  |
+| 15. HITL Review Workflow | v2.0 | 2/2 | Complete   | 2026-03-24 |
 | 16. PDF Reports & Auto-Evaluation | v2.0 | 0/? | Not started | - |
 | 17. Golden Dataset Expansion | v2.0 | 0/? | Not started | - |
