@@ -157,8 +157,10 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
             result = policy.model_dump(mode="json")
 
             if evaluate:
-                from policy_extractor.evaluation import evaluate_policy
+                from policy_extractor.evaluation import evaluate_policy, build_swap_warnings
                 from policy_extractor.storage.writer import update_evaluation_columns
+                from policy_extractor.storage.models import Poliza
+                from sqlalchemy import select
                 eval_result = evaluate_policy(ingestion_result, policy)
                 if eval_result is not None:
                     update_evaluation_columns(
@@ -168,6 +170,20 @@ def _run_extraction(job_id: str, pdf_path: Path, model: str | None, force: bool,
                     )
                     result["evaluation_score"] = eval_result.score
                     result["evaluation_json"] = eval_result.evaluation_json
+
+                    # D-17: Append swap warnings to validation_warnings (never overwrite)
+                    swap_warnings = build_swap_warnings(eval_result.evaluation_json)
+                    if swap_warnings:
+                        poliza_obj = session.execute(
+                            select(Poliza).where(
+                                Poliza.numero_poliza == policy.numero_poliza,
+                                Poliza.aseguradora == policy.aseguradora,
+                            )
+                        ).scalar_one_or_none()
+                        if poliza_obj:
+                            existing_warnings = poliza_obj.validation_warnings or []
+                            poliza_obj.validation_warnings = existing_warnings + swap_warnings
+                            session.commit()
                 else:
                     result["evaluation_score"] = None
                     result["evaluation_json"] = None
@@ -257,6 +273,76 @@ def _run_single_file_extraction(session, pdf_path: Path, model: str | None, forc
         return ("failed", {"error": str(exc)})
 
 
+def _auto_evaluate_batch(session, summaries: list[dict], model: str | None) -> None:
+    """Auto-evaluate a random sample of successfully extracted polizas from a batch.
+
+    Per D-12: only triggers when >= 10 successful extractions in batch.
+    Per D-13: sample percentage from settings.EVAL_SAMPLE_PERCENT (default 20%).
+    Per D-14: runs in same thread, adds ~3-5s per evaluated record.
+    Per D-17: swap warnings appended to existing validation_warnings.
+    """
+    import random
+    from policy_extractor.config import settings
+    from policy_extractor.evaluation import evaluate_policy, build_swap_warnings
+    from policy_extractor.storage.writer import update_evaluation_columns, orm_to_schema
+    from policy_extractor.storage.models import Poliza
+    from policy_extractor.ingestion import ingest_pdf
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    successful = [s for s in summaries if s["status"] == "complete" and s.get("poliza_id")]
+    total = len(successful)
+    if total < 10:
+        return  # D-12: only trigger when >= 10
+
+    sample_pct = getattr(settings, "EVAL_SAMPLE_PERCENT", 20)
+    sample_count = max(1, round(total * sample_pct / 100))
+    sampled = random.sample(successful, min(sample_count, total))
+
+    for entry in sampled:
+        try:
+            poliza = session.execute(
+                select(Poliza)
+                .options(selectinload(Poliza.asegurados), selectinload(Poliza.coberturas))
+                .where(Poliza.id == entry["poliza_id"])
+            ).scalar_one_or_none()
+            if poliza is None:
+                continue
+
+            # Reconstruct ingestion_result from retained PDF
+            pdf_path = PDFS_RETENTION_DIR / f"{poliza.id}.pdf"
+            if not pdf_path.exists():
+                continue
+
+            ingestion_result = ingest_pdf(pdf_path, session=session, force_reprocess=False)
+
+            # Reconstruct PolicyExtraction from ORM
+            policy_schema = orm_to_schema(poliza)
+
+            eval_result = evaluate_policy(ingestion_result, policy_schema, model=model or "claude-sonnet-4-5-20250514")
+            if eval_result is None:
+                continue
+
+            update_evaluation_columns(
+                session, poliza.numero_poliza, poliza.aseguradora,
+                eval_result.score, eval_result.evaluation_json,
+                eval_result.evaluated_at, eval_result.model_id,
+            )
+
+            # D-17: Append swap warnings to validation_warnings (do NOT overwrite existing)
+            swap_warnings = build_swap_warnings(eval_result.evaluation_json)
+            if swap_warnings:
+                existing_warnings = poliza.validation_warnings or []
+                poliza.validation_warnings = existing_warnings + swap_warnings
+                session.commit()
+
+        except Exception as exc:
+            # Per evaluate_policy contract: never raises. But guard the loop anyway.
+            from loguru import logger
+            logger.warning(f"Auto-eval failed for poliza {entry.get('poliza_id')}: {exc}")
+            continue
+
+
 def _run_batch_extraction(batch_id: str, file_entries: list[dict], model: str | None, force: bool) -> None:
     """Background batch extraction worker with DB-backed progress tracking.
 
@@ -307,6 +393,12 @@ def _run_batch_extraction(batch_id: str, file_entries: list[dict], model: str | 
                     .values(failed_files=BatchJob.failed_files + 1)
                 )
             session.commit()
+
+        # Auto-evaluate sample (D-12, D-14)
+        try:
+            _auto_evaluate_batch(session, summaries, model)
+        except Exception:
+            pass  # Never fail a batch due to evaluation errors
 
         # Mark batch complete with all results
         from datetime import datetime, timezone
