@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
 status: Ready to plan
-stopped_at: Completed 16-pdf-reports-auto-evaluation 16-03-PLAN.md
-last_updated: "2026-03-24T05:32:19.735Z"
+stopped_at: Phase 17 context gathered
+last_updated: "2026-03-24T06:12:34.826Z"
 progress:
   total_phases: 5
   completed_phases: 4
@@ -161,7 +161,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T05:26:25.289Z
-Stopped at: Completed 16-pdf-reports-auto-evaluation 16-03-PLAN.md
-Resume file: None
+Last session: 2026-03-24T06:12:34.821Z
+Stopped at: Phase 17 context gathered
+Resume file: .planning/phases/17-golden-dataset-expansion/17-CONTEXT.md
 Next action: /gsd:plan-phase 13
