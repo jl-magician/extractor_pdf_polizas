@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
-status: unknown
-stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-03-24T01:36:57.271Z"
+status: Ready to execute
+stopped_at: Completed 15-hitl-review-workflow 15-01-PLAN.md
+last_updated: "2026-03-24T02:00:10.647Z"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** Extract all available data from any insurance policy PDF automatically — regardless of insurer or format — and store it structured for query and integration.
-**Current focus:** Phase 14 — web-ui-foundation
+**Current focus:** Phase 15 — hitl-review-workflow
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
+Phase: 15 (hitl-review-workflow) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Plan: Not started
 | Phase 14 P02 | 385 | 3 tasks | 7 files |
 | Phase 14 P04 | 5 | 2 tasks | 7 files |
 | Phase 14-web-ui-foundation P05 | 5 | 2 tasks | 1 files |
+| Phase 15-hitl-review-workflow P01 | 207 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,8 @@ Recent decisions affecting current work:
 - [Phase 14]: HTMX partial check: HX-Request header present returns stats partial (no DOCTYPE); absent returns full dashboard.html
 - [Phase 14]: Date range D-17: periodo preset OR custom desde/hasta query params; needs-review uses OR(score < threshold, warnings IS NOT NULL)
 - [Phase 14-web-ui-foundation]: Integration tests committed in 039dfee bundled with job_ui_router registration; StaticPool pattern established for all UI test modules
+- [Phase 15-hitl-review-workflow]: Form(default='') for nullable PATCH value param — FastAPI Form(...) rejects empty string as missing; default='' allows blank submissions for null-setting
+- [Phase 15-hitl-review-workflow]: Stub templates for poliza_review.html and partials — satisfy test assertions on Plan 01; Plan 02 replaces with full split-pane implementations
 
 ### Pending Todos
 
@@ -144,7 +147,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T01:36:57.266Z
-Stopped at: Phase 15 UI-SPEC approved
-Resume file: .planning/phases/15-hitl-review-workflow/15-UI-SPEC.md
+Last session: 2026-03-24T02:00:10.643Z
+Stopped at: Completed 15-hitl-review-workflow 15-01-PLAN.md
+Resume file: None
 Next action: /gsd:plan-phase 13
