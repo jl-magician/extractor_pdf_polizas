@@ -25,8 +25,8 @@ Requirements for v2.0 Web UI & Extraction Quality milestone. Each maps to roadma
 
 ### Reports
 
-- [ ] **RPT-01**: User can generate a PDF report from extracted poliza data
-- [ ] **RPT-02**: System supports per-insurer report templates (customizable layout per aseguradora)
+- [x] **RPT-01**: User can generate a PDF report from extracted poliza data
+- [x] **RPT-02**: System supports per-insurer report templates (customizable layout per aseguradora)
 
 ### Testing & Quality
 
@@ -81,8 +81,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-06 | Phase 14 | Complete |
 | UI-03 | Phase 15 | Complete |
 | UI-04 | Phase 15 | Complete |
-| RPT-01 | Phase 16 | Pending |
-| RPT-02 | Phase 16 | Pending |
+| RPT-01 | Phase 16 | Complete |
+| RPT-02 | Phase 16 | Complete |
 | QA-02 | Phase 16 | Complete |
 | QA-03 | Phase 16 | Complete |
 | QA-01 | Phase 17 | Pending |

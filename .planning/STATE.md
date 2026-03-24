@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Web UI & Extraction Quality
-status: Ready to execute
-stopped_at: Completed 16-pdf-reports-auto-evaluation 16-02-PLAN.md
-last_updated: "2026-03-24T05:13:48.709Z"
+status: Ready to plan
+stopped_at: Completed 16-pdf-reports-auto-evaluation 16-03-PLAN.md
+last_updated: "2026-03-24T05:32:19.735Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 13
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-20)
 
 ## Current Position
 
-Phase: 16 (pdf-reports-auto-evaluation) — EXECUTING
-Plan: 2 of 3
+Phase: 17
+Plan: Not started
 
 ## Performance Metrics
 
@@ -45,6 +45,8 @@ Plan: 2 of 3
 | Phase 15-hitl-review-workflow P01 | 207 | 3 tasks | 8 files |
 | Phase 15-hitl-review-workflow P02 | 147 | 2 tasks | 5 files |
 | Phase 16-pdf-reports-auto-evaluation P02 | 15 | 2 tasks | 5 files |
+| Phase 16-pdf-reports-auto-evaluation P01 | 15 | 2 tasks | 12 files |
+| Phase 16-pdf-reports-auto-evaluation P03 | 15 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -135,6 +137,11 @@ Recent decisions affecting current work:
 - [Phase 16-02]: EVAL_SAMPLE_PERCENT uses getattr settings fallback for testability
 - [Phase 16-02]: campos_swap_suggestions required in tool schema — Sonnet must always return field (empty array if none)
 - [Phase 16-02]: Swap warnings appended to existing validation_warnings, never overwrite (Pitfall 4)
+- [Phase 16-pdf-reports-auto-evaluation]: helvetica built-in font used instead of DejaVuSans TTF — fpdf2 2.8.x ships no TTF files; helvetica handles Spanish chars via WinAnsi encoding
+- [Phase 16-pdf-reports-auto-evaluation]: PyMuPDF (fitz) used for PDF test content verification — fpdf2 compresses streams by default making raw byte search unreliable
+- [Phase 16-pdf-reports-auto-evaluation]: lru_cache on _load_config_by_name(normalized_name) — normalize before caching ensures Zurich/zurich/ZURICH all hit same cache entry
+- [Phase 16-03]: Score badge logic placed in poliza_rows.html partial to preserve HTMX pattern; poliza_list.html has Jinja2 comment with badge CSS references
+- [Phase 16-03]: dashboard_stats.html expanded from 3-col to 4-col grid for Evaluacion de Calidad card; _get_stats() extended with total_evaluated/eval_pct/avg_score_display
 
 ### Pending Todos
 
@@ -154,7 +161,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-24T05:13:48.700Z
-Stopped at: Completed 16-pdf-reports-auto-evaluation 16-02-PLAN.md
+Last session: 2026-03-24T05:26:25.289Z
+Stopped at: Completed 16-pdf-reports-auto-evaluation 16-03-PLAN.md
 Resume file: None
 Next action: /gsd:plan-phase 13
