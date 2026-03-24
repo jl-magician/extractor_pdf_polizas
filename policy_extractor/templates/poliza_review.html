@@ -12,6 +12,13 @@
   <header class="flex items-center gap-4 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0 min-h-[44px]">
     <a href="/ui/polizas/{{ poliza.id }}" class="text-blue-600 hover:underline text-sm">&larr; Volver</a>
     <h1 class="text-sm font-semibold text-gray-900">Poliza {{ poliza.numero_poliza }}</h1>
+    <div class="ml-auto">
+      <a href="/ui/polizas/{{ poliza.id }}/report"
+         class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+         download>
+        Descargar Reporte
+      </a>
+    </div>
   </header>
 
   <!-- Split pane container -->
