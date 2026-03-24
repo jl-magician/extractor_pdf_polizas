@@ -4,12 +4,24 @@
   <td class="px-4 py-3 text-gray-700">{{ p.aseguradora }}</td>
   <td class="px-4 py-3 text-gray-700">{{ p.tipo_seguro or '-' }}</td>
   <td class="px-4 py-3 text-gray-700">{{ p.nombre_contratante or '-' }}</td>
-  <td class="px-4 py-3 text-gray-700">
+  <td class="px-4 py-3 whitespace-nowrap text-sm">
     {% if p.evaluation_score is not none %}
-    <span class="{% if p.evaluation_score < 0.70 %}text-red-600 font-semibold{% else %}text-gray-700{% endif %}">
-      {{ "%.2f"|format(p.evaluation_score) }}
-    </span>
-    {% else %}-{% endif %}
+      {% if p.evaluation_score >= 0.8 %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          {{ "%.0f"|format(p.evaluation_score * 100) }}%
+        </span>
+      {% elif p.evaluation_score >= 0.6 %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          {{ "%.0f"|format(p.evaluation_score * 100) }}%
+        </span>
+      {% else %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          {{ "%.0f"|format(p.evaluation_score * 100) }}%
+        </span>
+      {% endif %}
+    {% else %}
+      <span class="text-gray-400 text-xs">--</span>
+    {% endif %}
   </td>
 </tr>
 {% endfor %}

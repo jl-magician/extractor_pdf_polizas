@@ -121,10 +121,11 @@
         <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Aseguradora</th>
         <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Tipo de Seguro</th>
         <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Contratante</th>
-        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Score</th>
+        <th scope="col" class="text-xs font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 text-left">Calidad</th>
       </tr>
     </thead>
     <tbody id="poliza-rows">
+      {# poliza_rows partial renders evaluation_score: is not none guard; bg-green-100 >=0.8; bg-yellow-100 >=0.6; bg-red-100 <0.6; -- for unevaluated #}
       {% include "partials/poliza_rows.html" %}
     </tbody>
   </table>
