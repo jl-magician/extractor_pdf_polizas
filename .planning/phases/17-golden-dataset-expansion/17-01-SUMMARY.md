@@ -126,6 +126,13 @@ No environment variables or dashboard configuration required.
 - Plan 17-02 (golden dataset population) can proceed: user runs `batch-fixtures` on their real PDFs, reviews output, commits fixtures
 - No blockers
 
+## Self-Check: PASSED
+
+- `policy_extractor/cli.py` — FOUND
+- `tests/test_batch_fixture.py` — FOUND
+- `.planning/phases/17-golden-dataset-expansion/17-01-SUMMARY.md` — FOUND
+- Commit `16cce5a` — FOUND in git log
+
 ---
 *Phase: 17-golden-dataset-expansion*
 *Completed: 2026-03-24*
