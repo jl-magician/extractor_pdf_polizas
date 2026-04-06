@@ -1,24 +1,27 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-06T05:23:08.293Z",
-  "phase": "18",
-  "phase_name": "financial-fields-evaluation-improvements",
+  "timestamp": "2026-04-06T19:58:57.743Z",
+  "phase": "post-v2.0",
+  "phase_name": "between-milestones",
   "phase_dir": null,
   "plan": null,
   "task": null,
-  "total_tasks": 7,
+  "total_tasks": 0,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Financial breakdown fields (prima_neta, derecho_poliza, recargo, descuento, iva, otros_cargos, primer_pago, pago_subsecuente)", "status": "done"},
-    {"id": 2, "name": "Schema + DB model + Alembic migration 006 + writer + export", "status": "done"},
-    {"id": 3, "name": "Prompt v2.2.0 with explicit financial field mapping and Zurich multi-column table restructurer", "status": "done"},
-    {"id": 4, "name": "Smart re-extraction: auto re-extract when prompt_version changes", "status": "done"},
-    {"id": 5, "name": "Evaluate buttons: single poliza + evaluate-all on list page", "status": "done"},
-    {"id": 6, "name": "Evaluation details UI: score cards, flagged fields highlighted with orange borders, click-to-scroll, inline reasons", "status": "done"},
-    {"id": 7, "name": "Extraction rules system: user-approved flags saved as permanent rules, rules management page at /ui/reglas", "status": "done"}
+    {"id": 1, "name": "v1.0 MVP (Phases 1-5)", "status": "done"},
+    {"id": 2, "name": "v1.1 API & Quality (Phases 6-12)", "status": "done"},
+    {"id": 3, "name": "v2.0 Web UI & Extraction Quality (Phases 13-17)", "status": "done"},
+    {"id": 4, "name": "Phase 18 (informal): Financial breakdown fields, evaluation UI, extraction rules system", "status": "done", "commit": "15eb54b"}
   ],
-  "remaining_tasks": [],
-  "blockers": [],
+  "remaining_tasks": [
+    {"id": 1, "name": "Upload 26 real PDFs and run evaluate-all to validate extraction quality across all 10 insurers", "status": "not_started"},
+    {"id": 2, "name": "Create golden dataset fixtures from real PDFs (Phase 17 data gap)", "status": "not_started"},
+    {"id": 3, "name": "Phase 16 plan 16-03 (score badges on poliza list/detail, aggregate eval stats on dashboard) — unchecked in roadmap", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "Golden dataset (Phase 17) needs real insurance PDFs to populate fixtures", "type": "human_action", "workaround": "Upload PDFs via web UI or place in pdfs-to-test/ and run batch-fixtures"}
+  ],
   "human_actions_pending": [
     {
       "action": "Upload all 26 PDFs and run evaluate-all to test extraction quality across insurers",
@@ -26,8 +29,8 @@
       "blocking": false
     },
     {
-      "action": "Commit all changes to git",
-      "context": "19 modified files + 4 new files with substantial feature additions, not yet committed",
+      "action": "Create golden dataset from real PDFs",
+      "context": "Run: poliza-extractor batch-fixtures pdfs-to-test/ --run-tests",
       "blocking": false
     }
   ],
@@ -38,31 +41,7 @@
     {"decision": "Prompt version bumped to v2.2.0", "rationale": "Triggers automatic re-extraction of PDFs extracted with older prompt versions", "phase": "18"},
     {"decision": "otros_cargos as separate field from recargo", "rationale": "Zurich 'Otros Servicios Contratados' is distinct from 'Financiamiento'", "phase": "18"}
   ],
-  "uncommitted_files": [
-    "policy_extractor/schemas/poliza.py",
-    "policy_extractor/storage/models.py",
-    "policy_extractor/storage/writer.py",
-    "policy_extractor/extraction/prompt.py",
-    "policy_extractor/extraction/schema_builder.py",
-    "policy_extractor/extraction/rules.py",
-    "policy_extractor/extraction/validation.py",
-    "policy_extractor/evaluation.py",
-    "policy_extractor/cli_helpers.py",
-    "policy_extractor/export.py",
-    "policy_extractor/api/ui/poliza_views.py",
-    "policy_extractor/api/ui/review_views.py",
-    "policy_extractor/templates/base.html",
-    "policy_extractor/templates/poliza_detail.html",
-    "policy_extractor/templates/poliza_list.html",
-    "policy_extractor/templates/extraction_rules.html",
-    "alembic/versions/006_financial_breakdown_columns.py",
-    "data/extraction_rules.json",
-    "tests/test_cli.py",
-    "tests/test_evaluation.py",
-    "tests/test_extraction.py",
-    "tests/test_prompt.py",
-    "tests/test_validation.py"
-  ],
-  "next_action": "Commit all changes, then upload all 26 PDFs and run evaluate-all to validate quality across insurers",
-  "context_notes": "Major feature session: added 8 financial breakdown fields as top-level schema fields, fixed Zurich multi-column table extraction, added evaluation UI with flag highlighting, added extraction rules learning system. All 481 tests pass. EVAL_MODEL_ID changed to Haiku because user's API key lacks Sonnet access."
+  "uncommitted_files": [],
+  "next_action": "Upload real PDFs from all 10 insurers and run evaluate-all to validate extraction quality, then create golden dataset fixtures",
+  "context_notes": "All code is committed and pushed. v2.0 milestone phases 13-17 complete (with minor gaps: 16-03 unchecked, golden dataset empty). Phase 18 informal work (financial fields, eval UI, rules system) shipped in 15eb54b. Project is in a stable state — next work requires real PDF testing."
 }
