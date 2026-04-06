@@ -9,3 +9,7 @@ dist/
 *.egg-info/
 uploads/
 pdfs-to-test/
+.claude/
+data/pdfs/
+data/*.db-shm
+data/*.db-wal
