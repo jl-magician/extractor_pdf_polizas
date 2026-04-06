@@ -2,6 +2,21 @@
 
 {% block title %}Poliza {{ poliza.numero_poliza }} — Extractor de Polizas{% endblock %}
 
+{% macro field_cell(name, label, value) %}
+<div id="field-{{ name }}" class="{% if name in flagged_fields %}ring-2 ring-orange-400 rounded-lg bg-orange-50 p-2 -m-1{% endif %}">
+  <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+    {{ label }}
+    {% if name in flagged_fields %}
+    <span class="ml-1 inline-block w-2 h-2 rounded-full bg-orange-400" title="{{ flagged_fields[name] }}"></span>
+    {% endif %}
+  </dt>
+  <dd class="text-sm text-gray-900 mt-1">{{ value or '-' }}</dd>
+  {% if name in flagged_fields %}
+  <p class="text-xs text-orange-600 mt-1 italic">{{ flagged_fields[name] }}</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
 {% block content %}
 <!-- Header row -->
 <div class="flex items-center justify-between mb-6">
@@ -28,6 +43,17 @@
               rounded-md transition-colors">
       Revisar
     </a>
+    {% endif %}
+    {% if has_pdf %}
+    <form method="post" action="/ui/polizas/{{ poliza.id }}/evaluate" style="display:inline">
+      <button type="submit"
+              class="inline-flex items-center justify-center min-h-[44px] px-4 py-2
+                     bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold
+                     rounded-md transition-colors"
+              onclick="var btn=this; setTimeout(function(){btn.disabled=true; btn.textContent='Evaluando...';}, 0)">
+        {% if poliza.evaluation_score is not none %}Re-evaluar{% else %}Evaluar{% endif %}
+      </button>
+    </form>
     {% endif %}
     <a href="/ui/polizas/{{ poliza.id }}/report"
        class="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-md transition-colors"
@@ -64,6 +90,61 @@
 </div>
 {% endif %}
 
+<!-- Evaluation details -->
+{% if eval_details %}
+<div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+  <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Evaluacion de Calidad</h3>
+  <div class="grid grid-cols-3 gap-4 mb-4">
+    <div class="text-center p-3 rounded-lg bg-gray-50">
+      <div class="text-2xl font-bold {% if eval_details.completeness >= 0.9 %}text-green-600{% elif eval_details.completeness >= 0.7 %}text-yellow-600{% else %}text-red-600{% endif %}">
+        {{ "%.0f"|format(eval_details.completeness * 100) }}%
+      </div>
+      <div class="text-xs text-gray-500 mt-1">Completitud</div>
+    </div>
+    <div class="text-center p-3 rounded-lg bg-gray-50">
+      <div class="text-2xl font-bold {% if eval_details.accuracy >= 0.9 %}text-green-600{% elif eval_details.accuracy >= 0.7 %}text-yellow-600{% else %}text-red-600{% endif %}">
+        {{ "%.0f"|format(eval_details.accuracy * 100) }}%
+      </div>
+      <div class="text-xs text-gray-500 mt-1">Precision</div>
+    </div>
+    <div class="text-center p-3 rounded-lg bg-gray-50">
+      <div class="text-2xl font-bold {% if eval_details.hallucination_risk <= 0.1 %}text-green-600{% elif eval_details.hallucination_risk <= 0.3 %}text-yellow-600{% else %}text-red-600{% endif %}">
+        {{ "%.0f"|format(eval_details.hallucination_risk * 100) }}%
+      </div>
+      <div class="text-xs text-gray-500 mt-1">Riesgo Alucinacion</div>
+    </div>
+  </div>
+  {% if eval_details.flags %}
+  <div class="mt-4">
+    <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Observaciones</h4>
+    <form method="post" action="/ui/polizas/{{ poliza.id }}/re-extract">
+      <ul class="space-y-2">
+        {% for flag in eval_details.flags %}
+        <li class="text-sm text-gray-700 bg-yellow-50 border border-yellow-100 rounded p-3 flex items-start gap-3">
+          <input type="checkbox" name="flags" value="{{ flag.field }}:::{{ flag.issue }}"
+                 class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <div>
+            <a href="#field-{{ flag.field }}" class="font-semibold text-yellow-800 hover:underline">{{ flag.field }}:</a> {{ flag.issue }}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      <button type="submit"
+              class="mt-3 inline-flex items-center justify-center min-h-[44px] px-4 py-2
+                     bg-green-600 hover:bg-green-700 text-white text-sm font-semibold
+                     rounded-md transition-colors disabled:opacity-50"
+              onclick="var btn=this; if(!document.querySelectorAll('input[name=flags]:checked').length){alert('Selecciona al menos una observacion');return false;} setTimeout(function(){btn.disabled=true; btn.textContent='Re-extrayendo...';}, 0)">
+        Re-extraer con mejoras seleccionadas
+      </button>
+    </form>
+  </div>
+  {% endif %}
+  {% if eval_details.summary %}
+  <p class="text-sm text-gray-600 mt-4 italic">{{ eval_details.summary }}</p>
+  {% endif %}
+</div>
+{% endif %}
+
 <!-- Field groups as definition lists -->
 <div class="space-y-6">
 
@@ -71,22 +152,10 @@
   <div class="bg-white rounded-lg border border-gray-200 p-6">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Informacion General</h2>
     <dl class="grid grid-cols-2 gap-4">
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">No. Poliza</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.numero_poliza or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Aseguradora</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.aseguradora or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo de Seguro</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.tipo_seguro or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Fecha de Emision</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.fecha_emision or '-' }}</dd>
-      </div>
+      {{ field_cell("numero_poliza", "No. Poliza", poliza.numero_poliza) }}
+      {{ field_cell("aseguradora", "Aseguradora", poliza.aseguradora) }}
+      {{ field_cell("tipo_seguro", "Tipo de Seguro", poliza.tipo_seguro) }}
+      {{ field_cell("fecha_emision", "Fecha de Emision", poliza.fecha_emision) }}
     </dl>
   </div>
 
@@ -94,14 +163,8 @@
   <div class="bg-white rounded-lg border border-gray-200 p-6">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Vigencia</h2>
     <dl class="grid grid-cols-2 gap-4">
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Inicio de Vigencia</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.inicio_vigencia or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Fin de Vigencia</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.fin_vigencia or '-' }}</dd>
-      </div>
+      {{ field_cell("inicio_vigencia", "Inicio de Vigencia", poliza.inicio_vigencia) }}
+      {{ field_cell("fin_vigencia", "Fin de Vigencia", poliza.fin_vigencia) }}
     </dl>
   </div>
 
@@ -109,22 +172,18 @@
   <div class="bg-white rounded-lg border border-gray-200 p-6">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Financiero</h2>
     <dl class="grid grid-cols-2 gap-4">
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Prima Total</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.prima_total or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Moneda</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.moneda or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Forma de Pago</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.forma_pago or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Frecuencia de Pago</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.frecuencia_pago or '-' }}</dd>
-      </div>
+      {{ field_cell("prima_neta", "Prima Neta", poliza.prima_neta) }}
+      {{ field_cell("derecho_poliza", "Derecho de Poliza", poliza.derecho_poliza) }}
+      {{ field_cell("recargo", "Recargo", poliza.recargo) }}
+      {{ field_cell("descuento", "Descuento", poliza.descuento) }}
+      {{ field_cell("iva", "IVA", poliza.iva) }}
+      {{ field_cell("otros_cargos", "Otros Cargos", poliza.otros_cargos) }}
+      {{ field_cell("prima_total", "Prima Total", poliza.prima_total) }}
+      {{ field_cell("primer_pago", "Primer Pago", poliza.primer_pago) }}
+      {{ field_cell("pago_subsecuente", "Pago Subsecuente", poliza.pago_subsecuente) }}
+      {{ field_cell("moneda", "Moneda", poliza.moneda) }}
+      {{ field_cell("forma_pago", "Forma de Pago", poliza.forma_pago) }}
+      {{ field_cell("frecuencia_pago", "Frecuencia de Pago", poliza.frecuencia_pago) }}
     </dl>
   </div>
 
@@ -132,14 +191,8 @@
   <div class="bg-white rounded-lg border border-gray-200 p-6">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-4">Personas</h2>
     <dl class="grid grid-cols-2 gap-4">
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre Contratante</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.nombre_contratante or '-' }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Nombre Agente</dt>
-        <dd class="text-sm text-gray-900 mt-1">{{ poliza.nombre_agente or '-' }}</dd>
-      </div>
+      {{ field_cell("nombre_contratante", "Nombre Contratante", poliza.nombre_contratante) }}
+      {{ field_cell("nombre_agente", "Nombre Agente", poliza.nombre_agente) }}
     </dl>
   </div>
 
@@ -189,6 +242,23 @@
             <dd class="text-sm text-gray-900 mt-1">{{ aseg.direccion }}</dd>
           </div>
           {% endif %}
+          {% if aseg.campos_adicionales %}
+          {% for key, val in aseg.campos_adicionales.items() %}
+          {% set full_key = "asegurados.campos_adicionales." ~ key %}
+          <div id="field-{{ full_key }}" class="{% if full_key in flagged_fields %}ring-2 ring-orange-400 rounded-lg bg-orange-50 p-2 -m-1{% endif %}">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {{ key }}
+              {% if full_key in flagged_fields %}
+              <span class="ml-1 inline-block w-2 h-2 rounded-full bg-orange-400"></span>
+              {% endif %}
+            </dt>
+            <dd class="text-sm text-gray-900 mt-1">{{ val or '-' }}</dd>
+            {% if full_key in flagged_fields %}
+            <p class="text-xs text-orange-600 mt-1 italic">{{ flagged_fields[full_key] }}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% endif %}
         </dl>
       </div>
       {% endfor %}
@@ -223,9 +293,18 @@
           {% if cob.campos_adicionales %}
           {% for k, v in cob.campos_adicionales.items() %}
           {% if k != 'confianza' %}
-          <div>
-            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ k }}</dt>
+          {% set cob_key = "coberturas.campos_adicionales." ~ k %}
+          <div id="field-{{ cob_key }}" class="{% if cob_key in flagged_fields %}ring-2 ring-orange-400 rounded-lg bg-orange-50 p-2 -m-1{% endif %}">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {{ k }}
+              {% if cob_key in flagged_fields %}
+              <span class="ml-1 inline-block w-2 h-2 rounded-full bg-orange-400"></span>
+              {% endif %}
+            </dt>
             <dd class="text-sm text-gray-900 mt-1">{{ v or '-' }}</dd>
+            {% if cob_key in flagged_fields %}
+            <p class="text-xs text-orange-600 mt-1 italic">{{ flagged_fields[cob_key] }}</p>
+            {% endif %}
           </div>
           {% endif %}
           {% endfor %}

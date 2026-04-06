@@ -21,7 +21,10 @@ review_router = APIRouter()
 # Field type constants
 # ---------------------------------------------------------------------------
 
-_NUMERIC_COLS: frozenset[str] = frozenset({"prima_total", "suma_asegurada", "deducible"})
+_NUMERIC_COLS: frozenset[str] = frozenset({
+    "prima_total", "prima_neta", "derecho_poliza", "recargo", "descuento",
+    "iva", "otros_cargos", "primer_pago", "pago_subsecuente", "suma_asegurada", "deducible",
+})
 _DATE_COLS: frozenset[str] = frozenset(
     {"fecha_emision", "inicio_vigencia", "fin_vigencia", "fecha_nacimiento"}
 )
@@ -187,7 +190,15 @@ def poliza_review(poliza_id: int, request: Request, db: Session = Depends(get_db
     field_groups.append({
         "title": "Financiero",
         "fields": [
+            _field("prima_neta", poliza.prima_neta),
+            _field("derecho_poliza", poliza.derecho_poliza),
+            _field("recargo", poliza.recargo),
+            _field("descuento", poliza.descuento),
+            _field("iva", poliza.iva),
+            _field("otros_cargos", poliza.otros_cargos),
             _field("prima_total", poliza.prima_total),
+            _field("primer_pago", poliza.primer_pago),
+            _field("pago_subsecuente", poliza.pago_subsecuente),
             _field("moneda", poliza.moneda),
             _field("forma_pago", poliza.forma_pago),
             _field("frecuencia_pago", poliza.frecuencia_pago),

@@ -29,19 +29,27 @@ def estimate_cost(model_id: str, input_tokens: int, output_tokens: int) -> float
 
 
 def is_already_extracted(session: Session, file_hash: str) -> bool:
-    """Check if a source file has already been extracted.
+    """Check if a source file has already been extracted with the current prompt.
 
-    Queries the polizas table for an existing row with a matching
-    source_file_hash. Used to implement idempotency in the CLI.
+    Returns True only if a poliza exists for this file hash AND its
+    prompt_version matches the current PROMPT_VERSION_V2. If the prompt
+    has been updated since the last extraction, returns False so the
+    file gets re-extracted with the new prompt.
 
     Args:
         session: Active SQLAlchemy session.
         file_hash: SHA-256 hex digest of the source PDF file.
 
     Returns:
-        True if an extraction record exists for this file hash, False otherwise.
+        True if an up-to-date extraction record exists, False otherwise.
     """
+    from policy_extractor.extraction.prompt import PROMPT_VERSION_V2
+
     row = session.execute(
-        select(Poliza.id).where(Poliza.source_file_hash == file_hash).limit(1)
+        select(Poliza.id, Poliza.prompt_version)
+        .where(Poliza.source_file_hash == file_hash)
+        .limit(1)
     ).first()
-    return row is not None
+    if row is None:
+        return False
+    return row.prompt_version == PROMPT_VERSION_V2

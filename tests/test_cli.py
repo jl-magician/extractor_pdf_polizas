@@ -98,16 +98,32 @@ def test_is_already_extracted_no_rows(session):
 
 
 def test_is_already_extracted_match(session):
-    """Row with matching source_file_hash returns True."""
+    """Row with matching source_file_hash and current prompt_version returns True."""
+    from policy_extractor.extraction.prompt import PROMPT_VERSION_V2
     poliza = Poliza(
         source_file_hash="abc123",
         numero_poliza="TEST-001",
         aseguradora="Test",
+        prompt_version=PROMPT_VERSION_V2,
     )
     session.add(poliza)
     session.commit()
 
     assert is_already_extracted(session, "abc123") is True
+
+
+def test_is_already_extracted_stale_prompt(session):
+    """Row with matching hash but old prompt_version returns False (triggers re-extraction)."""
+    poliza = Poliza(
+        source_file_hash="abc123",
+        numero_poliza="TEST-001",
+        aseguradora="Test",
+        prompt_version="v1.0.0",
+    )
+    session.add(poliza)
+    session.commit()
+
+    assert is_already_extracted(session, "abc123") is False
 
 
 def test_is_already_extracted_no_match(session):

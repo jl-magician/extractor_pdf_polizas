@@ -33,7 +33,15 @@ POLIZA_COLUMNS = [
     "fin_vigencia",
     "nombre_contratante",
     "nombre_agente",
+    "prima_neta",
+    "derecho_poliza",
+    "recargo",
+    "descuento",
+    "iva",
+    "otros_cargos",
     "prima_total",
+    "primer_pago",
+    "pago_subsecuente",
     "moneda",
     "forma_pago",
     "frecuencia_pago",
@@ -59,7 +67,10 @@ COBERTURA_COLUMNS = [
 ]
 
 DATE_COLS = {"fecha_emision", "inicio_vigencia", "fin_vigencia", "fecha_nacimiento"}
-MONEY_COLS = {"prima_total", "suma_asegurada", "deducible"}
+MONEY_COLS = {
+    "prima_total", "prima_neta", "derecho_poliza", "recargo", "descuento",
+    "iva", "otros_cargos", "primer_pago", "pago_subsecuente", "suma_asegurada", "deducible",
+}
 
 
 # ---------------------------------------------------------------------------

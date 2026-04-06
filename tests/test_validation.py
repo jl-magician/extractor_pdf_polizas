@@ -36,7 +36,8 @@ def test_validate_extraction_aggregates_warnings_from_all_validators():
     """validate_extraction() accumulates warnings from all registered validators."""
     policy = make_policy(
         prima_total=Decimal("10000"),
-        campos_adicionales={"primer_pago": 5000, "subsecuentes": 3000},  # 20% off
+        primer_pago=Decimal("5000"),
+        pago_subsecuente=Decimal("3000"),  # 20% off
         inicio_vigencia=date(2025, 12, 31),
         fin_vigencia=date(2025, 1, 1),  # fin < inicio
     )
@@ -51,10 +52,11 @@ def test_validate_extraction_aggregates_warnings_from_all_validators():
 # ─── check_financial_invariant() ─────────────────────────────────────────────
 
 def test_financial_invariant_mismatch_20pct_triggers_warning():
-    """primer_pago(5000) + subsecuentes(3000) vs prima_total(10000) is 20% off — warning."""
+    """primer_pago(5000) + pago_subsecuente(3000) vs prima_total(10000) is 20% off — warning."""
     policy = make_policy(
         prima_total=Decimal("10000"),
-        campos_adicionales={"primer_pago": 5000, "subsecuentes": 3000},
+        primer_pago=Decimal("5000"),
+        pago_subsecuente=Decimal("3000"),
     )
     result = check_financial_invariant(policy)
     assert len(result) == 1
@@ -67,30 +69,31 @@ def test_financial_invariant_mismatch_20pct_triggers_warning():
 
 
 def test_financial_invariant_exact_match_no_warning():
-    """primer_pago(5000) + subsecuentes(5000) == prima_total(10000) — no warning."""
+    """primer_pago(5000) + pago_subsecuente(5000) == prima_total(10000) — no warning."""
     policy = make_policy(
         prima_total=Decimal("10000"),
-        campos_adicionales={"primer_pago": 5000, "subsecuentes": 5000},
+        primer_pago=Decimal("5000"),
+        pago_subsecuente=Decimal("5000"),
     )
     result = check_financial_invariant(policy)
     assert result == []
 
 
 def test_financial_invariant_primer_pago_none_skips():
-    """primer_pago is None in campos_adicionales — skip (cannot validate)."""
+    """primer_pago is None — skip (cannot validate)."""
     policy = make_policy(
         prima_total=Decimal("10000"),
-        campos_adicionales={"subsecuentes": 5000},
+        pago_subsecuente=Decimal("5000"),
     )
     result = check_financial_invariant(policy)
     assert result == []
 
 
 def test_financial_invariant_subsecuentes_none_skips():
-    """subsecuentes is None in campos_adicionales — skip (cannot validate)."""
+    """pago_subsecuente is None — skip (cannot validate)."""
     policy = make_policy(
         prima_total=Decimal("10000"),
-        campos_adicionales={"primer_pago": 5000},
+        primer_pago=Decimal("5000"),
     )
     result = check_financial_invariant(policy)
     assert result == []
@@ -99,7 +102,8 @@ def test_financial_invariant_subsecuentes_none_skips():
 def test_financial_invariant_prima_total_none_skips():
     """prima_total is None — skip (cannot validate)."""
     policy = make_policy(
-        campos_adicionales={"primer_pago": 5000, "subsecuentes": 5000},
+        primer_pago=Decimal("5000"),
+        pago_subsecuente=Decimal("5000"),
     )
     result = check_financial_invariant(policy)
     assert result == []
@@ -107,10 +111,10 @@ def test_financial_invariant_prima_total_none_skips():
 
 def test_financial_invariant_boundary_exactly_1pct_no_warning():
     """Exactly 1% difference — must NOT trigger (threshold is >1%, not >=1%)."""
-    # primer_pago=4950, subsecuentes=0, prima_total=5000 → diff = 50/5000 = 1.0%
     policy = make_policy(
         prima_total=Decimal("5000"),
-        campos_adicionales={"primer_pago": 4950, "subsecuentes": 0},
+        primer_pago=Decimal("4950"),
+        pago_subsecuente=Decimal("0"),
     )
     result = check_financial_invariant(policy)
     assert result == []
@@ -118,10 +122,10 @@ def test_financial_invariant_boundary_exactly_1pct_no_warning():
 
 def test_financial_invariant_just_over_1pct_triggers_warning():
     """1.01% difference — should trigger a warning."""
-    # primer_pago=4949, subsecuentes=0, prima_total=5000 → diff = 51/5000 = 1.02%
     policy = make_policy(
         prima_total=Decimal("5000"),
-        campos_adicionales={"primer_pago": 4949, "subsecuentes": 0},
+        primer_pago=Decimal("4949"),
+        pago_subsecuente=Decimal("0"),
     )
     result = check_financial_invariant(policy)
     assert len(result) == 1
@@ -132,7 +136,8 @@ def test_financial_invariant_warning_contains_percentage():
     """Warning message contains the difference percentage."""
     policy = make_policy(
         prima_total=Decimal("10000"),
-        campos_adicionales={"primer_pago": 5000, "subsecuentes": 3000},
+        primer_pago=Decimal("5000"),
+        pago_subsecuente=Decimal("3000"),
     )
     result = check_financial_invariant(policy)
     assert len(result) == 1

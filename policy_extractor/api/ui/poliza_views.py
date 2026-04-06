@@ -8,7 +8,7 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
@@ -100,6 +100,64 @@ def poliza_list(
     )
 
 
+@poliza_ui_router.get("/ui/reglas", response_class=HTMLResponse)
+def extraction_rules_page(request: Request):
+    """Show all learned extraction rules."""
+    from policy_extractor.extraction.rules import load_rules
+    rules = load_rules()
+    return templates.TemplateResponse(
+        request=request, name="extraction_rules.html",
+        context={"active_page": "reglas", "rules": rules},
+    )
+
+
+@poliza_ui_router.post("/ui/reglas/{rule_id}/delete")
+def delete_extraction_rule(rule_id: int):
+    """Delete a single extraction rule."""
+    from policy_extractor.extraction.rules import remove_rule
+    remove_rule(rule_id)
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/ui/reglas", status_code=303)
+
+
+@poliza_ui_router.post("/ui/polizas/evaluate-all")
+def evaluate_all(request: Request, db: Session = Depends(get_db)):
+    """Evaluate all unevaluated polizas that have a retained PDF."""
+    unevaluated = db.execute(
+        select(Poliza)
+        .options(selectinload(Poliza.asegurados), selectinload(Poliza.coberturas))
+        .where(Poliza.evaluation_score.is_(None))
+    ).scalars().all()
+
+    from policy_extractor.ingestion import ingest_pdf
+    from policy_extractor.evaluation import evaluate_policy, build_swap_warnings
+    from policy_extractor.storage.writer import orm_to_schema, update_evaluation_columns
+
+    for poliza in unevaluated:
+        pdf_path = Path("data/pdfs") / f"{poliza.id}.pdf"
+        if not pdf_path.exists():
+            continue
+
+        ingestion_result = ingest_pdf(pdf_path, session=db, force_reprocess=False)
+        policy_schema = orm_to_schema(poliza)
+        eval_result = evaluate_policy(ingestion_result, policy_schema)
+
+        if eval_result is not None:
+            update_evaluation_columns(
+                db, poliza.numero_poliza, poliza.aseguradora,
+                eval_result.score, eval_result.evaluation_json,
+                eval_result.evaluated_at, eval_result.model_id,
+            )
+            swap_warnings = build_swap_warnings(eval_result.evaluation_json)
+            if swap_warnings:
+                existing = poliza.validation_warnings or []
+                poliza.validation_warnings = existing + swap_warnings
+                db.commit()
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/ui/polizas", status_code=303)
+
+
 @poliza_ui_router.get("/ui/polizas/{poliza_id}", response_class=HTMLResponse)
 def poliza_detail(poliza_id: int, request: Request, db: Session = Depends(get_db)):
     stmt = (
@@ -122,6 +180,17 @@ def poliza_detail(poliza_id: int, request: Request, db: Session = Depends(get_db
     # Parse validation_warnings for display
     warnings = poliza.validation_warnings or []
 
+    # Parse evaluation details and extract flagged field names
+    eval_details = None
+    flagged_fields = {}
+    if poliza.evaluation_json:
+        try:
+            eval_details = json.loads(poliza.evaluation_json)
+            for flag in eval_details.get("flags", []):
+                flagged_fields[flag["field"]] = flag["issue"]
+        except (json.JSONDecodeError, TypeError, KeyError):
+            pass
+
     return templates.TemplateResponse(
         request=request, name="poliza_detail.html",
         context={
@@ -129,6 +198,8 @@ def poliza_detail(poliza_id: int, request: Request, db: Session = Depends(get_db
             "poliza": poliza,
             "has_pdf": has_pdf,
             "warnings": warnings,
+            "eval_details": eval_details,
+            "flagged_fields": flagged_fields,
             "corrections": poliza.corrections or [],
         }
     )
@@ -211,6 +282,116 @@ def poliza_export(
         filename=f"poliza_{poliza.numero_poliza}.{fmt}",
         media_type=media,
     )
+
+
+@poliza_ui_router.post("/ui/polizas/{poliza_id}/evaluate")
+def evaluate_single(poliza_id: int, request: Request, db: Session = Depends(get_db)):
+    """Evaluate a single poliza using Sonnet and redirect back to detail page."""
+    poliza = db.execute(
+        select(Poliza)
+        .options(selectinload(Poliza.asegurados), selectinload(Poliza.coberturas))
+        .where(Poliza.id == poliza_id)
+    ).scalar_one_or_none()
+    if poliza is None:
+        raise HTTPException(status_code=404, detail="Poliza no encontrada")
+
+    pdf_path = Path("data/pdfs") / f"{poliza.id}.pdf"
+    if not pdf_path.exists():
+        raise HTTPException(status_code=400, detail="PDF no disponible para evaluar")
+
+    from policy_extractor.ingestion import ingest_pdf
+    from policy_extractor.evaluation import evaluate_policy, build_swap_warnings
+    from policy_extractor.storage.writer import orm_to_schema, update_evaluation_columns
+
+    ingestion_result = ingest_pdf(pdf_path, session=db, force_reprocess=False)
+    policy_schema = orm_to_schema(poliza)
+
+    eval_result = evaluate_policy(ingestion_result, policy_schema)
+    if eval_result is not None:
+        update_evaluation_columns(
+            db, poliza.numero_poliza, poliza.aseguradora,
+            eval_result.score, eval_result.evaluation_json,
+            eval_result.evaluated_at, eval_result.model_id,
+        )
+        swap_warnings = build_swap_warnings(eval_result.evaluation_json)
+        if swap_warnings:
+            existing = poliza.validation_warnings or []
+            poliza.validation_warnings = existing + swap_warnings
+            db.commit()
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/ui/polizas/{poliza_id}", status_code=303)
+
+
+@poliza_ui_router.post("/ui/polizas/{poliza_id}/re-extract")
+async def re_extract_with_improvements(
+    poliza_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Re-extract a poliza with additional instructions from selected evaluation flags."""
+    form_data = await request.form()
+    flags = form_data.getlist("flags")
+
+    poliza = db.execute(
+        select(Poliza)
+        .options(selectinload(Poliza.asegurados), selectinload(Poliza.coberturas))
+        .where(Poliza.id == poliza_id)
+    ).scalar_one_or_none()
+    if poliza is None:
+        raise HTTPException(status_code=404, detail="Poliza no encontrada")
+
+    pdf_path = Path("data/pdfs") / f"{poliza.id}.pdf"
+    if not pdf_path.exists():
+        raise HTTPException(status_code=400, detail="PDF no disponible")
+
+    # Parse flags: each is "field:::issue"
+    corrections = []
+    for flag in flags:
+        parts = flag.split(":::", 1)
+        if len(parts) == 2:
+            corrections.append({"field": parts[0], "issue": parts[1]})
+
+    if not corrections:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=f"/ui/polizas/{poliza_id}", status_code=303)
+
+    # Save corrections as permanent extraction rules
+    from policy_extractor.extraction.rules import add_rule
+    for c in corrections:
+        add_rule(
+            field=c["field"],
+            instruction=c["issue"],
+            source_poliza=poliza.numero_poliza,
+        )
+
+    # Re-extract with the rules now baked into the system prompt
+    from policy_extractor.ingestion import ingest_pdf
+    from policy_extractor.extraction import extract_policy
+    from policy_extractor.storage.writer import upsert_policy
+
+    ingestion_result = ingest_pdf(pdf_path, session=db, force_reprocess=False)
+
+    try:
+        policy, _usage, _retries = extract_policy(ingestion_result)
+        if policy is None:
+            raise RuntimeError("Re-extraction returned None")
+        upsert_policy(db, policy)
+
+        # Clear old evaluation since extraction changed
+        poliza = db.execute(
+            select(Poliza).where(Poliza.id == poliza_id)
+        ).scalar_one_or_none()
+        if poliza:
+            poliza.evaluation_score = None
+            poliza.evaluation_json = None
+            poliza.evaluated_at = None
+            db.commit()
+    except Exception:
+        pass  # Fall through to redirect; old data preserved
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/ui/polizas/{poliza_id}", status_code=303)
 
 
 @poliza_ui_router.get("/ui/polizas/{poliza_id}/pdf")

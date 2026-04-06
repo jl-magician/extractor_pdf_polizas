@@ -28,7 +28,7 @@ from policy_extractor.schemas.poliza import PolicyExtraction
 # ---------------------------------------------------------------------------
 
 EVAL_TOOL_NAME = "evaluate_policy"
-EVAL_MODEL_ID = "claude-sonnet-4-5-20250514"
+EVAL_MODEL_ID = "claude-haiku-4-5-20251001"
 LOW_SCORE_THRESHOLD = 0.7
 
 # ---------------------------------------------------------------------------

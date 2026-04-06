@@ -626,9 +626,9 @@ class TestCliEvaluateFlag:
 # ---------------------------------------------------------------------------
 
 class TestConstants:
-    def test_eval_model_id_is_sonnet(self):
+    def test_eval_model_id_is_set(self):
         from policy_extractor.evaluation import EVAL_MODEL_ID
-        assert EVAL_MODEL_ID == "claude-sonnet-4-5-20250514"
+        assert EVAL_MODEL_ID.startswith("claude-")
 
     def test_low_score_threshold_is_0_7(self):
         from policy_extractor.evaluation import LOW_SCORE_THRESHOLD

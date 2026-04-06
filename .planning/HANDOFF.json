@@ -1,55 +1,68 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-26T04:18:42.999Z",
-  "phase": "17",
-  "phase_name": "golden-dataset-expansion",
-  "phase_dir": ".planning/phases/17-golden-dataset-expansion",
+  "timestamp": "2026-04-06T05:23:08.293Z",
+  "phase": "18",
+  "phase_name": "financial-fields-evaluation-improvements",
+  "phase_dir": null,
   "plan": null,
   "task": null,
-  "total_tasks": 2,
+  "total_tasks": 7,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "17-01: Batch fixture creation CLI", "status": "done", "commit": "16cce5a"},
-    {"id": 2, "name": "17-02: Coverage matrix plugin", "status": "done", "commit": "6bb5f97"}
+    {"id": 1, "name": "Financial breakdown fields (prima_neta, derecho_poliza, recargo, descuento, iva, otros_cargos, primer_pago, pago_subsecuente)", "status": "done"},
+    {"id": 2, "name": "Schema + DB model + Alembic migration 006 + writer + export", "status": "done"},
+    {"id": 3, "name": "Prompt v2.2.0 with explicit financial field mapping and Zurich multi-column table restructurer", "status": "done"},
+    {"id": 4, "name": "Smart re-extraction: auto re-extract when prompt_version changes", "status": "done"},
+    {"id": 5, "name": "Evaluate buttons: single poliza + evaluate-all on list page", "status": "done"},
+    {"id": 6, "name": "Evaluation details UI: score cards, flagged fields highlighted with orange borders, click-to-scroll, inline reasons", "status": "done"},
+    {"id": 7, "name": "Extraction rules system: user-approved flags saved as permanent rules, rules management page at /ui/reglas", "status": "done"}
   ],
   "remaining_tasks": [],
-  "blockers": [
-    {
-      "description": "Golden dataset is empty — tests/fixtures/golden/ has 0 files. Need 20+ real PDF fixtures.",
-      "type": "human_action",
-      "workaround": "User must place real PDFs in pdfs-to-test/ and run batch-fixtures"
-    }
-  ],
+  "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Place 20+ real insurance PDFs (2 per insurer) in pdfs-to-test/ directory",
-      "context": "Insurers: Zurich, Qualitas, Mapfre, AXA, GNP, Chubb, Ana, HDI, Plan Seguro, Prudential. Name files by insurer/type for auto-detection.",
-      "blocking": true
-    },
-    {
-      "action": "Run: poliza-extractor batch-fixtures pdfs-to-test/ --run-tests",
-      "context": "Creates golden fixtures from PDFs, redacts PII, validates with regression tests",
-      "blocking": true
-    },
-    {
-      "action": "Review extractions in HITL UI (localhost:8000), correct any errors",
-      "context": "Two-step process per D-02: raw fixtures first, then review/correct before committing",
+      "action": "Upload all 26 PDFs and run evaluate-all to test extraction quality across insurers",
+      "context": "Only 1 Zurich PDF tested so far. Need to verify financial fields and evaluation across all 10 insurers.",
       "blocking": false
     },
     {
-      "action": "Commit golden fixtures: git add tests/fixtures/golden/ && git commit",
-      "context": "Fixtures must be committed for regression tests to run in CI",
-      "blocking": true
+      "action": "Commit all changes to git",
+      "context": "19 modified files + 4 new files with substantial feature additions, not yet committed",
+      "blocking": false
     }
   ],
   "decisions": [
-    {"decision": "fpdf2 for PDF reports instead of WeasyPrint", "rationale": "GTK/Tesseract DLL conflict on Windows 11", "phase": "16"},
-    {"decision": "Auto-eval triggers after any extraction when batch >= 10, 20% sample", "rationale": "User prefers higher quality coverage over cost savings", "phase": "16"},
-    {"decision": "Batch script creates raw fixtures, user reviews in HITL UI before finalizing", "rationale": "Two-step process is safer than trusting raw extraction output", "phase": "17"}
+    {"decision": "Haiku for evaluation instead of Sonnet", "rationale": "User's API key doesn't have access to Sonnet models — all Sonnet model IDs return 404", "phase": "18"},
+    {"decision": "Zurich multi-column table restructurer in assemble_text_v2", "rationale": "PyMuPDF get_text() scrambles 3-column financial tables — labels and values get misassociated", "phase": "18"},
+    {"decision": "Extraction rules stored in data/extraction_rules.json", "rationale": "Simple file-based persistence, loaded into system prompt via get_rules_prompt()", "phase": "18"},
+    {"decision": "Prompt version bumped to v2.2.0", "rationale": "Triggers automatic re-extraction of PDFs extracted with older prompt versions", "phase": "18"},
+    {"decision": "otros_cargos as separate field from recargo", "rationale": "Zurich 'Otros Servicios Contratados' is distinct from 'Financiamiento'", "phase": "18"}
   ],
   "uncommitted_files": [
-    ".planning/phases/17-golden-dataset-expansion/17-VERIFICATION.md"
+    "policy_extractor/schemas/poliza.py",
+    "policy_extractor/storage/models.py",
+    "policy_extractor/storage/writer.py",
+    "policy_extractor/extraction/prompt.py",
+    "policy_extractor/extraction/schema_builder.py",
+    "policy_extractor/extraction/rules.py",
+    "policy_extractor/extraction/validation.py",
+    "policy_extractor/evaluation.py",
+    "policy_extractor/cli_helpers.py",
+    "policy_extractor/export.py",
+    "policy_extractor/api/ui/poliza_views.py",
+    "policy_extractor/api/ui/review_views.py",
+    "policy_extractor/templates/base.html",
+    "policy_extractor/templates/poliza_detail.html",
+    "policy_extractor/templates/poliza_list.html",
+    "policy_extractor/templates/extraction_rules.html",
+    "alembic/versions/006_financial_breakdown_columns.py",
+    "data/extraction_rules.json",
+    "tests/test_cli.py",
+    "tests/test_evaluation.py",
+    "tests/test_extraction.py",
+    "tests/test_prompt.py",
+    "tests/test_validation.py"
   ],
-  "next_action": "Place 20+ real PDFs in pdfs-to-test/, run batch-fixtures, review in HITL UI, commit fixtures, then /gsd:verify-work 17",
-  "context_notes": "Phase 17 tooling is 100% complete (batch-fixtures CLI + coverage matrix plugin, 480 tests pass). The only gap is the actual golden fixture data which requires the user's real insurance PDFs. After fixtures are created and committed, run /gsd:verify-work 17 to confirm phase goal, then /gsd:complete-milestone to finish v2.0."
+  "next_action": "Commit all changes, then upload all 26 PDFs and run evaluate-all to validate quality across insurers",
+  "context_notes": "Major feature session: added 8 financial breakdown fields as top-level schema fields, fixed Zurich multi-column table extraction, added evaluation UI with flag highlighting, added extraction rules learning system. All 481 tests pass. EVAL_MODEL_ID changed to Haiku because user's API key lacks Sonnet access."
 }

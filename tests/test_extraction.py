@@ -414,10 +414,8 @@ def test_extract_policy_populates_validation_warnings(sample_ingestion_result, v
     # prima_total = 10000, primer_pago = 5000, subsecuentes = 3000 → diff = 20% → warning
     data = dict(valid_extraction_data)
     data["prima_total"] = 10000.0
-    data["campos_adicionales"] = {
-        "primer_pago": 5000.0,
-        "subsecuentes": 3000.0,  # 5000 + 3000 = 8000 != 10000 (20% diff)
-    }
+    data["primer_pago"] = 5000.0
+    data["pago_subsecuente"] = 3000.0  # 5000 + 3000 = 8000 != 10000 (20% diff)
     mock_response = MockMessage(data)
 
     with patch("anthropic.Anthropic") as MockClient:

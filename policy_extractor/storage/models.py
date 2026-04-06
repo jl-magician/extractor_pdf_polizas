@@ -34,6 +34,30 @@ class Poliza(Base):
     prima_total: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(precision=15, scale=2), nullable=True
     )
+    prima_neta: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
+    derecho_poliza: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
+    recargo: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
+    descuento: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
+    iva: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
+    otros_cargos: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
+    primer_pago: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
+    pago_subsecuente: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(precision=15, scale=2), nullable=True
+    )
     moneda: Mapped[str] = mapped_column(String(3), default="MXN")
 
     # Payment info

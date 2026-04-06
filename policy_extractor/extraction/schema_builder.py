@@ -44,10 +44,15 @@ def build_extraction_schema() -> dict:
         if field in required:
             required.remove(field)
 
-    # 2. Simplify top-level Decimal field: prima_total
-    if "prima_total" in properties:
-        title = properties["prima_total"].get("title", "Prima Total")
-        properties["prima_total"] = _simplify_decimal_property(properties["prima_total"], title)
+    # 2. Simplify top-level Decimal fields
+    _DECIMAL_FIELDS = [
+        "prima_total", "prima_neta", "derecho_poliza", "recargo",
+        "descuento", "iva", "otros_cargos", "primer_pago", "pago_subsecuente",
+    ]
+    for field_name in _DECIMAL_FIELDS:
+        if field_name in properties:
+            title = properties[field_name].get("title", field_name.replace("_", " ").title())
+            properties[field_name] = _simplify_decimal_property(properties[field_name], title)
 
     # 3. Simplify Decimal fields inside CoberturaExtraction definition
     defs = schema.get("$defs", {})

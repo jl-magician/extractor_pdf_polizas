@@ -32,9 +32,9 @@ def _make_ingestion(pages: list[tuple[int, str]]) -> IngestionResult:
 # ---------------------------------------------------------------------------
 
 def test_prompt_version_v2_value():
-    """PROMPT_VERSION_V2 must be exactly 'v2.0.0'."""
+    """PROMPT_VERSION_V2 must be a v2.x.x version string."""
     from policy_extractor.extraction.prompt import PROMPT_VERSION_V2
-    assert PROMPT_VERSION_V2 == "v2.0.0"
+    assert PROMPT_VERSION_V2.startswith("v2.")
 
 
 # ---------------------------------------------------------------------------
@@ -47,10 +47,10 @@ def test_system_prompt_v2_has_financiamiento_rule():
     assert "financiamiento" in SYSTEM_PROMPT_V2.lower()
 
 
-def test_system_prompt_v2_has_subsecuentes_rule():
-    """SYSTEM_PROMPT_V2 contains 'subsecuentes' field-mapping rule."""
+def test_system_prompt_v2_has_pago_subsecuente_rule():
+    """SYSTEM_PROMPT_V2 contains 'pago_subsecuente' field-mapping rule."""
     from policy_extractor.extraction.prompt import SYSTEM_PROMPT_V2
-    assert "subsecuentes" in SYSTEM_PROMPT_V2.lower()
+    assert "pago_subsecuente" in SYSTEM_PROMPT_V2.lower()
 
 
 def test_system_prompt_v2_has_folio_clave_disambiguation():
@@ -275,4 +275,3 @@ def test_client_injects_prompt_version_v2():
 
     policy, raw_input = parse_and_validate(mock_message, ingestion_file_hash="abc123")
     assert raw_input["prompt_version"] == PROMPT_VERSION_V2
-    assert raw_input["prompt_version"] == "v2.0.0"

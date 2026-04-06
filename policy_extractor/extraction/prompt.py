@@ -87,7 +87,7 @@ def assemble_text(ingestion: IngestionResult) -> str:
 # v2.0.0 — explicit field-mapping rules, Zurich overlay, financial page tagging
 # ---------------------------------------------------------------------------
 
-PROMPT_VERSION_V2 = "v2.0.0"
+PROMPT_VERSION_V2 = "v2.2.0"
 
 SYSTEM_PROMPT_V2 = """You are an expert insurance data extractor. Your task is to extract all available structured data from insurance policy documents.
 
@@ -108,21 +108,33 @@ Call the `extract_policy` tool with all fields you can extract from the provided
 
 ## Financial Breakdown Field Mapping (CRITICAL)
 
-When extracting values from financial breakdown tables, map each row to its correct field by reading the ROW LABEL, not by position or proximity. Common confused pairs:
+The tool has DEDICATED top-level fields for the financial breakdown. You MUST use these fields — do NOT put financial values in campos_adicionales.
+
+Map each financial row from the PDF to the correct top-level field by reading the ROW LABEL:
+
+| PDF Label (any of these) | Tool Field | Description |
+|---|---|---|
+| Prima Neta, Prima Neta de Riesgo | **prima_neta** | Net premium before taxes/surcharges |
+| Prima Total, Costo Total, Total a Pagar | **prima_total** | Total premium (sum of all charges) |
+| Gastos de Expedición, Gasto de Expedición, Derecho de Póliza, Derechos | **derecho_poliza** | Policy issuance fee |
+| Recargo, Recargo por Pago Fraccionado, Financiamiento, Recargos | **recargo** | Financing surcharge |
+| Descuento, Bonificación, Descuentos | **descuento** | Discount (always positive number) |
+| IVA, I.V.A., Impuesto al Valor Agregado | **iva** | Tax amount |
+| Otros Servicios Contratados, Otros Cargos, Servicios Adicionales | **otros_cargos** | Additional contracted services charge |
+| Primer Pago, Pago Inicial, 1er Pago | **primer_pago** | First payment amount |
+| Pagos Subsecuentes, Subsecuentes, Pago Subsecuente | **pago_subsecuente** | Subsequent payment amount |
+
+**IMPORTANT**: These are TOP-LEVEL fields in the tool schema. Do NOT create alternative names like "gasto_expedicion", "recargo_pago_fraccionado", "porcentaje_iva", etc. in campos_adicionales. Always use the exact field names from the table above.
+
+When a page is tagged with [FINANCIAL BREAKDOWN TABLE BELOW], pay extra attention to column headers and row labels in that page's table structure.
+
+Other field disambiguation:
 
 | Field Name | What It Is | What It Is NOT |
 |---|---|---|
-| financiamiento | Financing charge (often 0.0 when no financing plan) | NOT otros_servicios |
-| otros_servicios_contratados | Additional contracted services charge | NOT financiamiento |
-| primer_pago | First payment amount | NOT subsecuentes |
-| subsecuentes | Subsequent payment amount (0.0 for annual/single payment) | NOT primer_pago |
-| prima_total | Total premium amount | NOT prima_neta or recargo |
-| prima_neta | Net premium before surcharges | NOT prima_total |
 | folio | Folio identifier (may be null) | NOT clave |
 | clave | Agent/branch code (typically 5-digit numeric like "75534") | NOT folio |
 | numero_poliza | The policy number on the document | NOT numero_cotizacion (quote number) |
-
-When a page is tagged with [FINANCIAL BREAKDOWN TABLE BELOW], pay extra attention to column headers and row labels in that page's table structure.
 
 ## Vehicle Identification Fields
 
@@ -138,6 +150,13 @@ Use these mappings when reading Spanish-language documents:
 | Poliza / Numero de Poliza / No. de Poliza | numero_poliza |
 | Prima Total / Costo Total | prima_total |
 | Prima Neta | prima_neta (NOT prima_total) |
+| Derecho de Poliza / Gastos de Expedicion / Derechos | derecho_poliza |
+| Recargo / Financiamiento / Recargo por Pago Fraccionado | recargo |
+| Descuento / Bonificacion | descuento |
+| IVA / Impuesto al Valor Agregado | iva |
+| Otros Servicios Contratados / Otros Cargos | otros_cargos |
+| Primer Pago / Pago Inicial | primer_pago |
+| Pagos Subsecuentes / Subsecuentes | pago_subsecuente |
 | Vigencia / Periodo de Vigencia | inicio_vigencia + fin_vigencia |
 | Inicio de Vigencia / Desde | inicio_vigencia |
 | Fin de Vigencia / Hasta | fin_vigencia |
@@ -169,11 +188,11 @@ ZURICH_OVERLAY = """
 The following field pairs are commonly confused in Zurich auto policy breakdown tables.
 Map them precisely by column position and ROW LABEL, not by proximity to adjacent values:
 
-- `financiamiento`: The financing charge row. Value is 0.0 when no financing plan is active. Do NOT confuse with otros_servicios_contratados.
-- `otros_servicios_contratados`: Additional contracted services charge. This is the row labeled "Otros Servicios Contratados" or similar. NOT the same as financiamiento.
+- `recargo`: The financing/surcharge row. In Zurich policies this is labeled "Financiamiento". Value is 0.0 when no financing plan is active. Do NOT confuse with otros_cargos.
+- `otros_cargos`: The "Otros Servicios Contratados" row. This is a SEPARATE charge from recargo/financiamiento. Map it to the `otros_cargos` field, NOT to `recargo`.
 - `folio`: The folio identifier (typically null for standard auto policies). Do NOT populate with clave values.
 - `clave`: The clave identifier (typically a 5-digit numeric code like "75534"). This is the agent/branch code. NOT the same as folio.
-- `subsecuentes`: Subsequent payment amount. Returns 0.0 when payment is annual (single payment). Do NOT copy primer_pago value into subsecuentes.
+- `pago_subsecuente`: Subsequent payment amount. Returns 0.0 when payment is annual (single payment). Do NOT copy primer_pago value into pago_subsecuente.
 - `numero_serie`: Use the VIN/NIV from the vehicle data section. Do NOT use the engine serial number ("No. de Motor").
 """
 
@@ -203,18 +222,24 @@ def detect_insurer(assembled_text: str) -> str | None:
 
 
 def get_system_prompt(assembled_text: str) -> str:
-    """Return SYSTEM_PROMPT_V2 with insurer-specific overlay appended if detected.
+    """Return SYSTEM_PROMPT_V2 with insurer overlay and learned rules appended.
 
     Args:
         assembled_text: Full assembled text from all PDF pages (used for insurer detection).
 
     Returns:
-        SYSTEM_PROMPT_V2 + overlay if detected, or just SYSTEM_PROMPT_V2 if not.
+        SYSTEM_PROMPT_V2 + overlay (if detected) + learned rules (if any).
     """
+    from policy_extractor.extraction.rules import get_rules_prompt
+
+    prompt = SYSTEM_PROMPT_V2
     insurer = detect_insurer(assembled_text)
     if insurer and insurer in _INSURER_OVERLAYS:
-        return SYSTEM_PROMPT_V2 + "\n\n" + _INSURER_OVERLAYS[insurer]
-    return SYSTEM_PROMPT_V2
+        prompt += "\n\n" + _INSURER_OVERLAYS[insurer]
+    rules_section = get_rules_prompt()
+    if rules_section:
+        prompt += rules_section
+    return prompt
 
 
 # Financial page detection keywords for [FINANCIAL BREAKDOWN TABLE BELOW] tagging
@@ -231,12 +256,75 @@ _FINANCIAL_KEYWORDS = [
 ]
 
 
+def _restructure_financial_table(text: str) -> str:
+    """Detect and restructure multi-column financial tables that get scrambled by PDF text extraction.
+
+    Zurich (and similar insurers) use a 3-column financial summary table where
+    PyMuPDF's get_text() reads labels column-by-column then values separately,
+    producing incorrect label-value associations.
+
+    This function detects the known label pattern and re-emits structured
+    label: value lines using positional matching.
+    """
+    import re
+
+    # Known 3-column Zurich financial table labels (row-major order)
+    # Row 1: Prima Neta | Otros Serv. Contratados | Cesión de Comisión
+    # Row 2: Financiamiento | Gastos Expedición | I.V.A.
+    # Row 3: Prima Total | 1er. Pago | Subsecuentes
+    _ROW_LABELS = [
+        ["Prima Neta", "Otros Serv. Contratados", r"Cesi[oó]n de Comisi[oó]n"],
+        ["Financiamiento", r"Gastos Expedici[oó]n", r"I\.V\.A\."],
+        ["Prima Total", r"1er\. Pago", "Subsecuentes"],
+    ]
+
+    # Check if this page has the Zurich financial table pattern
+    text_lower = text.lower()
+    markers = ["prima neta", "financiamiento", "otros serv", "gastos expedic"]
+    if not all(m in text_lower for m in markers):
+        return text
+
+    # Extract all dollar amounts from the text (in order of appearance)
+    amounts = re.findall(r'[\d,]+\.\d{2}', text)
+    if len(amounts) < 9:
+        return text  # Not enough values to restructure
+
+    # Build restructured table: labels in row-major order, values in column-major order
+    # PDF values appear column-major: col1_row1, col2_row1, col3_row1, col1_row2, ...
+    # which is actually row-major since text reads left-to-right per row
+    friendly_labels = [
+        "Prima Neta", "Otros Serv. Contratados", "Cesion de Comision",
+        "Financiamiento", "Gastos Expedicion", "I.V.A.",
+        "Prima Total", "1er. Pago", "Subsecuentes",
+    ]
+
+    restructured = "\n[FINANCIAL SUMMARY - RESTRUCTURED FROM MULTI-COLUMN TABLE]\n"
+    for i, label in enumerate(friendly_labels):
+        if i < len(amounts):
+            restructured += f"  {label}: ${amounts[i]}\n"
+
+    # Remove the original scrambled financial section and append the restructured version
+    # Find the region between "Resumen de Valores" (or "Prima Neta") and "Coberturas Amparadas"
+    start_match = re.search(r'(?:Resumen de Valores|Prima Neta)', text)
+    end_match = re.search(r'Coberturas Amparadas', text)
+
+    if start_match and end_match:
+        before = text[:start_match.start()]
+        after = text[end_match.start():]
+        return before + restructured + "\n" + after
+
+    return text + "\n" + restructured
+
+
 def assemble_text_v2(ingestion: IngestionResult) -> str:
     """Assemble all pages with financial breakdown table hints (D-05).
 
     Each page is preceded by a separator line. Pages containing financial
     keywords get a [FINANCIAL BREAKDOWN TABLE BELOW] hint to guide Claude's
     column-to-field mapping in breakdown tables.
+
+    Multi-column financial tables (e.g. Zurich) are restructured into
+    clear label: value lines to prevent column-swap errors.
 
     Args:
         ingestion: IngestionResult containing list of PageResult objects.
@@ -246,10 +334,12 @@ def assemble_text_v2(ingestion: IngestionResult) -> str:
     """
     parts = []
     for page in ingestion.pages:
-        text_lower = page.text.lower()
+        text = page.text
+        text_lower = text.lower()
         has_financial = any(kw in text_lower for kw in _FINANCIAL_KEYWORDS)
         parts.append(f"--- Page {page.page_num} ---")
         if has_financial:
+            text = _restructure_financial_table(text)
             parts.append("[FINANCIAL BREAKDOWN TABLE BELOW]")
-        parts.append(page.text)
+        parts.append(text)
     return "\n\n".join(parts)

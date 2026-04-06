@@ -37,16 +37,11 @@ def validate_extraction(policy: PolicyExtraction) -> list[dict]:
 
 @register
 def check_financial_invariant(policy: PolicyExtraction) -> list[dict]:
-    """primer_pago + subsecuentes must be within 1% of prima_total (D-09).
-
-    CRITICAL: primer_pago and subsecuentes live in campos_adicionales, NOT
-    as top-level PolicyExtraction fields. Use policy.campos_adicionales.get().
-    """
+    """primer_pago + pago_subsecuente must be within 1% of prima_total (D-09)."""
     prima_total = policy.prima_total
-    campos = policy.campos_adicionales
 
-    primer_pago = campos.get("primer_pago")
-    subsecuentes = campos.get("subsecuentes")
+    primer_pago = policy.primer_pago
+    subsecuentes = policy.pago_subsecuente
 
     if prima_total is None or primer_pago is None or subsecuentes is None:
         return []  # Cannot validate — missing data, not an error

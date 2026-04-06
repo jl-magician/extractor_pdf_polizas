@@ -33,6 +33,14 @@ class PolicyExtraction(BaseModel):
 
     # Financial
     prima_total: Optional[Decimal] = None
+    prima_neta: Optional[Decimal] = None
+    derecho_poliza: Optional[Decimal] = None
+    recargo: Optional[Decimal] = None
+    descuento: Optional[Decimal] = None
+    iva: Optional[Decimal] = None
+    otros_cargos: Optional[Decimal] = None
+    primer_pago: Optional[Decimal] = None
+    pago_subsecuente: Optional[Decimal] = None
     moneda: str = "MXN"
     forma_pago: Optional[str] = None
     frecuencia_pago: Optional[str] = None
